@@ -15,13 +15,13 @@ De los informes diarios que provee el Departamento de Salud es posible extraer e
 
 A pesar de ser uno de los peores estados afectados en EEUU,
 Massachussets se ha destacado por la gran mejoría y [ayer anunciaron 0 muertes](https://www.bostonherald.com/2020/06/30/zero-new-coronavirus-deaths-reported-in-massachusetts-after-data-cleaning/) por primera vez desde marzo.
-La epidemióloga del estado usa el **porciento**, no el total, de casos positivos por día como el instrumento principal de monitoreo.
+La epidemióloga del estado usa el **porciento**, no el total, de casos positivos por día como el instrumento principal de monitoreo. La Organización Mundial de la Salud (WHO) aconseja que antes de reabrir, las tasas de positividad deberían permanecer en 5% o menos por al menos 14 días.
 
 Aunque el gobierno de Puerto Rico no comparte estos datos, Puerto Rico Science Trust (PRST) recoge esta información semanalmente de los laboratorios privados, los cuales hacen la gran mayoría de pruebas en Puerto Rico. El PRST ha compartido estos datos y por primera vez puedo calcular el porciento de casos positivos, aunque no son diarios sino semanales. Aquí mostramos algunas gráficas.
 
 ## El patrón en Puerto Rico es parecido al de Nueva Zelandia 
 
-Las buenas noticias son que, basado en estos datos, parece que lis efectos de la pandemia han sido muy leves en Puerto Rico. En la siguiente gráfica vemos los porcentajes de pruebas positivas por semana para Massachusetts, Nueva Zelandia y Puerto Rico. Vemos que el patrón en Puerto Rico se asemeja más a Nueva Zelandia que a Massachusetts. Noten que los datos para Nueva Zelandia incluyen casos probables y confirmados pues eso son los datos que proveen, mientras que para Puerto Rico y Massachusetts solo incluimos casos confirmados con pruebas PCR.
+Las buenas noticias son que, basado en estos datos, parece que los efectos de la pandemia han sido muy leves en Puerto Rico. En la siguiente gráfica vemos los porcentajes de pruebas positivas por semana para Massachusetts, Nueva Zelandia y Puerto Rico. Vemos que el patrón en Puerto Rico se asemeja más a Nueva Zelandia que a Massachusetts. Noten que los datos para Nueva Zelandia incluyen casos probables y confirmados pues eso son los datos que proveen, mientras que para Puerto Rico y Massachusetts solo incluimos casos confirmados con pruebas PCR.
 
 ```{r nz-ma-pr}
 library(tidyverse)
@@ -61,11 +61,13 @@ dat <- bind_rows(pr, ma, nz)
 
 dslabs::ds_theme_set()
 dat %>% ggplot(aes(date, new_cases/new_tests, color = location)) +
+  geom_hline(yintercept = 0.05, lty = 2) +
   geom_point() +
   geom_line() +
-  xlab("Fecha") + ylab("Porciento de Pruebas Positivas") + 
-  labs(title = "Porciento de pruebas positivas", color = "Lugar") +
+  xlab("Semana") + ylab("Tasa de positividad") + 
+  labs(title = "Tasa de positividad", color = "Lugar") +
   scale_y_continuous(labels = scales::percent)
+ggsave("~/Desktop/tasa-positividad.png", width = 6, height = 6/1.6)
 ```
 
 Aunque el porciento en Puerto Rico está bien bajo, es importante continuar monitoreando estos datos. Preferiblemente con datos diarios en vez 
@@ -95,15 +97,44 @@ dat <- bind_rows(ma, fl)
 dat %>% 
   mutate(state = factor(state, levels = c("Massachusetts", "Florida"))) %>%
     ggplot(aes(date, new_cases/new_tests)) +
+  geom_hline(yintercept = 0.05, lty = 2) +
   geom_point() +
   geom_line() +
-  xlab("Fecha") + ylab("Porciento de Pruebas Positivas") + 
-  labs(title = "Porciento de pruebas positivas", color = "Estado") +
+  xlab("Fecha") + ylab("Tasa de positividad") + 
+  labs(title = "Tasa de positividad", color = "Estado") +
   scale_y_continuous(labels = scales::percent) +
   facet_wrap(~state)
 ```
 
+## La tasa para las pruebas serologicas es diferente
 
+Aquí definimos la tasa de positividad usando casos confirmados con pruebas moleculars (PCR). Las pruebas serologicas resultan en tasas diferentes. Aquí un ejemplo con Massachusetts: 
+
+```{r serology}
+tmp <- read_csv("data/TestingByDate.csv") %>% 
+  select(Date, `Molecular New`, `Molecular Positive New`, `Serology New`, `Serology Positive New`) %>%
+  rename(date = Date, new_tests = `Molecular New`, new_cases = `Molecular Positive New`,
+         new_serology_tests = `Serology New`, new_serology_cases = `Serology Positive New`) %>%
+  mutate(new_serology_tests  = ifelse(new_serology_tests< 100, NA, new_serology_tests)) %>%
+  mutate(date = mdy(date), 
+        PCR =  new_cases/new_tests,
+        Serology = new_serology_cases/new_serology_tests) %>%
+  select(date, PCR, Serology) %>%
+  gather(test, rate, -date) %>%
+  filter(date != max(date) & date >= make_date(2020, 3, 21)) 
+
+tmp %>% ggplot(aes(date, rate, color = test)) +
+    geom_hline(yintercept = 0.05, lty = 2) +
+  geom_line() +
+  geom_point() +
+  scale_y_continuous(labels = scales::percent) +
+  ylab("Positivity rate") +
+  xlab("Date") +
+  labs(title = "Positivity Rate in Massachusettes: PCR versus serology", 
+       caption = "Results included if based on 100 tests or more",
+        color = "Test type")
+ggsave("~/Desktop/PCR-v-Serology.png", width = 6, height = 6/1.6)
+```
 ## Exploración de los datos de Puerto Rico
 
 Los datos de Puerto Rico tienen algunas deficiencias. Por ejemplo los totales reportados semanalmente no cuadran con los totales acumulados reportados:
@@ -149,7 +180,7 @@ pr_by_lab %>%
   geom_line() +
   geom_point() +
   ylab("Fecha") + xlab("Positivos") +  
-  labs(title = "Porciento de pruebas positivas", fill = "Laboratorio") +
+  labs(title = "tasa de positividad", fill = "Laboratorio") +
   scale_y_continuous(labels = scales::percent)
 ```
 

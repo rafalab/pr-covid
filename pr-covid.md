@@ -18,7 +18,9 @@ Massachussets se ha destacado por la gran mejoría y [ayer anunciaron 0
 muertes](https://www.bostonherald.com/2020/06/30/zero-new-coronavirus-deaths-reported-in-massachusetts-after-data-cleaning/)
 por primera vez desde marzo. La epidemióloga del estado usa el
 **porciento**, no el total, de casos positivos por día como el
-instrumento principal de monitoreo.
+instrumento principal de monitoreo. La Organización Mundial de la Salud
+(WHO) aconseja que antes de reabrir, las tasas de positividad deberían
+permanecer en 5% o menos por al menos 14 días.
 
 Aunque el gobierno de Puerto Rico no comparte estos datos, Puerto Rico
 Science Trust (PRST) recoge esta información semanalmente de los
@@ -29,7 +31,7 @@ semanales. Aquí mostramos algunas gráficas.
 
 ## El patrón en Puerto Rico es parecido al de Nueva Zelandia
 
-Las buenas noticias son que, basado en estos datos, parece que lis
+Las buenas noticias son que, basado en estos datos, parece que los
 efectos de la pandemia han sido muy leves en Puerto Rico. En la
 siguiente gráfica vemos los porcentajes de pruebas positivas por semana
 para Massachusetts, Nueva Zelandia y Puerto Rico. Vemos que el patrón en
@@ -55,7 +57,14 @@ preocupantemente.
 
 ![](pr-covid_files/figure-gfm/fl-ma-1.png)<!-- -->
 
-## Exploración de los datos de Puerto Rico
+## La tasa para las pruebas serologicas es diferente
+
+Aquí definimos la tasa de positividad usando casos confirmados con
+pruebas moleculars (PCR). Las pruebas serologicas resultan en tasas
+diferentes. Aquí un ejemplo con Massachusetts:
+
+![](pr-covid_files/figure-gfm/serology-1.png)<!-- --> \#\# Exploración
+de los datos de Puerto Rico
 
 Los datos de Puerto Rico tienen algunas deficiencias. Por ejemplo los
 totales reportados semanalmente no cuadran con los totales acumulados
