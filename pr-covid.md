@@ -29,14 +29,14 @@ semanales. Aquí mostramos algunas gráficas.
 
 ## El patrón en Puerto Rico es parecido al de Nueva Zelandia
 
-Las buenas noticias son que, basado en estos datos, no parece que la
-epidemia fue muy leve en Puerto Rico. En la siguiente gráfica vemos los
-porcentajes de pruebas positivas por semana para Massachusetts, Nueva
-Zelandia y Puerto Rico. Vemos que el patrón en Puerto Rico se asemeja
-más a Nueva Zelandia que a Massachusetts. Noten que los datos para
-Nueva Zelandia incluyen casos probables y confirmados pues eso son los
-datos que proveen, mientras que para Puerto Rico y Massachusetts solo
-incluimos casos confirmados con pruebas PCR.
+Las buenas noticias son que, basado en estos datos, parece que lis
+efectos de la pandemia han sido muy leves en Puerto Rico. En la
+siguiente gráfica vemos los porcentajes de pruebas positivas por semana
+para Massachusetts, Nueva Zelandia y Puerto Rico. Vemos que el patrón en
+Puerto Rico se asemeja más a Nueva Zelandia que a Massachusetts. Noten
+que los datos para Nueva Zelandia incluyen casos probables y confirmados
+pues eso son los datos que proveen, mientras que para Puerto Rico y
+Massachusetts solo incluimos casos confirmados con pruebas PCR.
 
 ![](pr-covid_files/figure-gfm/nz-ma-pr-1.png)<!-- -->
 
