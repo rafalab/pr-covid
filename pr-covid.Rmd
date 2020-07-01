@@ -6,7 +6,7 @@ output: github_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, dpi=300)
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, dpi=600)
 ```
 
 ## Introducción
