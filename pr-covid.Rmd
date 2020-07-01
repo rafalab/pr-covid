@@ -1,0 +1,155 @@
+---
+title: "Monitoreando COVID-19 en Puerto Rico"
+author: "Rafael Irizarry"
+date: "6/30/2020"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+```
+
+## Introducción
+
+De los informes diarios que provee el Departamento de Salud es posible extraer el número de pruebas moleculares positivas de COVID-19 que se reportan diariamente. Desafortunadamente estos datos por si solos no son útiles para monitorear la epidemia pues no sabes si un incremento en casos se debe simplemente al hecho de que se están haciendo más pruebas. Por lo tanto, necesitamos saber también cuantas pruebas salieron negativas, no solo las positivas. 
+
+A pesar de ser uno de los peores estados afectados en EEUU,
+Massachussets se ha destacado por la gran mejoría y [ayer anunciaron 0 muertes](https://www.bostonherald.com/2020/06/30/zero-new-coronavirus-deaths-reported-in-massachusetts-after-data-cleaning/) por primera vez desde marzo.
+La epidemióloga del estado usa el **porciento**, no el total, de casos positivos por día como el instrumento principal de monitoreo.
+
+Aunque el gobierno de Puerto Rico no comparte estos datos, Puerto Rico Science Trust (PRST) recoge esta información semanalmente de los laboratorios privados, los cuales hacen la gran mayoría de pruebas en Puerto Rico. El PRST ha compartido estos datos y por primera vez puedo calcular el porciento de casos positivos, aunque no son diarios sino semanales. Aquí mostramos algunas gráficas.
+
+## El patrón en Puerto Rico es parecido al de Nueva Zelandia 
+
+Las buenas noticias son que, basado en estos datos, no parece que la epidemia fue muy leve en Puerto Rico. En la siguiente gráfica vemos los porcentajes de pruebas positivas por semana para Massachusetts, Nueva Zelandia y Puerto Rico. Vemos que el patrón en Puerto Rico se asemeja más a Nueva Zelandia que a Massachusetts. Noten que los datos para Nueva Zelandia incluyen casos probables y confirmados pues eso son los datos que proveen, mientras que para Puerto Rico y Massachusetts solo incluimos casos confirmados con pruebas PCR.
+
+```{r nz-ma-pr}
+library(tidyverse)
+library(readxl)
+library(lubridate)
+
+load("rdas/pr.rda")
+
+ma <- read_csv("data/TestingByDate.csv") %>% 
+  select(Date, `Molecular New`, `Molecular Positive New`) %>%
+  rename(date = Date, new_tests = `Molecular New`, new_cases = `Molecular Positive New`) %>%
+  mutate(date = mdy(date), location = "Massachusetts") %>%
+  filter(date != max(date) & date >= make_date(2020, 3, 15)) %>%
+  group_by(location, date = floor_date(date, unit = "week")) %>%
+  summarize(new_tests = sum(new_tests, na.rm = TRUE),
+            new_cases = sum(new_cases, na.rm = TRUE),
+            n = n()) %>%
+  filter(n == 7) %>%
+  select(-n)
+
+nz <- read_csv("https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/owid-covid-data.csv") %>% 
+  filter(location == "New Zealand") %>% 
+  select(names(pr)) %>%
+  mutate(date = floor_date(date, unit = "week")) %>%
+  group_by(location, date) %>%
+  summarize(new_tests = sum(new_tests, na.rm = TRUE),
+            new_cases = sum(new_cases, na.rm = TRUE),
+            total_tests = sum(total_tests, na.rm = TRUE),
+            total_cases = sum(new_tests, na.rm = TRUE),
+            n = n()) %>%
+  ungroup() %>%
+  filter(n==7) %>%
+  select(-n) %>%
+  filter(date >= make_date(2020, 3, 15))
+
+dat <- bind_rows(pr, ma, nz)
+
+dslabs::ds_theme_set()
+dat %>% ggplot(aes(date, new_cases/new_tests, color = location)) +
+  geom_point() +
+  geom_line() +
+  xlab("Fecha") + ylab("Porciento de Pruebas Positivas") + 
+  labs(title = "Porciento de pruebas positivas", color = "Lugar") +
+  scale_y_continuous(labels = scales::percent)
+```
+
+Aunque el porciento en Puerto Rico está bien bajo, es importante continuar monitoreando estos datos. Preferiblemente con datos diarios en vez 
+semanales. Noten que en la última semana se ven un pequeño aumento en el porciento para Puerto Rico. Si esto continua, pues nos debemos preocupar.
+
+
+## Este monitoreo demuestra problemas en Florida
+Como ejemplo de cómo esto monitoreo puede ayudar, mostramos los datos de Florida y los comparamos a los de Massachusetts donde la situación a mejorado mucho. Vemos que en Florido el porciento ha estado aumentando preocupantemente. 
+
+```{r fl-ma}
+ma <- read_csv("data/TestingByDate.csv") %>% 
+  select(Date, `Molecular New`, `Molecular Positive New`) %>%
+  rename(date = Date, new_tests = `Molecular New`, new_cases = `Molecular Positive New`) %>%
+  mutate(date = mdy(date), state= "Massachusetts") %>%
+  filter(date != max(date) & date >= make_date(2020, 3, 21)) 
+
+fl <-  read_csv("https://covidtracking.com/api/v1/states/daily.csv") %>% 
+  filter(state == "FL") %>%
+  mutate(date = ymd(date), state = "Florida") %>%
+  arrange(date) %>%
+  rename(new_tests = totalTestResultsIncrease,
+         new_cases = positiveIncrease) %>%
+  select(state, date, new_tests, new_cases) %>%
+  filter(date >= make_date(2020, 3, 21))
+
+dat <- bind_rows(ma, fl)
+dat %>% 
+  mutate(state = factor(state, levels = c("Massachusetts", "Florida"))) %>%
+    ggplot(aes(date, new_cases/new_tests)) +
+  geom_point() +
+  geom_line() +
+  xlab("Fecha") + ylab("Porciento de Pruebas Positivas") + 
+  labs(title = "Porciento de pruebas positivas", color = "Estado") +
+  scale_y_continuous(labels = scales::percent) +
+  facet_wrap(~state)
+```
+
+
+## Exploración de los datos de Puerto Rico
+
+Los datos de Puerto Rico tienen algunas deficiencias. Por ejemplo los totales reportados semanalmente no cuadran con los totales acumulados reportados:
+
+```{r}
+
+load("rdas/pr_by_lab.rda")
+## check on totals computed two different ways
+pr_by_lab %>% group_by(laboratory) %>% 
+  summarize(total_acumulado_calculado = sum(new_tests, na.rm=TRUE),  
+            total_acumulado_reportado = pmax(0, max(total_tests, na.rm = TRUE))) %>% 
+  arrange(desc(total_acumulado_calculado)) %>%
+  knitr::kable()
+```
+
+
+En la siguiente gráfica vemos como las pruebas acumuladas han aumentado hasta sobre 20,000 por semana. 
+
+```{r total-test-by-lab}
+## Accumulated totals for Puerto Rico by week/lab
+pr_by_lab %>%
+  ggplot(aes(date, new_tests, fill = laboratory)) +
+  geom_bar(stat = "identity") +
+  xlab("Fecha") + ylab("Pruebas") + 
+  labs(title = "Total de pruebas por semana\nLaboratorios privados en Puerto Rico", fill = "Laboratorio")
+```
+
+Cuando observamos los casos reportados por laboratorio vemos que algunos laboratorios parecen no haber reportado todas las semanas.
+
+```{r cases-by-lab}
+pr_by_lab %>%
+  ggplot(aes(date, new_cases, fill = laboratory)) +
+  geom_bar(stat = "identity")  +
+  ylab("Fecha") + xlab("Positivos") + 
+  labs(title = "Casos nuevos por semana en Puerto Rico", fill = "Laboratorio")
+```
+
+Finalmente vemos consistencia en los porcentajes de positividad calculados con los datos de cada laboratorio:
+
+```{r percent-positive-by-lab}
+pr_by_lab %>%
+  ggplot(aes(date, new_cases/new_tests, color = laboratory)) +
+  geom_line() +
+  geom_point() +
+  ylab("Fecha") + xlab("Positivos") +  
+  labs(title = "Porciento de pruebas positivas", fill = "Laboratorio") +
+  scale_y_continuous(labels = scales::percent)
+```
+
