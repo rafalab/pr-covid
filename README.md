@@ -1,3 +1,7 @@
+Pueden ver un resumen aquí: [https://github.com/rafalab/pr-covid/blob/master/pr-covid.md](https://github.com/rafalab/pr-covid/blob/master/pr-covid.md)
+
+y el codigo aquí [https://github.com/rafalab/pr-covid/blob/master/pr-covid.Rmd](https://github.com/rafalab/pr-covid/blob/master/pr-covid.Rmd)
+
 Para extaer los datos de Puerto Rico pueden correr el archivo wrangle.R. Este extrae los datos del archivo `20_0615-Grafica y Tablas Pruebas Moleculares COVID- semana 15 junio.xlsx`
 
 Para obtener los datos de Massachusetts descargen este archivo zip
