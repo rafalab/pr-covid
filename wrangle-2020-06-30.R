@@ -55,7 +55,7 @@ pr_by_lab <- dat %>% group_by(laboratory) %>%
   filter(n>0 & laboratory != "HRP" & date < max(date)) %>%
   select(-n)
 
-save(pr_by_lab, file = "rdas/pr_by_lab.rda")
+save(pr_by_lab, file = "rdas/pr_by_lab-2020-06-30.rda")
 
 pr <- pr_by_lab %>% 
   group_by(date) %>%
@@ -66,5 +66,5 @@ pr <- pr_by_lab %>%
          location = "Puerto Rico") %>%
   filter(!is.na(new_cases))
 
-save(pr, file = "rdas/pr.rda")
+save(pr, file = "rdas/pr-2020-06-30.rda")
 

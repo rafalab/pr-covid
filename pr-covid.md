@@ -93,3 +93,19 @@ Finalmente vemos consistencia en los porcentajes de positividad
 calculados con los datos de cada laboratorio:
 
 ![](pr-covid_files/figure-gfm/percent-positive-by-lab-1.png)<!-- -->
+
+## Actualización con datos 2020-07-06
+
+Solo dos laboratoris reportaron datos: Toledo y Ponce. Aquí la tasa de
+positividad por semana basada en esos dos casos
+
+![](pr-covid_files/figure-gfm/pr-2020-07-06-1.png)<!-- -->
+
+Estos son los datos para todos los laboratorios
+
+![](pr-covid_files/figure-gfm/percent-positive-by-lab-2-1.png)<!-- -->
+
+La subida en Puerto Rico ocurre alrededor de dos semanas de la subida en
+Florida, EEUU.
+
+![](pr-covid_files/figure-gfm/fl-1.png)<!-- -->

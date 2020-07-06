@@ -28,7 +28,7 @@ library(tidyverse)
 library(readxl)
 library(lubridate)
 
-load("rdas/pr.rda")
+load("rdas/pr-2020-06-30.rda")
 
 ma <- read_csv("data/TestingByDate.csv") %>% 
   select(Date, `Molecular New`, `Molecular Positive New`) %>%
@@ -141,7 +141,7 @@ Los datos de Puerto Rico tienen algunas deficiencias. Por ejemplo los totales re
 
 ```{r}
 
-load("rdas/pr_by_lab.rda")
+load("rdas/pr_by_lab-2020-06-30.rda")
 ## check on totals computed two different ways
 pr_by_lab %>% group_by(laboratory) %>% 
   summarize(total_acumulado_calculado = sum(new_tests, na.rm=TRUE),  
@@ -168,7 +168,7 @@ Cuando observamos los casos reportados por laboratorio vemos que algunos laborat
 pr_by_lab %>%
   ggplot(aes(date, new_cases, fill = laboratory)) +
   geom_bar(stat = "identity")  +
-  ylab("Fecha") + xlab("Positivos") + 
+  xlab("Fecha") + ylab("Tasa de Positividad") + 
   labs(title = "Casos nuevos por semana en Puerto Rico", fill = "Laboratorio")
 ```
 
@@ -182,5 +182,64 @@ pr_by_lab %>%
   ylab("Fecha") + xlab("Positivos") +  
   labs(title = "tasa de positividad", fill = "Laboratorio") +
   scale_y_continuous(labels = scales::percent)
+```
+
+
+## Actualización con datos 2020-07-06
+
+Solo dos laboratoris reportaron datos: Toledo y Ponce. Aquí la tasa de positividad por semana basada en esos dos casos
+
+```{r pr-2020-07-06}
+load("rdas/pr-2020-07-06.rda")
+
+dslabs::ds_theme_set()
+pr %>% ggplot(aes(date, new_cases/new_tests)) +
+  geom_hline(yintercept = 0.05, lty = 2) +
+  geom_point() +
+  geom_line() +
+  xlab("Semana comenzando en este día") + ylab("Tasa de positividad") + 
+  labs(title = "Tasa de positividad", caption = "Basado en datos de Laboratorios Toledo y Ponce") +
+  scale_y_continuous(labels = scales::percent)
+ggsave("~/Desktop/tasa-positividad.png", width = 6, height = 6/1.6)
+```
+
+Estos son los datos para todos los laboratorios
+
+```{r percent-positive-by-lab-2}
+load("rdas/pr_by_lab-2020-07-06.rda")
+
+pr_by_lab %>%
+  ggplot(aes(date, new_cases/new_tests, color = laboratory)) +
+  geom_hline(yintercept = 0.05, lty = 2) +
+  geom_line() +
+  geom_point() +
+  xlab("Fecha") + ylab("Tasa de Positividad") +  
+  labs(title = "Tasa de positividad", color = "Laboratorio") +
+  scale_y_continuous(labels = scales::percent)
+ggsave("~/Desktop/tasa-positividad-por-lab.png", width = 6, height = 6/1.6)
+
+```
+
+La subida en Puerto Rico ocurre alrededor de dos semanas de la subida en Florida, EEUU.
+
+```{r fl}
+fl <-  read_csv("https://covidtracking.com/api/v1/states/daily.csv") %>% 
+  filter(state == "FL") %>%
+  mutate(date = ymd(date)) %>%
+  arrange(date) %>%
+  rename(new_tests = totalTestResultsIncrease,
+         new_cases = positiveIncrease) %>%
+  select(state, date, new_tests, new_cases) %>%
+  filter(date >= make_date(2020, 3, 21))
+
+fl %>% 
+  ggplot(aes(date, new_cases/new_tests)) +
+  geom_hline(yintercept = 0.05, lty = 2) +
+  geom_point() +
+  xlab("Fecha") + ylab("Tasa de positividad") + 
+  labs(title = "Tasa de positividad en Florida") +
+  scale_y_continuous(labels = scales::percent) +
+  geom_smooth(method = "loess", span = 21/nrow(fl), method.args = list(degree = 1, familty = "symmetric")) 
+ggsave("~/Desktop/tasa-florida.png", width = 6, height = 6/1.6)
 ```
 
