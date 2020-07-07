@@ -63,8 +63,9 @@ Aquí definimos la tasa de positividad usando casos confirmados con
 pruebas moleculars (PCR). Las pruebas serologicas resultan en tasas
 diferentes. Aquí un ejemplo con Massachusetts:
 
-![](pr-covid_files/figure-gfm/serology-1.png)<!-- --> \#\# Exploración
-de los datos de Puerto Rico
+![](pr-covid_files/figure-gfm/serology-1.png)<!-- -->
+
+## Exploración de los datos de Puerto Rico
 
 Los datos de Puerto Rico tienen algunas deficiencias. Por ejemplo los
 totales reportados semanalmente no cuadran con los totales acumulados

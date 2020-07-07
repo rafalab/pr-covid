@@ -67,7 +67,7 @@ dat %>% ggplot(aes(date, new_cases/new_tests, color = location)) +
   xlab("Semana") + ylab("Tasa de positividad") + 
   labs(title = "Tasa de positividad", color = "Lugar") +
   scale_y_continuous(labels = scales::percent)
-ggsave("~/Desktop/tasa-positividad.png", width = 6, height = 6/1.6)
+#ggsave("~/Desktop/tasa-positividad.png", width = 6, height = 6/1.6)
 ```
 
 Aunque el porciento en Puerto Rico está bien bajo, es importante continuar monitoreando estos datos. Preferiblemente con datos diarios en vez 
@@ -133,8 +133,9 @@ tmp %>% ggplot(aes(date, rate, color = test)) +
   labs(title = "Positivity Rate in Massachusettes: PCR versus serology", 
        caption = "Results included if based on 100 tests or more",
         color = "Test type")
-ggsave("~/Desktop/PCR-v-Serology.png", width = 6, height = 6/1.6)
+#ggsave("~/Desktop/PCR-v-Serology.png", width = 6, height = 6/1.6)
 ```
+
 ## Exploración de los datos de Puerto Rico
 
 Los datos de Puerto Rico tienen algunas deficiencias. Por ejemplo los totales reportados semanalmente no cuadran con los totales acumulados reportados:
@@ -200,7 +201,7 @@ pr %>% ggplot(aes(date, new_cases/new_tests)) +
   xlab("Semana comenzando en este día") + ylab("Tasa de positividad") + 
   labs(title = "Tasa de positividad", caption = "Basado en datos de Laboratorios Toledo y Ponce") +
   scale_y_continuous(labels = scales::percent)
-ggsave("~/Desktop/tasa-positividad.png", width = 6, height = 6/1.6)
+#ggsave("~/Desktop/tasa-positividad.png", width = 6, height = 6/1.6)
 ```
 
 Estos son los datos para todos los laboratorios
@@ -216,7 +217,7 @@ pr_by_lab %>%
   xlab("Fecha") + ylab("Tasa de Positividad") +  
   labs(title = "Tasa de positividad", color = "Laboratorio") +
   scale_y_continuous(labels = scales::percent)
-ggsave("~/Desktop/tasa-positividad-por-lab.png", width = 6, height = 6/1.6)
+#ggsave("~/Desktop/tasa-positividad-por-lab.png", width = 6, height = 6/1.6)
 
 ```
 
@@ -240,6 +241,6 @@ fl %>%
   labs(title = "Tasa de positividad en Florida") +
   scale_y_continuous(labels = scales::percent) +
   geom_smooth(method = "loess", span = 21/nrow(fl), method.args = list(degree = 1, familty = "symmetric")) 
-ggsave("~/Desktop/tasa-florida.png", width = 6, height = 6/1.6)
+#ggsave("~/Desktop/tasa-florida.png", width = 6, height = 6/1.6)
 ```
 
