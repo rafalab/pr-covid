@@ -1,8 +1,8 @@
 ## Informes
 
-Pueden ver un resumen [aquí](https://github.com/rafalab/pr-covid/blob/master/pr-covid.md](https://github.com/rafalab/pr-covid/blob/master/pr-covid.md)
+Pueden ver un resumen [aquí](https://github.com/rafalab/pr-covid/blob/master/pr-covid.md)
 
-y el codigo [aquí](https://github.com/rafalab/pr-covid/blob/master/pr-covid.Rmd](https://github.com/rafalab/pr-covid/blob/master/pr-covid.Rmd)
+y el codigo [aquí](https://github.com/rafalab/pr-covid/blob/master/pr-covid.Rmd)
 
 La charla presentada al PRPHT está [aquí](https://rafalab.github.io/pr-covid/prpht.html).
 
