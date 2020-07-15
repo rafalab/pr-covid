@@ -188,7 +188,7 @@ pr_by_lab %>%
 
 ## Actualización con datos 2020-07-06
 
-Solo dos laboratoris reportaron datos: Toledo y Ponce. Aquí la tasa de positividad por semana basada en esos dos casos
+Solo dos laboratorios reportaron datos: Toledo y Ponce. Aquí la tasa de positividad por semana basada en esos dos casos
 
 ```{r pr-2020-07-06}
 load("rdas/pr-2020-07-06.rda")
@@ -242,5 +242,61 @@ fl %>%
   scale_y_continuous(labels = scales::percent) +
   geom_smooth(method = "loess", span = 21/nrow(fl), method.args = list(degree = 1, familty = "symmetric")) 
 #ggsave("~/Desktop/tasa-florida.png", width = 6, height = 6/1.6)
+```
+
+
+## Actualización con datos 2020-07-12
+
+Esta es una actualización basad en datos proveidos el 12 de julio. Ahora tenemos mas laboratorios completando los datos.
+
+```{r pr-2020-07-12}
+load("rdas/pr-2020-07-12.rda")
+
+dslabs::ds_theme_set()
+pr %>% ggplot(aes(date, new_cases/new_tests)) +
+  geom_hline(yintercept = 0.05, lty = 2) +
+  geom_point() +
+  geom_line() +
+  xlab("Semana comenzando en este día") + ylab("Tasa de positividad") + 
+  labs(title = "Tasa de positividad", caption = "Basado en datos de Laboratorios Toledo y Ponce") +
+  scale_y_continuous(labels = scales::percent)
+```
+
+Si usamos los datos reportados por semana, en vez de los acumulados, nos da un resultado mas alto:
+
+```{r}
+load("rdas/pr_by_lab-2020-07-12.rda")
+pr_by_lab %>%
+  group_by(date) %>%
+  summarize(total_cases = sum(total_cases, na.rm=TRUE),
+            total_tests = sum(total_tests, na.rm=TRUE),
+            new_cases = sum(new_cases, na.rm=TRUE),
+            new_tests = sum(new_tests, na.rm=TRUE)) %>%
+  mutate(location = "Puerto Rico") %>%
+  filter(!is.na(new_cases)) %>%ggplot(aes(date, new_cases/new_tests)) +
+  geom_hline(yintercept = 0.05, lty = 2) +
+  geom_point() +
+  geom_line() +
+  xlab("Semana comenzando en este día") + ylab("Tasa de positividad") + 
+  labs(title = "Tasa de positividad", caption = "Basado en datos de Laboratorios Toledo y Ponce") +
+  scale_y_continuous(labels = scales::percent)
+```
+
+
+Estos son los datos para todos los laboratorios. Notamos que Quest tiene los valores más pequeños.
+
+
+```{r percent-positive-by-lab-3}
+load("rdas/pr_by_lab-2020-07-12.rda")
+
+pr_by_lab %>%
+  ggplot(aes(date, new_cases/new_tests, color = laboratory)) +
+  geom_hline(yintercept = 0.05, lty = 2) +
+  geom_line() +
+  geom_point() +
+  xlab("Fecha") + ylab("Tasa de Positividad") +  
+  labs(title = "Tasa de positividad", color = "Laboratorio") +
+  scale_y_continuous(labels = scales::percent)
+
 ```
 

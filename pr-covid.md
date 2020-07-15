@@ -97,7 +97,7 @@ calculados con los datos de cada laboratorio:
 
 ## Actualización con datos 2020-07-06
 
-Solo dos laboratoris reportaron datos: Toledo y Ponce. Aquí la tasa de
+Solo dos laboratorios reportaron datos: Toledo y Ponce. Aquí la tasa de
 positividad por semana basada en esos dos casos
 
 ![](pr-covid_files/figure-gfm/pr-2020-07-06-1.png)<!-- -->
@@ -110,3 +110,20 @@ La subida en Puerto Rico ocurre alrededor de dos semanas de la subida en
 Florida, EEUU.
 
 ![](pr-covid_files/figure-gfm/fl-1.png)<!-- -->
+
+## Actualización con datos 2020-07-12
+
+Esta es una actualización basad en datos proveidos el 12 de julio. Ahora
+tenemos mas laboratorios completando los datos.
+
+![](pr-covid_files/figure-gfm/pr-2020-07-12-1.png)<!-- -->
+
+Si usamos los datos reportados por semana, en vez de los acumulados, nos
+da un resultado mas alto:
+
+![](pr-covid_files/figure-gfm/unnamed-chunk-2-1.png)<!-- -->
+
+Estos son los datos para todos los laboratorios. Notamos que Quest tiene
+los valores más pequeños.
+
+![](pr-covid_files/figure-gfm/percent-positive-by-lab-3-1.png)<!-- -->
