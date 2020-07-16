@@ -7,15 +7,12 @@ day_received <- make_date(2020, 7, 14)
 fn <- "data/Bioportal\ molecular\ tests\ 7-14-2020.xlsx"
 dat <- read_xlsx(fn) 
 dat <- mutate(dat, date = mdy(collectedDate)) %>%
-  mutate(originaresult = result,
-         result = tolower(result)) %>%
+  mutate(result = tolower(result)) %>%
   mutate(result = case_when(str_detect(result, "igm") ~ "other",
                             str_detect(result, "positive") ~ "positive",
                             str_detect(result, "negative") ~ "negative",
                             result == "not detected" ~ "negative",
-                            TRUE ~ "other")) %>% 
-  select(-originaresult)
-
+                            TRUE ~ "other")) 
 ## Impute missing dates
 dat <- dat %>% mutate(date = if_else(is.na(date), mdy(dat$reportedDate) - days(2),  date))
 
