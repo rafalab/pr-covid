@@ -35,7 +35,7 @@ Convencerlos de:
 
 * La utilidad de visualizar datos
 * Visualizar datos es más poderoso que usar modelos matemáticos 
-* No basar decisiones en periodismo sensacionalista
+* No basar decisiones en anecdotas sensacionalistas
 * Organizar los datos sistemáticamente 
 * No usar Microsoft Excel
 

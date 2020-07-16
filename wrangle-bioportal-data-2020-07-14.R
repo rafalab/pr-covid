@@ -6,6 +6,7 @@ day_received <- make_date(2020, 7, 14)
 
 fn <- "data/Bioportal\ molecular\ tests\ 7-14-2020.xlsx"
 dat <- read_xlsx(fn) 
+
 dat <- mutate(dat, date = mdy(collectedDate)) %>%
   mutate(result = tolower(result)) %>%
   mutate(result = case_when(str_detect(result, "igm") ~ "other",
