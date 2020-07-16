@@ -629,6 +629,7 @@ make_pr_plot(5)
 * Wanda Llovet Díaz (Registro Demográfico)
 * Marcos López Casillas (PRST)
 * José Rodriguez Orenge (PRST)
+* Daniel Colón Ramos (Yale)
 * Caroline Buckee, Michael Mina, Marc Lipsitch (Harvard)
 * Natalie Dean (University of Florida)
 

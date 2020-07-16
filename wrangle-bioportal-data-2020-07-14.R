@@ -23,6 +23,8 @@ dat <- dat %>%
   filter(year(date) == 2020 & date <= day_received) %>%
   arrange(date)
 
+## We look at this table to decide first and last day
+## Often the last days too few tests
 if(FALSE){
   dat %>% 
     group_by(date) %>%
