@@ -24,7 +24,8 @@ dat <- dat %>%
   arrange(date)
 
 ## We look at this table to decide first and last day
-## Often the last days too few tests
+## Often the last days very few tests
+## below you can see our choice for this particular dataset
 if(FALSE){
   dat %>% 
     group_by(date) %>%
