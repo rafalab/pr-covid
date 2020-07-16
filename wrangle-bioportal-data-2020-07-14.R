@@ -19,7 +19,7 @@ dat <- dat %>% mutate(date = if_else(is.na(date), mdy(dat$reportedDate) - days(2
 
 ## Remove inconsistent dates
 dat <- dat %>% 
-  mutate(date = if_else(year(date) != 2020 | date > day_received, mdy(dat$reportedDate) - days(2),  date)) %>%
+  mutate(date = if_else(year(date) != 2020 | date > day_received, mdy(reportedDate) - days(2),  date)) %>%
   filter(year(date) == 2020 & date <= day_received) %>%
   arrange(date)
 
