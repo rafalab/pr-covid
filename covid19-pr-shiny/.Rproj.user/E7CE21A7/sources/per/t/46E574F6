@@ -1,0 +1,25 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1594931022454.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "3162565521",
+    "id" : "46E574F6",
+    "lastKnownWriteTime" : 1594963118,
+    "last_content_update" : 1594963118681,
+    "path" : "~/Desktop/pruebas-pr.R",
+    "project_path" : null,
+    "properties" : {
+        "cursorPosition" : "62,0",
+        "scrollLine" : "0"
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 4,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

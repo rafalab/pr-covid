@@ -1,0 +1,87 @@
+a <- dat %>%
+  filter(year(reported) == 2020, year(collected) == 2020) %>%
+  filter(reported <= today(), collected <= today()) %>%
+  mutate(lag = reported - collected,
+         lag = as.numeric(lag)) %>%
+  select(lag)
+  # filter(abs(lag) <= 500) %>%
+  
+a <- dat %>%
+  filter(year(reported) == 2020, year(collected) == 2020) %>%
+  filter(reported <= today(), collected <= today()) %>%
+  mutate(lag = reported - collected,
+         lag = as.numeric(lag)) %>%
+  select(reported, lag) %>%
+  unique()
+
+
+a %>%
+  filter(abs(lag) <= 50) %>%
+  arrange(desc(abs(lag)))
+a %>%
+  # filter(abs(lag) <= 50) %>%
+  ggplot(aes(lag)) +
+  geom_histogram(color="black", binwidth = 1) +
+  theme_bw()
+
+
+dat %>%
+  group_by(reported, municipio) %>%
+  summarize(number_test = n()) %>%
+  ungroup() %>%
+  ggplot(aes(reported, number_test, group=municipio)) +
+  geom_point() +
+  scale_y_continuous(labels = scales::comma,
+                     trans = "log10") +
+  scale_x_date(date_labels = "%B %d") +
+  theme_bw()
+
+  
+
+
+
+tmp_dat <- dat %>%
+  group_by(reported) %>%
+  summarize(number_test = n()) %>%
+  ungroup()
+  
+tmp_dat %>%
+  ggplot(aes(reported, number_test)) +
+  geom_point(size=2, alpha = 0.40) +
+  geom_smooth(formula = y ~ x,
+              method  = "loess",
+              size    = 0.60,
+              color   = "red3",
+              fill    = "red3",
+              alpha   = 0.20,
+              span    = 21/nrow(tmp_dat),
+              method.args = list(degree = 1)) +
+  ylab("Número de pruebas") +
+  xlab("Fecha") +
+  ggtitle("Número de Pruebas Diarias en Puerto Rico") +
+  scale_y_continuous(labels = scales::comma) +
+  scale_x_date(date_labels = "%B %d") +
+  theme_bw()
+
+dat %>%
+  group_by(reported, result) %>%
+  summarize(number_test = n()) %>%
+  ungroup() %>%
+  ggplot(aes(reported, number_test, color=result, fill=result)) +
+  geom_point(size=2, alpha = 0.20) +
+  geom_smooth(method  = "loess",
+              size    = 0.60,
+              alpha   = 0.40,
+              span    = 21/nrow(tmp_dat),
+              method.args = list(degree = 1)) +
+  ylab("Número de pruebas") +
+  xlab("Fecha") +
+  ggtitle("Número de Pruebas Diarias en Puerto Rico") +
+  scale_y_continuous(labels = scales::comma, trans = "log10") +
+  scale_color_manual(name = "Result:",
+                     values = c("#cb181d", "#252525", "#4292c6"),
+                     labels = c("Negative", "Positive", "Inconclusive")) +
+  scale_fill_manual(name = "Result:",
+                    values = c("#cb181d", "#252525", "#4292c6"),
+                    labels = c("Negative", "Positive", "Inconclusive")) +
+  theme_bw()

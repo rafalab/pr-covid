@@ -1,0 +1,25 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1594930744612.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "7|38|9|4|\n10|32|12|4|\n16|55|24|4|\n27|44|66|4|\n69|45|133|4|\n136|43|190|4|\n193|54|255|4|\n",
+    "hash" : "1497730842",
+    "id" : "228E4555",
+    "lastKnownWriteTime" : 1594966087,
+    "last_content_update" : 1594966087214,
+    "path" : "~/Desktop/covid19-pr-shiny/server.R",
+    "project_path" : "server.R",
+    "properties" : {
+        "cursorPosition" : "269,5",
+        "scrollLine" : "11"
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 1,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

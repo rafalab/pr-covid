@@ -1,0 +1,99 @@
+# -- Libraries
+library(tidyverse)
+library(lubridate)
+library(splines)
+library(httr)
+
+# -- Getting url
+url <- "https://bioportal.salud.gov.pr/api/administration/reports/minimal-info-unique-tests"
+
+# -- HTTP get
+http_get <- GET(url)
+
+# -- Turning object into json
+json <- content(http_get)
+
+# -- Wrangle
+dat <- do.call(rbind, json) %>% 
+  as_tibble() %>%
+  mutate_all(as.character) %>%
+  setNames(c("collected", "reported", "agegroup", "test_type", "result", "municipio", "created_at")) %>%
+  mutate_all(as.character) %>%
+  mutate(agegroup   = gsub(" to ", "-", agegroup),
+         collected  = gsub("/", "-", collected),
+         reported   = gsub("/", "-", reported),
+         created_at = gsub("/", "-", created_at),
+         collected  = mdy(collected),
+         reported   = mdy(reported),
+         created_at = mdy_hm(created_at),
+         municipio  = ifelse(municipio=="NULL", NA, municipio),
+         result     = ifelse(result=="NULL", NA, result),
+         test_type  = ifelse(test_type=="NULL", NA, test_type),
+         agegroup   = ifelse(agegroup %in% c("NULL", "N/A"), NA, agegroup),
+         result     = tolower(result),
+         result     = case_when(grepl("positive", result) ~ "positive",
+                                grepl("negative", result) ~ "negative",
+                                result == "not detected" ~ "negative",
+                                TRUE ~ "other")) %>%
+         filter(year(reported) == 2020, year(collected) == 2020) %>%
+         arrange(reported, collected)
+
+# -- Observed tasa de positividad
+rate <- dat %>%
+  group_by(reported, result) %>%
+  summarize(number_test = n()) %>%
+  ungroup() %>%
+  complete(reported, result, fill = list(number_test = 0)) %>%
+  spread(result, number_test) %>%
+  mutate(rate = positive / (positive+other+negative)) %>%
+  select(reported, rate)
+
+dat <- dat %>%
+  slice(1:5000)
+
+unique(dat$result)
+save(dat, file = "~/Desktop/covid19-pr-shiny/rdas/pruebas-pr.rda", compress = "xz")
+
+
+
+
+
+
+
+# -- Reported dates
+dates <- dat$reported
+
+# -- Outcome
+Y <- mutate(dat, y = ifelse(result == "positive", 1, 0))$y
+
+# -- Design matrix for weekday effect
+w            <- factor(wday(dates))
+contrasts(w) <- contr.sum(length(levels(w)), contrasts = TRUE)
+x_w          <- model.matrix(~w)
+i_w <- 1:ncol(x_w)
+  
+# -- Design matrix for splines
+x_s <- ns(dates, df = 3, intercept = FALSE)
+i_s <- ncol(x_w) + 1:ncol(x_s)
+
+# -- Design matrix
+X <- cbind(x_w, x_s)
+
+# -- Fitting model 
+fit  <- glm(Y ~ -1 + X, family = "binomial")
+beta <- coef(fit)
+
+
+# -- Helper functions
+logit <- function(x) { log(x / (1-x)) }
+expit <- function(x) { 1/ (1 + exp(-x))  }
+
+
+a <- X[, i_s] %*% beta[i_s]
+a <- expit(a)
+tibble(a, dates) %>%
+  unique() %>%
+  ggplot(aes(dates, a)) +
+  geom_hline(yintercept = 0.05, lty=2, color="gray") +
+  geom_line() +
+  theme_bw()
