@@ -10,9 +10,11 @@ shinyUI(fluidPage(theme = shinytheme("sandstone"),
     # Sidebar with a slider input for number of bins
     sidebarLayout(
         sidebarPanel(
+            div("Este botón actualiza automaticamente los datos usando el", a("API", href="https://bioportal.salud.gov.pr/api/administration/reports/minimal-info-unique-tests"), "del Departamento de Salud. Esto tarda unos minutos."),
             actionButton("do", "Presiona para actualizar datos"),
             br(),
             br(),
+            div("Este botón descarga los datos del", a("API", href="https://bioportal.salud.gov.pr/api/administration/reports/minimal-info-unique-tests"), "ya limpios."),
             downloadButton("downloadData", "Download")
         ),
 
@@ -26,8 +28,7 @@ shinyUI(fluidPage(theme = shinytheme("sandstone"),
                 
                 # -- Panel 2
                 tabPanel("Tasa de Positividad",
-                         plotlyOutput("tasa_positividad"),
-                         verbatimTextOutput("nText")), 
+                         plotlyOutput("tasa_positividad")), 
                 
                 # -- Panel 3
                 tabPanel("Número de Pruebas",

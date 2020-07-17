@@ -1,8 +1,4 @@
-# -- Libraries
-library(tidyverse)
-library(lubridate)
-library(splines)
-library(httr)
+source("init.R")
 
 # -- Getting url
 url <- "https://bioportal.salud.gov.pr/api/administration/reports/minimal-info-unique-tests"
@@ -37,6 +33,7 @@ dat <- do.call(rbind, json) %>%
                                 TRUE ~ "other")) %>%
          filter(year(reported) == 2020, year(collected) == 2020) %>%
          arrange(reported, collected)
+save(dat, file = "rdas/pruebas-pr.rda", compress = "xz")
 
 # -- Observed tasa de positividad
 rate <- dat %>%
@@ -48,52 +45,91 @@ rate <- dat %>%
   mutate(rate = positive / (positive+other+negative)) %>%
   select(reported, rate)
 
-dat <- dat %>%
-  slice(1:5000)
+# -- Code to fit the model 
+df <- dat %>%
+  group_by(reported) %>%
+  mutate(n = n()) %>%
+  ungroup() %>%
+  group_by(reported, result) %>%
+  mutate(y = n()) %>%
+  ungroup() %>%
+  filter(result == "positive") %>%
+  select(y, n, reported) %>%
+  unique() %>%
+  rename(x = reported)
 
-unique(dat$result)
-save(dat, file = "~/Desktop/covid19-pr-shiny/rdas/pruebas-pr.rda", compress = "xz")
-
-
-
-
-
-
-
-# -- Reported dates
-dates <- dat$reported
-
-# -- Outcome
-Y <- mutate(dat, y = ifelse(result == "positive", 1, 0))$y
+# -- Extracting from df
+x <- df$x
+y <- df$y
+n <- df$n
 
 # -- Design matrix for weekday effect
-w            <- factor(wday(dates))
+w            <- factor(wday(x))
 contrasts(w) <- contr.sum(length(levels(w)), contrasts = TRUE)
 x_w          <- model.matrix(~w)
 i_w <- 1:ncol(x_w)
-  
+
 # -- Design matrix for splines
-x_s <- ns(dates, df = 3, intercept = FALSE)
+x_s <- ns(x, df = 7, intercept = FALSE)
+# x_s <- sweep(x_s, 2, colMeans(x_s))
 i_s <- ncol(x_w) + 1:ncol(x_s)
 
 # -- Design matrix
 X <- cbind(x_w, x_s)
 
 # -- Fitting model 
-fit  <- glm(Y ~ -1 + X, family = "binomial")
+fit  <- glm(cbind(y, n-y) ~ -1 + X, family = "binomial")
+summary(fit)
 beta <- coef(fit)
 
+# -- Computing probabilities
+probs <- X[, i_s] %*% beta[i_s]
+se    <- sqrt(diag(X[, i_s] %*% summary(fit)$cov.scaled[i_s, i_s] %*% t(X[, i_s])))
+# probs <- X %*% beta
+# se    <- sqrt(diag(X %*% summary(fit)$cov.scaled %*% t(X)))
 
-# -- Helper functions
-logit <- function(x) { log(x / (1-x)) }
-expit <- function(x) { 1/ (1 + exp(-x))  }
-
-
-a <- X[, i_s] %*% beta[i_s]
-a <- expit(a)
-tibble(a, dates) %>%
-  unique() %>%
-  ggplot(aes(dates, a)) +
-  geom_hline(yintercept = 0.05, lty=2, color="gray") +
-  geom_line() +
+# -- Visualizations
+tibble(x, probs, se) %>%
+  mutate(lwr   = probs - 1.96*se,
+         upr   = probs + 1.96*se,
+         probs = expit(probs),
+         lwr   = expit(lwr),
+         upr   = expit(upr)) %>%
+  ggplot(aes(x, probs)) +
+  geom_point(aes(reported, rate), data = rate, alpha=0.50, size=1) +
+  geom_ribbon(aes(ymin=lwr, ymax=upr), alpha=0.20, color=NA) +
+  geom_line(color="blue2", size=0.80) +
   theme_bw()
+
+# -- Pruebas por semana
+tests <- dat %>% 
+  filter(result %in% c("positive", "negative")) %>% 
+  filter(reported >= make_date(2020, 3, 15)) %>%
+  group_by(date = ceiling_date(reported, 
+                               unit = "week", 
+                               week_start = wday(max(dat$reported)))) %>%
+  summarize(tests = n()) 
+
+# -- Viz
+tests %>%
+  ggplot(aes(date, tests)) +
+  geom_bar(color="black", size=0.20, stat = "identity") +
+  ggtitle("Pruebas por semana") +
+  xlab("Semana acabando en esta fecha") +
+  ylab("Pruebas") +
+  scale_y_continuous(labels = scales::comma,
+                     breaks = seq(0, 30000, by = 5000)) +
+  scale_x_date(date_labels = "%B %d") +
+  theme_bw()
+
+
+
+
+
+
+
+
+
+
+
+

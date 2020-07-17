@@ -2,21 +2,21 @@ source("init.R")
 
 # -- Getting url
 url <- "https://bioportal.salud.gov.pr/api/administration/reports/minimal-info-unique-tests"
-
 dat <- jsonlite::fromJSON(url)
 
 dat <- dat %>%  
-  mutate(ageRange   = gsub(" to ", "-", ageRange),
+  as_tibble() %>%
+  mutate(ageRange       = gsub(" to ", "-", ageRange),
          collectedDate  = mdy(collectedDate),
          reportedDate   = mdy(reportedDate),
-         createdAt = mdy_hm(createdAt),
-         ageRange   = na_if(ageRange, "N/A"),
-         result     = tolower(result),
-         result     = case_when(grepl("positive", result) ~ "positive",
-                                grepl("negative", result) ~ "negative",
-                                result == "not detected" ~ "negative",
-                                TRUE ~ "other")) %>%
-         arrange(reportedDate, collectedDate)
+         createdAt      = mdy_hm(createdAt),
+         ageRange       = na_if(ageRange, "N/A"),
+         result         = tolower(result),
+         result         = case_when(grepl("positive", result) ~ "positive",
+                                    grepl("negative", result) ~ "negative",
+                                    result == "not detected" ~ "negative",
+                                    TRUE ~ "other")) %>%
+         arrange(reportedDate, collectedDate) 
 
 ## Impute missing dates
 dat <- dat %>% mutate(date = if_else(is.na(collectedDate), reportedDate - days(2),  collectedDate))
@@ -26,27 +26,24 @@ dat <- dat %>%
   mutate(date = if_else(year(date) != 2020 | date > today(), reportedDate - days(2),  date)) %>%
   filter(year(date) == 2020 & date <= today()) %>%
   arrange(date, reportedDate)
-
 save(dat, file = "rdas/pruebas-pr.rda", compress = "xz")
 
 # -- Observed tasa de positividad
 tests <- dat %>%  
   filter(date>=make_date(2020, 3, 15)) %>%
-  filter(result %in% c("positive", "negative")) %>%
+  # filter(result %in% c("positive", "negative")) %>%
   group_by(date) %>%
   summarize(positives = sum(result == "positive"), tests = n()) %>%
   mutate(rate = positives / tests) %>%
   mutate(weekday = factor(wday(date)))
 
-
-# -- Extracting from df
+# -- Extracting from tests
 x <- as.numeric(tests$date)
 y <- tests$positives
 n <- tests$tests
 
-
 # -- Design matrix for splines
-df = round(3*nrow(tests)/30)
+df  <- round(3 * nrow(tests)/30)
 x_s <- ns(x, df = df, intercept = FALSE)
 i_s <- c(1:(ncol(x_s)+1))
 
@@ -61,14 +58,13 @@ X <- cbind(x_s, x_w)
 # -- Fitting model 
 fit  <- glm(cbind(y, n-y) ~ -1 + X, family = "quasibinomial")
 beta <- coef(fit)
+summary(fit)
 
 # -- Computing probabilities
 tests$fit <- X[, i_s] %*% beta[i_s]
-tests$se    <- sqrt(diag(X[, i_s] %*% 
-                     summary(fit)$cov.scaled[i_s, i_s] %*% 
-                     t(X[, i_s])) * 
-                pmax(1, summary(fit)$dispersion))
-
+tests$se  <- sqrt(diag(X[, i_s] %*%
+                         summary(fit)$cov.scaled[i_s, i_s] %*%
+                         t(X[, i_s])))
 
 # -- Visualizations
 tests %>%
@@ -77,34 +73,4 @@ tests %>%
   geom_ribbon(aes(ymin= expit(fit - 3*se), ymax = expit(fit + 3*se)), alpha=0.20) +
   geom_line(aes(y = expit(fit)), color="blue2", size=0.80) +
   theme_bw()
-
-# -- Pruebas por semana
-
-
-# -- Viz
-tests %>%
-  group_by(date = ceiling_date(date, 
-                             unit = "week", 
-                             week_start = wday(max(date)))) %>%
-  summarize(tests = sum(tests)) %>%
-  ggplot(aes(date, tests)) +
-  geom_bar(color="black", size=0.20, stat = "identity") +
-  ggtitle("Pruebas por semana") +
-  xlab("Semana acabando en esta fecha") +
-  ylab("Pruebas") +
-  scale_y_continuous(labels = scales::comma,
-                     breaks = seq(0, 30000, by = 5000)) +
-  scale_x_date(date_labels = "%B %d") +
-  theme_bw()
-
-
-
-
-
-
-
-
-
-
-
 

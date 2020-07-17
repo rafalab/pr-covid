@@ -29,40 +29,35 @@ shinyServer(function(input, output, session) {
         # -- Getting url
         url <- "https://bioportal.salud.gov.pr/api/administration/reports/minimal-info-unique-tests"
 
-        # -- HTTP get
-        http_get <- GET(url)
-
-        # -- Turning object into json
-        json <- content(http_get)
+        # -- From JSON to dataframe 
+        dat <- jsonlite::fromJSON(url)
 
         # -- Wrangle
-        dat <- do.call(rbind, json) %>%
+        dat <- dat %>%  
             as_tibble() %>%
-            mutate_all(as.character) %>%
-            setNames(c("collected", "reported", "agegroup", "test_type", "result", "municipio", "created_at")) %>%
-            mutate_all(as.character) %>%
-            mutate(agegroup   = gsub(" to ", "-", agegroup),
-                   collected  = gsub("/", "-", collected),
-                   reported   = gsub("/", "-", reported),
-                   created_at = gsub("/", "-", created_at),
-                   collected  = mdy(collected),
-                   reported   = mdy(reported),
-                   created_at = mdy_hm(created_at),
-                   municipio  = ifelse(municipio=="NULL", NA, municipio),
-                   result     = ifelse(result=="NULL", NA, result),
-                   test_type  = ifelse(test_type=="NULL", NA, test_type),
-                   agegroup   = ifelse(agegroup %in% c("NULL", "N/A"), NA, agegroup),
-                   result     = tolower(result),
-                   result     = case_when(grepl("positive", result) ~ "positive",
-                                          grepl("negative", result) ~ "negative",
-                                          result == "not detected" ~ "negative",
-                                          TRUE ~ "other")) %>%
-            filter(reported >= "2020-03-19", year(collected) == 2020,
-                   reported <= today(), collected <= today()) %>%
-            arrange(reported, collected)
+            mutate(ageRange       = gsub(" to ", "-", ageRange),
+                   collectedDate  = mdy(collectedDate),
+                   reportedDate   = mdy(reportedDate),
+                   createdAt      = mdy_hm(createdAt),
+                   ageRange       = na_if(ageRange, "N/A"),
+                   result         = tolower(result),
+                   result         = case_when(grepl("positive", result) ~ "positive",
+                                              grepl("negative", result) ~ "negative",
+                                              result == "not detected" ~ "negative",
+                                              TRUE ~ "other")) %>%
+            arrange(reportedDate, collectedDate) 
+        
+        # -- Impute missing dates
+        dat <- dat %>% mutate(date = if_else(is.na(collectedDate), reportedDate - days(2),  collectedDate))
+        
+        # -- Remove inconsistent dates
+        dat <- dat %>%
+            mutate(date = if_else(year(date) != 2020 | date > today(), reportedDate - days(2),  date)) %>%
+            filter(year(date) == 2020 & date <= today()) %>%
+            arrange(date, reportedDate)
         
         # -- Saving things
-        save(dat, file = "~/Desktop/covid19-pr-shiny/rdas/pruebas-pr.rda", compress = "xz")
+        save(dat, file = "pruebas-pr.rda", compress = "xz")
         return(dat)
     })
     
@@ -71,118 +66,95 @@ shinyServer(function(input, output, session) {
         
         if(input$do == 0)
         {
-            tmp_dat <- dat %>%
-                group_by(reported, result) %>%
-                summarize(number_test = n()) %>%
-                ungroup() %>%
-                complete(reported, result, fill = list(number_test = 0)) %>%
-                spread(result, number_test) %>%
-                mutate(rate = positive / (positive+other+negative)) %>%
-                select(reported, rate)
+            tmp_dat <- dat
             
-            tmp_dat %>%
-                ggplot(aes(reported, rate)) +
-                geom_hline(yintercept = 0.05, lty=2, color="gray") +
-                geom_point(size=2, alpha=0.40) +
-                # geom_smooth(formula = y ~ x,
-                #             method  = "loess",
-                #             size    = 0.60,
-                #             color   = "red3",
-                #             fill    = "red3",
-                #             alpha   = 0.20,
-                #             span    = 21/nrow(tmp_dat),
-                #             method.args = list(degree = 1)) +
-                ylab("Tasa de positividad") +
-                xlab("Fecha") +
-                ggtitle("Tasa de Positividad en Puerto Rico") +
-                scale_y_continuous(labels = scales::percent) +
-                coord_cartesian(ylim = c(0, 0.20)) +
-                scale_x_date(date_labels = "%B %d") +
-                theme_bw()
-            
-            ggplotly()
         } else {
-            tmp_dat <- update_data() %>%
-                group_by(reported, result) %>%
-                summarize(number_test = n()) %>%
-                ungroup() %>%
-                complete(reported, result, fill = list(number_test = 0)) %>%
-                spread(result, number_test) %>%
-                mutate(rate = positive / (positive+other+negative)) %>%
-                select(reported, rate)
-            
-            tmp_dat %>%
-                ggplot(aes(reported, rate)) +
-                geom_hline(yintercept = 0.05, lty=2, color="gray") +
-                geom_point(size=2, alpha=0.40) +
-                # geom_smooth(formula = y ~ x,
-                #             method  = "loess",
-                #             size    = 0.60,
-                #             color   = "red3",
-                #             fill    = "red3",
-                #             alpha   = 0.20,
-                #             span    = 21/nrow(tmp_dat),
-                #             method.args = list(degree = 1)) +
-                ylab("Tasa de positividad") +
-                xlab("Fecha") +
-                ggtitle("Tasa de Positividad en Puerto Rico") +
-                scale_y_continuous(labels = scales::percent) +
-                coord_cartesian(ylim = c(0, 0.20)) +
-                scale_x_date(date_labels = "%B %d") +
-                theme_bw()
-            
-            ggplotly()
+            tmp_dat <- update_data()
         }
+        
+        # -- Observed tasa de positividad
+        tests <- tmp_dat %>%  
+            filter(date>=make_date(2020, 3, 15)) %>%
+            group_by(date) %>%
+            summarize(positives = sum(result == "positive"), tests = n()) %>%
+            mutate(rate = positives / tests) %>%
+            mutate(weekday = factor(wday(date)))
+        
+        # -- Extracting from tests
+        x <- as.numeric(tests$date)
+        y <- tests$positives
+        n <- tests$tests
+        
+        # -- Design matrix for splines
+        df  <- round(3 * nrow(tests)/30)
+        x_s <- ns(x, df = df, intercept = FALSE)
+        i_s <- c(1:(ncol(x_s)+1))
+        
+        # -- Design matrix for weekday effect
+        w            <- factor(wday(tests$date))
+        contrasts(w) <- contr.sum(length(levels(w)), contrasts = TRUE)
+        x_w          <- model.matrix(~w)
+        
+        # -- Design matrix
+        X <- cbind(x_s, x_w)
+        
+        # -- Fitting model 
+        fit  <- glm(cbind(y, n-y) ~ -1 + X, family = "quasibinomial")
+        beta <- coef(fit)
+        summary(fit)
+        
+        # -- Computing probabilities
+        tests$fit <- X[, i_s] %*% beta[i_s]
+        tests$se  <- sqrt(diag(X[, i_s] %*%
+                                   summary(fit)$cov.scaled[i_s, i_s] %*%
+                                   t(X[, i_s])))
+        
+        
+        tests %>%
+            ggplot(aes(date, rate)) +
+            geom_hline(yintercept = 0.05, lty=2, color="gray") +
+            geom_point(aes(date, rate), size=2, alpha=0.40) +
+            geom_ribbon(aes(ymin= expit(fit - 3*se), ymax = expit(fit + 3*se)), alpha=0.20) +
+            geom_line(aes(y = expit(fit)), color="blue2", size=0.80) +
+            ylab("Tasa de positividad") +
+            xlab("Fecha") +
+            ggtitle("Tasa de Positividad en Puerto Rico") +
+            scale_y_continuous(labels = scales::percent) +
+            coord_cartesian(ylim = c(0, 0.25)) +
+            scale_x_date(date_labels = "%B %d") +
+            theme_bw()
+        
+        ggplotly()
     })
     
     # -- This creates the daily number of tests figure
     output$numero_pruebas <- renderPlotly({
         
-        if(input$do == 0)
-        {
-            
-            tests <- dat %>% 
-                filter(result %in% c("positive", "negative")) %>% 
-                filter(reported >= make_date(2020, 3, 15)) %>%
-                group_by(date = ceiling_date(reported, 
-                                             unit = "week", 
-                                             week_start = wday(max(dat$reported)))) %>%
-                summarize(tests = n()) 
-            
-            tests %>%
-                ggplot(aes(date, tests)) +
-                geom_bar(color="black", size=0.20, stat = "identity") +
-                ggtitle("Número de Pruebas Semanales en Puerto Rico") +
-                ylab("Número de pruebas") +
-                xlab("Semana acabando en esta fecha") +
-                scale_y_continuous(labels = scales::comma,
-                                   breaks = seq(0, 30000, by = 5000)) +
-                scale_x_date(date_labels = "%B %d") +
-                theme_bw()
-            
-            ggplotly()
+        if(input$do == 0){
+            pruebas <- dat
         } else {
-            tmp_dat <- update_data() %>% 
-                filter(result %in% c("positive", "negative")) %>% 
-                filter(reported >= make_date(2020, 3, 15)) %>%
-                group_by(date = ceiling_date(reported, 
-                                             unit = "week", 
-                                             week_start = wday(max(dat$reported)))) %>%
-                summarize(tests = n()) 
-            
-            tests %>%
-                ggplot(aes(date, tests)) +
-                geom_bar(color="black", size=0.20, stat = "identity") +
-                ggtitle("Número de Pruebas Semanales en Puerto Rico") +
-                ylab("Número de pruebas") +
-                xlab("Semana acabando en esta fecha") +
-                scale_y_continuous(labels = scales::comma,
-                                   breaks = seq(0, 30000, by = 5000)) +
-                scale_x_date(date_labels = "%B %d") +
-                theme_bw()
-            
-            ggplotly()
+            pruebas <- update_data()
         }
+        
+        pruebas %>% 
+            filter(result %in% c("positive", "negative")) %>% 
+            filter(date > make_date(2020, 3, 15)) %>%
+            group_by(date = ceiling_date(date, 
+                                         unit = "week", 
+                                         week_start = wday(max(dat$date)))) %>%
+            summarize(tests = n()) %>%
+            ggplot(aes(date, tests)) +
+            geom_bar(color="black", fill="#252525", size=0.20, stat = "identity") +
+            ggtitle("Número de Pruebas Semanales en Puerto Rico") +
+            ylab("Número de pruebas") +
+            xlab("Semana acabando en esta fecha") +
+            scale_y_continuous(labels = scales::comma,
+                               breaks = seq(0, 30000, by = 5000)) +
+            scale_x_date(date_labels = "%B %d") +
+            theme_bw()
+        
+        ggplotly()
+    
     })
     
     # -- This creates the daily number of tests figure
@@ -192,10 +164,10 @@ shinyServer(function(input, output, session) {
         {
             dat %>% 
                 filter(result %in% c("positive", "negative")) %>% 
-                filter(reported >= make_date(2020, 3, 15)) %>%
-                group_by(date = ceiling_date(reported, 
+                filter(date > make_date(2020, 3, 15)) %>%
+                group_by(date = ceiling_date(date,
                                              unit = "week", 
-                                             week_start = wday(max(dat$reported))), result) %>%
+                                             week_start = wday(max(dat$date))), result) %>%
                 summarize(tests = n()) %>%
                 ggplot(aes(date, tests, fill=result)) +
                 geom_bar(color="black", alpha=0.90, size=0.20, stat = "identity", position = "dodge2") +
@@ -214,10 +186,10 @@ shinyServer(function(input, output, session) {
         } else {
             update_data() %>% 
                 filter(result %in% c("positive", "negative")) %>% 
-                filter(reported >= make_date(2020, 3, 15)) %>%
-                group_by(date = ceiling_date(reported, 
+                filter(date > make_date(2020, 3, 15)) %>%
+                group_by(date = ceiling_date(date,
                                              unit = "week", 
-                                             week_start = wday(max(dat$reported))), result) %>%
+                                             week_start = wday(max(dat$date))), result) %>%
                 summarize(tests = n()) %>%
                 ggplot(aes(date, tests, fill=result)) +
                 geom_bar(color="black", alpha=0.90, size=0.20, stat = "identity", position = "dodge2") +

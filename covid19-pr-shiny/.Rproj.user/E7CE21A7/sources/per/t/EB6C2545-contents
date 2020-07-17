@@ -21,8 +21,8 @@ shinyUI(fluidPage(theme = shinytheme("sandstone"),
             tabsetPanel(
                 
                 # -- Panel 1
-                tabPanel("Datos",
-                         DT::dataTableOutput("table")),
+                # tabPanel("Datos",
+                #          DT::dataTableOutput("table")),
                 
                 # -- Panel 2
                 tabPanel("Tasa de Positividad",

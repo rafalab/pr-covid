@@ -9,11 +9,11 @@
     "id" : "228E4555",
     "lastKnownWriteTime" : 1594966087,
     "last_content_update" : 1594966087214,
-    "path" : "~/Desktop/covid19-pr-shiny/server.R",
+    "path" : "~/Desktop/pr-covid/covid19-pr-shiny/server.R",
     "project_path" : "server.R",
     "properties" : {
         "cursorPosition" : "269,5",
-        "scrollLine" : "11"
+        "scrollLine" : "0"
     },
     "read_only" : false,
     "read_only_alternatives" : [
