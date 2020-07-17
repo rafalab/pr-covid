@@ -101,7 +101,6 @@ shinyServer(function(input, output, session) {
         # -- Fitting model 
         fit  <- glm(cbind(y, n-y) ~ -1 + X, family = "quasibinomial")
         beta <- coef(fit)
-        summary(fit)
         
         # -- Computing probabilities
         tests$fit <- X[, i_s] %*% beta[i_s]

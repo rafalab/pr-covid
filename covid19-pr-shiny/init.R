@@ -13,4 +13,4 @@ logit <- function(x) { log(x / (1-x)) }
 expit <- function(x) { 1/ (1 + exp(-x))  }
 
 # -- Loading data
-load("rdas/pruebas-pr.rda")
+load("pruebas-pr.rda")
