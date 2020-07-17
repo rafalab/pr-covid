@@ -12,7 +12,6 @@ shinyServer(function(input, output, session) {
         ntext()
     })
     
-    
     # -- This is used to print table in app
     output$table <- DT::renderDataTable(DT::datatable({
        
@@ -58,7 +57,8 @@ shinyServer(function(input, output, session) {
                                           grepl("negative", result) ~ "negative",
                                           result == "not detected" ~ "negative",
                                           TRUE ~ "other")) %>%
-            filter(year(reported) == 2020, year(collected) == 2020) %>%
+            filter(reported >= "2020-03-19", year(collected) == 2020,
+                   reported <= today(), collected <= today()) %>%
             arrange(reported, collected)
         
         # -- Saving things
@@ -84,18 +84,19 @@ shinyServer(function(input, output, session) {
                 ggplot(aes(reported, rate)) +
                 geom_hline(yintercept = 0.05, lty=2, color="gray") +
                 geom_point(size=2, alpha=0.40) +
-                geom_smooth(formula = y ~ x,
-                            method  = "loess",
-                            size    = 0.60,
-                            color   = "red3",
-                            fill    = "red3",
-                            alpha   = 0.20,
-                            span    = 21/nrow(tmp_dat),
-                            method.args = list(degree = 1)) +
+                # geom_smooth(formula = y ~ x,
+                #             method  = "loess",
+                #             size    = 0.60,
+                #             color   = "red3",
+                #             fill    = "red3",
+                #             alpha   = 0.20,
+                #             span    = 21/nrow(tmp_dat),
+                #             method.args = list(degree = 1)) +
                 ylab("Tasa de positividad") +
                 xlab("Fecha") +
                 ggtitle("Tasa de Positividad en Puerto Rico") +
                 scale_y_continuous(labels = scales::percent) +
+                coord_cartesian(ylim = c(0, 0.20)) +
                 scale_x_date(date_labels = "%B %d") +
                 theme_bw()
             
@@ -114,18 +115,19 @@ shinyServer(function(input, output, session) {
                 ggplot(aes(reported, rate)) +
                 geom_hline(yintercept = 0.05, lty=2, color="gray") +
                 geom_point(size=2, alpha=0.40) +
-                geom_smooth(formula = y ~ x,
-                            method  = "loess",
-                            size    = 0.60,
-                            color   = "red3",
-                            fill    = "red3",
-                            alpha   = 0.20,
-                            span    = 21/nrow(tmp_dat),
-                            method.args = list(degree = 1)) +
+                # geom_smooth(formula = y ~ x,
+                #             method  = "loess",
+                #             size    = 0.60,
+                #             color   = "red3",
+                #             fill    = "red3",
+                #             alpha   = 0.20,
+                #             span    = 21/nrow(tmp_dat),
+                #             method.args = list(degree = 1)) +
                 ylab("Tasa de positividad") +
                 xlab("Fecha") +
                 ggtitle("Tasa de Positividad en Puerto Rico") +
                 scale_y_continuous(labels = scales::percent) +
+                coord_cartesian(ylim = c(0, 0.20)) +
                 scale_x_date(date_labels = "%B %d") +
                 theme_bw()
             
@@ -138,51 +140,44 @@ shinyServer(function(input, output, session) {
         
         if(input$do == 0)
         {
-            tmp_dat <- dat %>%
-                group_by(reported) %>%
-                summarize(number_test = n()) %>%
-                ungroup()
             
-            tmp_dat %>%
-                ggplot(aes(reported, number_test)) +
-                geom_point(size=2, alpha = 0.40) +
-                geom_smooth(formula = y ~ x,
-                            method  = "loess",
-                            size    = 0.60,
-                            color   = "red3",
-                            fill    = "red3",
-                            alpha   = 0.20,
-                            span    = 21/nrow(tmp_dat),
-                            method.args = list(degree = 1)) +
+            tests <- dat %>% 
+                filter(result %in% c("positive", "negative")) %>% 
+                filter(reported >= make_date(2020, 3, 15)) %>%
+                group_by(date = ceiling_date(reported, 
+                                             unit = "week", 
+                                             week_start = wday(max(dat$reported)))) %>%
+                summarize(tests = n()) 
+            
+            tests %>%
+                ggplot(aes(date, tests)) +
+                geom_bar(color="black", size=0.20, stat = "identity") +
+                ggtitle("Número de Pruebas Semanales en Puerto Rico") +
                 ylab("Número de pruebas") +
-                xlab("Fecha") +
-                ggtitle("Número de Pruebas Diarias en Puerto Rico") +
-                scale_y_continuous(labels = scales::comma) +
+                xlab("Semana acabando en esta fecha") +
+                scale_y_continuous(labels = scales::comma,
+                                   breaks = seq(0, 30000, by = 5000)) +
                 scale_x_date(date_labels = "%B %d") +
                 theme_bw()
             
             ggplotly()
         } else {
-            tmp_dat <- update_data() %>%
-                group_by(reported) %>%
-                summarize(number_test = n()) %>%
-                ungroup()
+            tmp_dat <- update_data() %>% 
+                filter(result %in% c("positive", "negative")) %>% 
+                filter(reported >= make_date(2020, 3, 15)) %>%
+                group_by(date = ceiling_date(reported, 
+                                             unit = "week", 
+                                             week_start = wday(max(dat$reported)))) %>%
+                summarize(tests = n()) 
             
-            tmp_dat %>%
-                ggplot(aes(reported, number_test)) +
-                geom_point(size=2, alpha = 0.40) +
-                geom_smooth(formula = y ~ x,
-                            method  = "loess",
-                            size    = 0.60,
-                            color   = "red3",
-                            fill    = "red3",
-                            alpha   = 0.20,
-                            span    = 21/nrow(tmp_dat),
-                            method.args = list(degree = 1)) +
+            tests %>%
+                ggplot(aes(date, tests)) +
+                geom_bar(color="black", size=0.20, stat = "identity") +
+                ggtitle("Número de Pruebas Semanales en Puerto Rico") +
                 ylab("Número de pruebas") +
-                xlab("Fecha") +
-                ggtitle("Número de Pruebas Diarias en Puerto Rico") +
-                scale_y_continuous(labels = scales::comma) +
+                xlab("Semana acabando en esta fecha") +
+                scale_y_continuous(labels = scales::comma,
+                                   breaks = seq(0, 30000, by = 5000)) +
                 scale_x_date(date_labels = "%B %d") +
                 theme_bw()
             
@@ -193,62 +188,48 @@ shinyServer(function(input, output, session) {
     # -- This creates the daily number of tests figure
     output$numero_pruebas_resultados <- renderPlotly({
         
-        # -- To be used below
-        tmp_dat <- dat %>%
-            group_by(reported) %>%
-            summarize(number_test = n()) %>%
-            ungroup()
-        
         if(input$do == 0)
         {
-            dat %>%
-                group_by(reported, result) %>%
-                summarize(number_test = n()) %>%
-                ungroup() %>%
-                ggplot(aes(reported, number_test, color=result, fill=result)) +
-                geom_point(size=2, alpha = 0.20) +
-                geom_smooth(method  = "loess",
-                            size    = 0.60,
-                            alpha   = 0.40,
-                            span    = 21/nrow(tmp_dat),
-                            method.args = list(degree = 1)) +
+            dat %>% 
+                filter(result %in% c("positive", "negative")) %>% 
+                filter(reported >= make_date(2020, 3, 15)) %>%
+                group_by(date = ceiling_date(reported, 
+                                             unit = "week", 
+                                             week_start = wday(max(dat$reported))), result) %>%
+                summarize(tests = n()) %>%
+                ggplot(aes(date, tests, fill=result)) +
+                geom_bar(color="black", alpha=0.90, size=0.20, stat = "identity", position = "dodge2") +
+                ggtitle("Número de Pruebas Semanales en Puerto Rico") +
                 ylab("Número de pruebas") +
-                xlab("Fecha") +
-                ggtitle("Número de Pruebas Diarias en Puerto Rico") +
-                scale_y_continuous(labels = scales::comma, trans = "log10") +
+                xlab("Semana acabando en esta fecha") +
+                scale_y_continuous(labels = scales::comma, 
+                                   trans  = "log10") +
                 scale_x_date(date_labels = "%B %d") +
-                scale_color_manual(name = "Result:",
-                                   values = c("#cb181d", "#252525", "#4292c6"),
-                                   labels = c("Negative", "Positive", "Inconclusive")) +
                 scale_fill_manual(name = "Result:",
-                                  values = c("#cb181d", "#252525", "#4292c6"),
-                                  labels = c("Negative", "Positive", "Inconclusive")) +
+                                  values = c("#252525", "#cb181d")) +
+                
                 theme_bw()
             
             ggplotly()
         } else {
-            update_data() %>%
-                group_by(reported, result) %>%
-                summarize(number_test = n()) %>%
-                ungroup() %>%
-                ggplot(aes(reported, number_test, color=result, fill=result)) +
-                geom_point(size=2, alpha = 0.20) +
-                geom_smooth(method  = "loess",
-                            size    = 0.60,
-                            alpha   = 0.40,
-                            span    = 21/nrow(tmp_dat),
-                            method.args = list(degree = 1)) +
+            update_data() %>% 
+                filter(result %in% c("positive", "negative")) %>% 
+                filter(reported >= make_date(2020, 3, 15)) %>%
+                group_by(date = ceiling_date(reported, 
+                                             unit = "week", 
+                                             week_start = wday(max(dat$reported))), result) %>%
+                summarize(tests = n()) %>%
+                ggplot(aes(date, tests, fill=result)) +
+                geom_bar(color="black", alpha=0.90, size=0.20, stat = "identity", position = "dodge2") +
+                ggtitle("Número de Pruebas Semanales en Puerto Rico") +
                 ylab("Número de pruebas") +
-                xlab("Fecha") +
-                ggtitle("Número de Pruebas Diarias en Puerto Rico") +
-                scale_y_continuous(labels = scales::comma, trans = "log10") +
+                xlab("Semana acabando en esta fecha") +
+                scale_y_continuous(labels = scales::comma, 
+                                   trans  = "log10") +
                 scale_x_date(date_labels = "%B %d") +
-                scale_color_manual(name = "Result:",
-                                   values = c("#cb181d", "#252525", "#4292c6"),
-                                   labels = c("Negative", "Positive", "Inconclusive")) +
                 scale_fill_manual(name = "Result:",
-                                  values = c("#cb181d", "#252525", "#4292c6"),
-                                  labels = c("Negative", "Positive", "Inconclusive")) +
+                                  values = c("#252525", "#cb181d")) +
+                
                 theme_bw()
             
             ggplotly()
