@@ -19,11 +19,11 @@ shinyUI(fluidPage(theme = shinytheme("sandstone"),
                 
                 # -- Panel 1
                 tabPanel("Tasa de Positividad",
-                         plotlyOutput("tasa_positividad", height = "550px")), 
+                         plotOutput("tasa_positividad")), 
                 
                 # -- Panel 2
                 tabPanel("Número de Pruebas",
-                         plotlyOutput("numero_pruebas", height = "550px")),
+                         plotOutput("numero_pruebas")),
                 
                 # -- Panel 3
                 tabPanel("Tabla con totales diarios",

@@ -3,16 +3,9 @@ source("init.R")
 
 shinyServer(function(input, output, session) {
     
-    ntext <- eventReactive(input$do, {
-        "Hello World"
-    })
-    output$nText <- renderText({
-        ntext()
-    })
     
     # -- This is used to print table in app
     output$tabla <- DT::renderDataTable(DT::datatable({
-        Sys.setlocale("LC_TIME", "es_ES")
         z <- qnorm(0.995)
         ret <- tests %>%
             mutate(rate = paste0(format(round(100*rate,1), nsmall=1),"%"),
@@ -21,17 +14,17 @@ shinyServer(function(input, output, session) {
                    upper_ci = paste0(format(round(100*expit(fit + z*se), 1), nsmall=1),"%"))%>%
             select(date, positives, tests, rate, avg_7_day, lower_ci, upper_ci) %>%
             arrange(desc(date)) %>%
-            mutate(date = format(date, "%B %d")) %>%
+            mutate(date = format(date, "%m %d")) %>%
             setNames(c("Fecha", "Positivos", "Pruebas", "Tasa", "Promedio 7 dias", "LCI", "UCI"))
         return(ret)
     }), 
     rownames= FALSE,
-    options = list(pageLength = 30))
+    options = list(dom = 't', pageLength = -1))
     
     # -- This creates the positivity rate figure
-    output$tasa_positividad <- renderPlotly({
+    output$tasa_positividad <- renderPlot({
         z <- qnorm(0.995)
-        tests %>%
+       tests %>%
             ggplot(aes(date, rate)) +
             geom_hline(yintercept = 0.05, lty=2, color="gray") +
             geom_point(aes(date, rate), size=2, alpha=0.40) +
@@ -44,12 +37,11 @@ shinyServer(function(input, output, session) {
             coord_cartesian(ylim = c(0, 0.25)) +
             scale_x_date(date_labels = "%B %d") +
             theme_bw()
-        
-        ggplotly()
+      
     })
     
     # -- This creates the daily number of tests figure
-    output$numero_pruebas <- renderPlotly({
+    output$numero_pruebas <- renderPlot({
         
         tests %>%
             group_by(date = ceiling_date(date, 
@@ -66,7 +58,7 @@ shinyServer(function(input, output, session) {
             scale_x_date(date_labels = "%B %d") +
             theme_bw()
         
-        ggplotly()
+        #ggplotly(displayModeBar = FALSE)
     
     })
     
