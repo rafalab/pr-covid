@@ -1,0 +1,12 @@
+name: covidpr
+title: covidpr
+username: rafa
+account: rafa
+server: rconnect.dfci.harvard.edu
+hostUrl: https://rconnect.dfci.harvard.edu/__api__
+appId: 30
+bundleId: 116
+url: https://rconnect.dfci.harvard.edu/covidpr/
+when: 1595032970.34512
+asMultiple: FALSE
+asStatic: FALSE

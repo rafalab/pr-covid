@@ -26,12 +26,11 @@ dat <- dat %>%
   mutate(date = if_else(year(date) != 2020 | date > today(), reportedDate - days(2),  date)) %>%
   filter(year(date) == 2020 & date <= today()) %>%
   arrange(date, reportedDate)
-save(dat, file = "rdas/pruebas-pr.rda", compress = "xz")
 
 # -- Observed tasa de positividad
 tests <- dat %>%  
   filter(date>=make_date(2020, 3, 15)) %>%
-  # filter(result %in% c("positive", "negative")) %>%
+  filter(result %in% c("positive", "negative")) %>%
   group_by(date) %>%
   summarize(positives = sum(result == "positive"), tests = n()) %>%
   mutate(rate = positives / tests) %>%
@@ -58,19 +57,24 @@ X <- cbind(x_s, x_w)
 # -- Fitting model 
 fit  <- glm(cbind(y, n-y) ~ -1 + X, family = "quasibinomial")
 beta <- coef(fit)
-summary(fit)
 
 # -- Computing probabilities
-tests$fit <- X[, i_s] %*% beta[i_s]
+tests$fit <- as.vector(X[, i_s] %*% beta[i_s])
 tests$se  <- sqrt(diag(X[, i_s] %*%
                          summary(fit)$cov.scaled[i_s, i_s] %*%
                          t(X[, i_s])))
 
+save(tests, file = "rdas/tests.rda")
+all_tests <- dat
+attr(all_tests, "date") <- today()
+save(all_tests, file = "rdas/all_tests.rda")
+
 # -- Visualizations
+if(FALSE){
 tests %>%
   ggplot(aes(date, rate)) +
   geom_point(aes(date, rate), alpha=0.50, size=1) +
   geom_ribbon(aes(ymin= expit(fit - 3*se), ymax = expit(fit + 3*se)), alpha=0.20) +
   geom_line(aes(y = expit(fit)), color="blue2", size=0.80) +
   theme_bw()
-
+}
