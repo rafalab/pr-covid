@@ -10,18 +10,14 @@ shinyUI(fluidPage(theme = shinytheme("sandstone"),
     # Sidebar with a slider input for number of bins
     sidebarLayout(
         sidebarPanel(
-            div("Este botón actualiza automaticamente los datos usando el", a("API", href="https://bioportal.salud.gov.pr/api/administration/reports/minimal-info-unique-tests"), "del Departamento de Salud. Esto tarda unos minutos."),
-            actionButton("do", " Presiona para actualizar datos", icon = icon("refresh")),
+            div("Este botón actualiza automaticamente los datos usando el", 
+                a("API", href="https://bioportal.salud.gov.pr/api/administration/reports/minimal-info-unique-tests"), 
+                "del Departamento de Salud. Tarda unos minutos."),
+            actionButton("do", " Actualizar datos", icon = icon("refresh")),
             br(),
             br(),
             div("Este botón descarga los datos del", a("API", href="https://bioportal.salud.gov.pr/api/administration/reports/minimal-info-unique-tests"), "ya limpios."),
-            downloadButton("downloadData", "Download"),
-            br(),
-            br(),
-            "Aquí puedes accesar el API: \n",
-            br(),
-            actionButton("api", "API", onclick ="window.open('https://bioportal.salud.gov.pr/api/administration/reports/minimal-info-unique-tests', '_blank')"),
-        ),
+            downloadButton("downloadData", "Download"), width = 3),
 
         # Show a plot of the generated distribution
         mainPanel(
@@ -33,17 +29,17 @@ shinyUI(fluidPage(theme = shinytheme("sandstone"),
                 
                 # -- Panel 2
                 tabPanel("Tasa de Positividad",
-                         plotlyOutput("tasa_positividad", height = "620px")), 
+                         plotlyOutput("tasa_positividad", height = "650px")), 
                 
                 # -- Panel 3
                 tabPanel("Número de Pruebas",
-                         plotlyOutput("numero_pruebas", height = "620px"),
-                         br(),
-                         br(),
-                         plotlyOutput("numero_pruebas_resultados", height = "620px"))
-                
-                
+                         plotlyOutput("numero_pruebas", height = "650px"))#, 
+#                         br(),
+#                         br(),
+#                         plotlyOutput("numero_pruebas_resultados", height = "620px"))
             )
-        )
-    )
+        ),
+    ),
+    hr(),
+    print( "API: https://bioportal.salud.gov.pr/api/administration/reports/minimal-info-unique-tests\n")
 ))
