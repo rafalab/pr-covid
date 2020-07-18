@@ -18,15 +18,22 @@ dat <- dat %>%
                                     TRUE ~ "other")) %>%
          arrange(reportedDate, collectedDate) 
 
+
+if(FALSE){
+## remove bad dates
+  dat <- dat %>% 
+  filter(!is.na(collectedDate) & year(collectedDate) == 2020 & collectedDate <= today()) %>%
+  mutate(date = collectedDate) 
+} else{
 ## Impute missing dates
-dat <- dat %>% mutate(date = if_else(is.na(collectedDate), reportedDate - days(2),  collectedDate))
+  dat <- dat %>% mutate(date = if_else(is.na(collectedDate), reportedDate - days(2),  collectedDate))
 
 ## Remove inconsistent dates
-dat <- dat %>%
-  mutate(date = if_else(year(date) != 2020 | date > today(), reportedDate - days(2),  date)) %>%
-  filter(year(date) == 2020 & date <= today()) %>%
-  arrange(date, reportedDate)
-
+  dat <- dat %>%
+    mutate(date = if_else(year(date) != 2020 | date > today(), reportedDate - days(2),  date)) %>%
+    filter(year(date) == 2020 & date <= today()) %>%
+    arrange(date, reportedDate)
+}
 # -- Observed tasa de positividad
 tests <- dat %>%  
   filter(date>=make_date(2020, 3, 15)) %>%
