@@ -48,6 +48,7 @@ shinyServer(function(input, output, session) {
       
       # -- Getting municipio data based on users date range
       municipio_tests <- tests_by_strata %>%
+        filter(date >= input$range[1], date <= input$range[2]) %>%
         group_by(date, patientCity) %>%
         dplyr::summarize(positives = sum(positives),
                          tests     = sum(tests)) %>%
@@ -59,7 +60,6 @@ shinyServer(function(input, output, session) {
                          rate       = positives / tests) %>%
         ungroup() %>%
         mutate(rate = pmax(0.25/1000, rate)) %>%
-        # rate = rate / as.numeric(diff(c(ymd(input$range[1]), ymd(input$range[2])))),
         na.omit() %>%
         mutate(lwr  = 100 * qbinom(alpha/2, tests, rate) / tests,
                upr  = 100 * qbinom(1 - alpha/2, tests, rate) / tests, 
@@ -103,13 +103,13 @@ shinyServer(function(input, output, session) {
       ret <- tests %>%
         filter(date >= input$range[1], date <= input$range[2]) %>%
         mutate(rate = paste0(format(round(100*rate,1), nsmall=1),"%"),
-               avg_7_day = paste0(format(round(100*expit(fit), 1), nsmall=1),"%"),
-               lower_ci = paste0(format(round(100*expit(fit - z*se), 1), nsmall=1),"%"),
-               upper_ci = paste0(format(round(100*expit(fit + z*se), 1), nsmall=1),"%"))%>%
-        select(date, positives, tests, rate, avg_7_day, lower_ci, upper_ci) %>%
+               avg_7_day = paste0(format(round(100*expit(fit), 1), nsmall=1),"% ",
+                                  "(",format(round(100*expit(fit - z*se), 1), nsmall=1),"%", ", ",
+                                  format(round(100*expit(fit + z*se), 1), nsmall=1),"%", ")")) %>%
+        select(date, positives, tests, rate, avg_7_day) %>%
         arrange(desc(date)) %>%
         mutate(date = format(date, "%B %d")) %>%
-        setNames(c("Fecha", "Positivos", "Pruebas", "Tasa", "Promedio 7 dias", "LCI", "UCI"))
+        setNames(c("Fecha", "Positivos", "Pruebas", "Tasa", "Promedio 7 dias  (intervalo de confianza)"))
       return(ret)
     }), 
     rownames= FALSE,
@@ -125,12 +125,12 @@ shinyServer(function(input, output, session) {
                   rate =  positives/tests) %>%
         mutate(lower = qbinom(alpha/2, tests, rate) / tests,
                upper = qbinom(1 - alpha/2, tests, rate) / tests) %>%
-        select(patientCity, positives, tests, rate, lower, upper, `0 to 9`, `10 to 19`) %>%
         arrange(desc(rate)) %>%
-        mutate(rate = paste0(format(round(100*rate,1), nsmall=1),"%"),
-               lower = paste0(format(round(100*lower, 1), nsmall=1),"%"),
-               upper = paste0(format(round(100*upper, 1), nsmall=1),"%")) %>%
-        setNames(c("Municipio", "Positivos", "Pruebas", "Tasa", "LCI", "UCI", "Casos 0 a 9 años", "Casos 10 a 19 años"))
+        mutate(rate = paste0(format(round(100*rate,1), nsmall=1),"% ", "(",
+               format(round(100*lower, 1), nsmall=1),"%", ", ",
+               format(round(100*upper, 1), nsmall=1),"%", ")")) %>%
+        select(patientCity, positives, tests, rate, `0 to 9`, `10 to 19`) %>%
+        setNames(c("Municipio", "Positivos", "Pruebas", "Tasa (intervalo de confianza)", "Casos 0 a 9 años", "Casos 10 a 19 años"))
       
         return(ret)
     }), 
@@ -142,7 +142,7 @@ shinyServer(function(input, output, session) {
     output$downloadData <- downloadHandler(
         filename = function() {
             load("rdas/all_tests.rda")
-            paste0("pruebas-",attr(all_tests,"date"),".csv")
+            paste0("pruebas-",format(attr(all_tests, "date"), "%Y-%m-%d_%H:%M:%S"),".csv")
         },
         content = function(file) {
             load("rdas/all_tests.rda")
