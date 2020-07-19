@@ -31,12 +31,16 @@ shinyUI(fluidPage(theme = shinytheme("sandstone"),
                 # -- Panel 2
                 tabPanel("Número de Pruebas",
                          plotOutput("numero_pruebas")),
+                
+                # -- Panel 3
+                tabPanel("Municipios",
+                         leafletOutput("mapa")),
 
                 # -- Panel 3
                 tabPanel("Tabla con totales diarios",
                          DT::dataTableOutput("tabla")),
                 
-                # -- Panel 3
+                # -- Panel 4
                 tabPanel("Tabla de tasas por municipio",
                          DT::dataTableOutput("municipios"))
             )
