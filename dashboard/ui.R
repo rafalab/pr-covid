@@ -10,15 +10,14 @@ shinyUI(fluidPage(theme = shinytheme("sandstone"),
     # Sidebar with a slider input for number of bins
     sidebarLayout(
         sidebarPanel(
+            dateRangeInput("range", "Periodo", 
+                           start = make_date(2020, 3, 21), end=today(),
+                           min = make_date(2020,3,15),
+                           format = "M-dd",
+                           max = today()),
+            br(),
             div("Datos depurados:"),
             downloadButton("downloadData", "Download"), 
-            br(),
-            br(),
-            dateRangeInput("range", "Periodo", 
-                           start = "2020-03-21", end=today(),
-                           min = "2020-03-15", 
-                           max = today(), 
-                           separator = " - "),
             width = 3),
         
         # Show a plot of the generated distribution
@@ -28,16 +27,18 @@ shinyUI(fluidPage(theme = shinytheme("sandstone"),
                 # -- Panel 1
                 tabPanel("Tasa de Positividad",
                          plotOutput("tasa_positividad")),
-                         # plotOutput("tasa_positividad_edad")),
-                
+
                 # -- Panel 2
                 tabPanel("Número de Pruebas",
                          plotOutput("numero_pruebas")),
-                         # plotOutput("numero_pruebas_edad")),
-                
+
                 # -- Panel 3
                 tabPanel("Tabla con totales diarios",
-                         DT::dataTableOutput("tabla"))
+                         DT::dataTableOutput("tabla")),
+                
+                # -- Panel 3
+                tabPanel("Tabla de tasas por municipio",
+                         DT::dataTableOutput("municipios"))
             )
     )),
     hr(),

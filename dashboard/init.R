@@ -19,5 +19,7 @@ expit <- function(x) { 1/ (1 + exp(-x))  }
 
 # -- Loading data
 load("rdas/tests.rda")
-load("rdas/agegroup-tests.rda")
-load("rdas/municipio-tests.rda")
+load("rdas/tests_by_strata.rda")
+
+alpha <- 0.01
+z <- qnorm(1-alpha/2)
