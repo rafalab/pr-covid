@@ -77,7 +77,6 @@ shinyServer(function(input, output, session) {
                            breaks = seq(0, 30000, by = 5000)) +
         scale_x_date(date_labels = "%B %d") +
         theme_bw()
-d        
         # ggplotly(displayModeBar = FALSE)
     
     })
