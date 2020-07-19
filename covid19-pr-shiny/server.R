@@ -23,7 +23,7 @@ shinyServer(function(input, output, session) {
     
     # -- This creates the positivity rate figure
     output$tasa_positividad <- renderPlot({
-        z <- qnorm(0.995)
+       z <- qnorm(0.995)
        tests %>%
             ggplot(aes(date, rate)) +
             geom_hline(yintercept = 0.05, lty=2, color="gray") +
@@ -40,14 +40,33 @@ shinyServer(function(input, output, session) {
       
     })
     
+    # -- This creates the positivity rate figure per agegroup
+    output$tasa_positividad_edad <- renderPlot({
+      z <- qnorm(0.995)
+      agegroup_tests %>%
+        ggplot(aes(date, rate)) +
+        geom_hline(yintercept = 0.05, lty=2, color="gray") +
+        geom_point(aes(date, rate), size=2, alpha=0.40) +
+        geom_ribbon(aes(ymin= expit(fit - z*se), ymax = expit(fit + z*se)), alpha=0.20) +
+        geom_line(aes(y = expit(fit)), color="blue2", size=0.80) +
+        ylab("Tasa de positividad") +
+        xlab("Fecha") +
+        ggtitle("Tasa de Positividad en Puerto Rico") +
+        scale_y_continuous(labels = scales::percent) +
+        coord_cartesian(ylim = c(0, 0.25)) +
+        scale_x_date(date_labels = "%B %d") +
+        facet_wrap(~agegroup) +
+        theme_bw()
+    })
+    
     # -- This creates the daily number of tests figure
     output$numero_pruebas <- renderPlot({
         
-        tests %>%
+        tests %>% 
             group_by(date = ceiling_date(date, 
                                          unit = "week", 
                                          week_start = wday(max(date)))) %>%
-            summarize(tests = sum(tests)) %>%
+            dplyr::summarize(tests = sum(tests)) %>%
             ggplot(aes(date, tests)) +
             geom_bar(color="black", fill="#252525", size=0.20, stat = "identity") +
             ggtitle("Número de Pruebas Semanales en Puerto Rico") +
@@ -58,9 +77,32 @@ shinyServer(function(input, output, session) {
             scale_x_date(date_labels = "%B %d") +
             theme_bw()
         
-        #ggplotly(displayModeBar = FALSE)
+        # ggplotly(displayModeBar = FALSE)
     
     })
+    
+    # -- This creates the daily number of tests per agegroup figure
+    output$numero_pruebas_edad <- renderPlot({
+      
+      agegroup_tests %>%
+        group_by(date = ceiling_date(date, 
+                                     unit = "week", 
+                                     week_start = wday(max(date))), agegroup) %>%
+        dplyr::summarize(tests = sum(tests)) %>%
+        ggplot(aes(date, tests)) +
+        geom_bar(color="black", fill="#252525", size=0.20, stat = "identity") +
+        ggtitle("Número de Pruebas Semanales en Puerto Rico") +
+        ylab("Número de pruebas") +
+        xlab("Semana acabando en esta fecha") +
+        scale_y_continuous(labels = scales::comma,
+                           breaks = seq(0, 30000, by = 5000)) +
+        scale_x_date(date_labels = "%B %d") +
+        facet_wrap(~agegroup) +
+        theme_bw()      
+      # ggplotly(displayModeBar = FALSE)
+      
+    })
+  
     
     # -- This allows users to download data
     output$downloadData <- downloadHandler(
