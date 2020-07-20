@@ -19,6 +19,8 @@ expit <- function(x) { 1/ (1 + exp(-x))  }
 load("rdas/tests.rda")
 load("rdas/tests_by_strata.rda")
 load("rdas/hosp_mort.rda")
+load("rdas/poblacion_municipios.rda")
+
 # -- For confidence intervals
 alpha <- 0.01
 z <- qnorm(1-alpha/2)

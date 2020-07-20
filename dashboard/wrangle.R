@@ -88,7 +88,8 @@ tests_by_strata <- all_tests %>%
   mutate(patientCity = fct_explicit_na(patientCity, "No reportado")) %>%
   mutate(ageRange = fct_explicit_na(ageRange, "No reportado")) %>%
   group_by(date, patientCity, ageRange, .drop = FALSE) %>%
-  dplyr::summarize(positives = sum(result == "positive"), tests = n()) 
+  dplyr::summarize(positives = sum(result == "positive"), tests = n()) %>%
+  ungroup()
 
 
 save(tests, file = "rdas/tests.rda")
@@ -96,18 +97,7 @@ attr(all_tests, "date") <- now()
 save(all_tests, file = "rdas/all_tests.rda")
 save(tests_by_strata, file = "rdas/tests_by_strata.rda")
 
-# -- Check with Visualizations
-if(FALSE){
-tests %>%
-  ggplot(aes(date, rate)) +
-  geom_point(aes(date, rate), alpha=0.50, size=1) +
-  geom_ribbon(aes(ymin= expit(fit - 3*se), ymax = expit(fit + 3*se)), alpha=0.20) +
-  geom_line(aes(y = expit(fit)), color="blue2", size=0.80) +
-  theme_bw()
-}
-
-
-### Adding mortality and hospitlization
+# Adding mortality and hospitlization
 hosp_mort <- read_csv("data/DatosMortalidad.csv") %>%
   mutate(date = mdy(Fecha)) %>% 
   filter(date >= first_day) 
@@ -116,10 +106,10 @@ hosp_mort <- read_csv("data/DatosMortalidad.csv") %>%
 
 # -- Extracting variables for model fit
 x <- as.numeric(hosp_mort$date)
-y <- hosp_mort$IncrementoMuertes
+y <- hosp_mort$IncMueSalud
 
 # -- Design matrix for splines
-df  <- round(2 * nrow(hosp_mort)/30)
+df  <- round(nrow(hosp_mort)/30)
 x_s <- ns(x, df = df, intercept = FALSE)
 i_s <- c(1:(ncol(x_s)+1))
 
@@ -143,22 +133,40 @@ hosp_mort$se  <- sqrt(diag(X[, i_s] %*%
 
 save(hosp_mort, file = "rdas/hosp_mort.rda")
 
+## Load municipio pop data
+
+pop <- read_csv("data/poblacion-municipios.csv") %>%
+  slice(1) %>% unlist()
+pop <- pop[-1]
+names(pop)[names(pop)=="Comerio"]<- "Comerío"
+poblacion_municipios <- tibble(patientCity = names(pop), poblacion = pop) %>%
+  filter(patientCity != "Puerto Rico")
+
+save(poblacion_municipios, file = "rdas/poblacion_municipios.rda")
+
+# -- Check with Visualizations
 if(FALSE){
+  tests %>%
+    ggplot(aes(date, rate)) +
+    geom_point(aes(date, rate), alpha=0.50, size=1) +
+    geom_ribbon(aes(ymin= expit(fit - 3*se), ymax = expit(fit + 3*se)), alpha=0.20) +
+    geom_line(aes(y = expit(fit)), color="blue2", size=0.80) +
+    theme_bw()
 
-hosp_mort %>% 
-  ggplot(aes(date, IncrementoMuertes)) +
-  geom_ribbon(aes(ymin = exp(fit - 2*se), ymax = exp(fit + 2*se)), alpha = 0.5) +
-  #geom_bar(stat = "identity") + 
-  geom_point() +
-  geom_line(aes(y = exp(fit))) 
-
-max_y <- pmax(max(hosp_mort$HospitCOV19, na.rm = TRUE), 700)
-hosp_mort %>% 
-  filter(!is.na(HospitCOV19)) %>%
-  ggplot(aes(date, HospitCOV19)) +
-  geom_point() +
-  geom_smooth(formula = y~x, method = "loess", span = 14/nrow(hosp_mort), method.args = list(degree = 1, family = "symmetric")) +
-  scale_y_continuous(limits = c(0, max_y)) + 
-  geom_hline(yintercept = 691, lty = 2, level = 1 - alpha) + 
-  annotate("text", x = make_date(2020, 5, 1), y = 695, label = "Camas disponibles en los ICU", vjust = 0)
+  hosp_mort %>% 
+    ggplot(aes(date, IncMueSalud)) +
+    geom_ribbon(aes(ymin = exp(fit - 2*se), ymax = exp(fit + 2*se)), alpha = 0.5) +
+    #geom_bar(stat = "identity") + 
+    geom_point() +
+    geom_line(aes(y = exp(fit))) 
+  
+  max_y <- pmax(max(hosp_mort$HospitCOV19, na.rm = TRUE), 700)
+  hosp_mort %>% 
+    filter(!is.na(HospitCOV19)) %>%
+    ggplot(aes(date, HospitCOV19)) +
+    geom_point() +
+    geom_smooth(formula = y~x, method = "loess", span = 14/nrow(hosp_mort), method.args = list(degree = 1, family = "symmetric")) +
+    scale_y_continuous(limits = c(0, max_y)) + 
+    geom_hline(yintercept = 691, lty = 2, level = 1 - alpha) + 
+    annotate("text", x = make_date(2020, 5, 1), y = 695, label = "Camas disponibles en los ICU", vjust = 0)
 }

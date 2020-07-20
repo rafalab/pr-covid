@@ -54,7 +54,7 @@ shinyServer(function(input, output, session) {
       hosp_mort %>%
         filter(date >= input$range[1], date <= input$range[2]) %>%
         ggplot(aes(date)) +
-        geom_point(aes(y = IncrementoMuertes), size = 2, alpha = 0.65) +
+        geom_point(aes(y = IncMueSalud), size = 2, alpha = 0.65) +
         geom_ribbon(aes(ymin= exp(fit - z*se), ymax = exp(fit + z*se)), alpha = 0.35) +
         geom_line(aes(y = exp(fit)), color="blue2", size = 0.80) +
         ylab("Muertes") +
@@ -180,7 +180,7 @@ shinyServer(function(input, output, session) {
     # -- This is used to print table in app
     
     output$tabla <- DT::renderDataTable(DT::datatable({
-      tmp <- select(hosp_mort, date, HospitCOV19, IncrementoMuertes)
+      tmp <- select(hosp_mort, date, HospitCOV19, IncMueSalud)
       
       ret <- tests %>% left_join(tmp, by = "date") %>%
         filter(date >= input$range[1], date <= input$range[2]) %>%
@@ -188,7 +188,7 @@ shinyServer(function(input, output, session) {
                avg_7_day = paste0(format(round(100*expit(fit), 1), nsmall=1),"% ",
                                   "(",format(round(100*expit(fit - z*se), 1), nsmall=1),"%", ", ",
                                   format(round(100*expit(fit + z*se), 1), nsmall=1),"%", ")")) %>%
-        select(date, IncrementoMuertes, HospitCOV19,  positives, tests, rate, avg_7_day ) %>%
+        select(date, IncMueSalud, HospitCOV19,  positives, tests, rate, avg_7_day ) %>%
         arrange(desc(date)) %>%
         mutate(date = format(date, "%B %d")) %>%
         setNames(c("Fecha",  "Muertes", "Hospitalizaciones", "Positivos", "Pruebas", "Tasa", "Estimado (intervalo de confianza)"))
@@ -198,21 +198,37 @@ shinyServer(function(input, output, session) {
     options = list(dom = 't', pageLength = -1))
     
     output$municipios <- DT::renderDataTable(DT::datatable({
-      ret <- tests_by_strata %>%
+      
+      tmp <- tests_by_strata %>%
         filter(date >= input$range[1], date <= input$range[2]) %>%
+        mutate(patientCity = as.character(patientCity))
+      
+      children <- tmp %>%
+        filter(as.numeric(ageRange) <= 2) %>%
+        group_by(patientCity, ageRange) %>%
+        summarize(value = sum(positives)) %>%
+        ungroup() %>%
+        spread(ageRange, value)
+       
+      ndays <- as.numeric(diff(input$range))+1
+      
+      ret <- tmp %>%
         group_by(patientCity) %>%
-        summarize(`0 to 9` = sum(positives[as.character(ageRange) == "0 to 9"]),
-                  `10 to 19` = sum(positives[as.character(ageRange) == "10 to 19"]),
-                  positives = sum(positives), tests = sum(tests),
+        summarize(positives = sum(positives), tests = sum(tests),
                   rate =  positives/tests) %>%
+        ungroup() %>%
+        left_join(children, by = "patientCity") %>%
+        left_join(poblacion_municipios, by = "patientCity") %>%
         mutate(lower = qbinom(alpha/2, tests, rate) / tests,
-               upper = qbinom(1 - alpha/2, tests, rate) / tests) %>%
+               upper = qbinom(1 - alpha/2, tests, rate) / tests,
+               ppc = round(positives/poblacion * 100000 / ndays, 1)) %>%
         arrange(desc(rate)) %>%
         mutate(rate = paste0(format(round(100*rate,1), nsmall=1),"% ", "(",
                format(round(100*lower, 1), nsmall=1),"%", ", ",
-               format(round(100*upper, 1), nsmall=1),"%", ")")) %>%
-        select(patientCity, positives, tests, rate, `0 to 9`, `10 to 19`) %>%
-        setNames(c("Municipio", "Positivos", "Pruebas", "Tasa (intervalo de confianza)", "Casos 0 a 9 años", "Casos 10 a 19 años"))
+               format(round(100*upper, 1), nsmall=1),"%", ")"),
+               poblacion = prettyNum(poblacion, big.mark=",")) %>%
+        select(patientCity, positives, tests, rate, ppc, poblacion, `0 to 9`, `10 to 19`) %>%
+        setNames(c("Municipio", "Positivos", "Pruebas", "Tasa (intervalo de confianza)", "Casos por 100,000 por día", "Población", "Casos 0 a 9 años", "Casos 10 a 19 años"))
       
         return(ret)
     }), 
