@@ -43,12 +43,10 @@ shinyServer(function(input, output, session) {
     
     })
     
-    # -- This creates the map with positivity rate by municipio
-    output$mapa <- renderLeaflet({
+    # -- This creates the positivity rate map by municipio
+    output$mapa_positividad <- renderPlot({
       
-      # -- Getting municipio data based on users date range
       municipio_tests <- tests_by_strata %>%
-        filter(date >= input$range[1], date <= input$range[2]) %>%
         group_by(date, patientCity) %>%
         dplyr::summarize(positives = sum(positives),
                          tests     = sum(tests)) %>%
@@ -65,38 +63,78 @@ shinyServer(function(input, output, session) {
                upr  = 100 * qbinom(1 - alpha/2, tests, rate) / tests, 
                rate = 100 * rate)
       
-      # -- Joining with polygons
-      geoDat <- geo_join(pr_gjson, municipio_tests, "NAME", "patientCity")
-      
-      # -- Set up for colors
-      pal <- colorNumeric(palette = "Reds", domain = municipio_tests$rate, reverse = FALSE)
-      
-      # -- Viz
-      leaflet(geoDat) %>%
-        addProviderTiles(providers$CartoDB) %>%
-        addPolygons(stroke       = TRUE,
-                    weight       = 1,
-                    color        = "black",
-                    smoothFactor = 0.30,
-                    fillOpacity  = 0.80,
-                    fillColor    = ~pal(rate),
-                    label        = ~paste0(NAME,
-                                           ": ",
-                                           formatC(round(rate,2), big.mark = ","),
-                                           "% ",
-                                           "(",round(lwr,2),
-                                           "%, ",
-                                           round(upr,2),
-                                           "%)"),
-                    popup  = ~paste0("Número de pruebas = ", tests)) %>%
-        addLegend(pal       = pal, 
-                  values    = ~rate, 
-                  opacity   = 1,
-                  bins      = 4,  
-                  labFormat = labelFormat(suffix = "%"),
-                  position  = "bottomleft",
-                  title     = paste("Tasa de Positividad"))
+      municipio_tests %>%
+        {merge(map, .,by.x = "ADM1_ES", by.y = "patientCity", all.y = T)} %>%
+        ggplot() +
+        geom_sf(data = map, fill="gray", size=0.15) +
+        geom_sf(aes(fill = rate), color="black", size=0.15) +
+        geom_text(data = map, aes(X, Y, label = ADM1_ES),
+                  size  = 2.2,
+                  color = "black",
+                  fontface = "bold") +
+        scale_fill_gradient2(low  = "#2171b5", 
+                             high = "#cb181d", 
+                             mid  = "white", 
+                             name = "Tasa de Positividad:",
+                             midpoint = 5) +
+        theme_void() +
+        theme(legend.position = "bottom")
     })
+    
+    # -- This creates the map with positivity rate by municipio
+    # output$mapa <- renderLeaflet({
+    #   
+    #   # -- Getting municipio data based on users date range
+    #   municipio_tests <- tests_by_strata %>%
+    #     filter(date >= input$range[1], date <= input$range[2]) %>%
+    #     group_by(date, patientCity) %>%
+    #     dplyr::summarize(positives = sum(positives),
+    #                      tests     = sum(tests)) %>%
+    #     ungroup() %>%
+    #     filter(date >= input$range[1], date <= input$range[2]) %>%
+    #     group_by(patientCity) %>%
+    #     dplyr::summarize(positives  = sum(positives),
+    #                      tests      = sum(tests),
+    #                      rate       = positives / tests) %>%
+    #     ungroup() %>%
+    #     mutate(rate = pmax(0.25/1000, rate)) %>%
+    #     na.omit() %>%
+    #     mutate(lwr  = 100 * qbinom(alpha/2, tests, rate) / tests,
+    #            upr  = 100 * qbinom(1 - alpha/2, tests, rate) / tests, 
+    #            rate = 100 * rate)
+    #   
+    #   # -- Joining with polygons
+    #   geoDat <- geo_join(pr_gjson, municipio_tests, "NAME", "patientCity")
+    #   
+    #   # -- Set up for colors
+    #   pal <- colorNumeric(palette = "Reds", domain = municipio_tests$rate, reverse = FALSE)
+    #   
+    #   # -- Viz
+    #   leaflet(geoDat) %>%
+    #     addProviderTiles(providers$CartoDB) %>%
+    #     addPolygons(stroke       = TRUE,
+    #                 weight       = 1,
+    #                 color        = "black",
+    #                 smoothFactor = 0.30,
+    #                 fillOpacity  = 0.80,
+    #                 fillColor    = ~pal(rate),
+    #                 label        = ~paste0(NAME,
+    #                                        ": ",
+    #                                        formatC(round(rate,2), big.mark = ","),
+    #                                        "% ",
+    #                                        "(",round(lwr,2),
+    #                                        "%, ",
+    #                                        round(upr,2),
+    #                                        "%)"),
+    #                 popup  = ~paste0("Número de pruebas = ", tests)) %>%
+    #     addLegend(pal       = pal, 
+    #               values    = ~rate, 
+    #               opacity   = 1,
+    #               bins      = 4,  
+    #               labFormat = labelFormat(suffix = "%"),
+    #               position  = "bottomleft",
+    #               title     = paste("Tasa de Positividad"))
+    # })
     
     # -- This is used to print table in app
     output$tabla <- DT::renderDataTable(DT::datatable({
