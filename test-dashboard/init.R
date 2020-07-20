@@ -28,3 +28,11 @@ map <- st_read("pri_adm_2019_shp/pri_admbnda_adm1_2019.shp") %>%
   st_transform(crs = 4326) %>%
   st_crop(xmin = -67.3, xmax = -65.3, ymin = 17.9, ymax = 18.5)
 map <- cbind(map, st_coordinates(st_centroid(map)))
+
+# -- Population data
+pop <- read_csv("poblacion-municipios.csv") %>%
+  slice(1) %>% unlist()
+pop <- pop[-1]
+names(pop)[names(pop)=="Comerio"]<- "Comerío"
+pop <- tibble(patientCity = names(pop), pop) %>%
+  filter(patientCity != "Puerto Rico")

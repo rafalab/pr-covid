@@ -43,6 +43,44 @@ shinyServer(function(input, output, session) {
     
     })
     
+    # -- This creates the positivity rate map by municipio
+    output$mapa_positividad <- renderPlot({
+      
+      municipio_tests <- tests_by_strata %>%
+        group_by(date, patientCity) %>%
+        dplyr::summarize(positives = sum(positives),
+                         tests     = sum(tests)) %>%
+        ungroup() %>%
+        filter(date >= input$range[1], date <= input$range[2]) %>%
+        group_by(patientCity) %>%
+        dplyr::summarize(positives  = sum(positives),
+                         tests      = sum(tests),
+                         rate       = positives / tests) %>%
+        ungroup() %>%
+        mutate(rate = pmax(0.25/1000, rate)) %>%
+        na.omit() %>%
+        mutate(lwr  = 100 * qbinom(alpha/2, tests, rate) / tests,
+               upr  = 100 * qbinom(1 - alpha/2, tests, rate) / tests, 
+               rate = 100 * rate)
+      
+      municipio_tests %>%
+        {merge(map, .,by.x = "ADM1_ES", by.y = "patientCity", all.y = T)} %>%
+        ggplot() +
+        geom_sf(data = map, fill="gray", size=0.15) +
+        geom_sf(aes(fill = rate), color="black", size=0.15) +
+        geom_text(data = map, aes(X, Y, label = ADM1_ES),
+                  size  = 2.2,
+                  color = "black",
+                  fontface = "bold") +
+        scale_fill_gradient2(low  = "#2171b5", 
+                             high = "#cb181d", 
+                             mid  = "white", 
+                             name = "Tasa de Positividad:",
+                             midpoint = 5) +
+        theme_void() +
+        theme(legend.position = "bottom")
+    })
+    
     # -- This creates the map with positivity rate by municipio
     # output$mapa <- renderLeaflet({
     #   
@@ -97,7 +135,6 @@ shinyServer(function(input, output, session) {
     #               position  = "bottomleft",
     #               title     = paste("Tasa de Positividad"))
     # })
-    # 
     # -- This is used to print table in app
     output$tabla <- DT::renderDataTable(DT::datatable({
       ret <- tests %>%
