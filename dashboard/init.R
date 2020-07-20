@@ -6,7 +6,7 @@ library(splines)
 library(scales)
 library(plotly)
 library(shiny)
-##library(sf)
+#library(sf)
 
 # -- Set locale
 Sys.setlocale("LC_TIME", "es_ES")

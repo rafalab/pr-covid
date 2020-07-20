@@ -55,9 +55,4 @@ shinyUI(fluidPage(theme = shinytheme("sandstone"),
             )
     )),
     hr(),
-    print("Datos actualizados de mortalidad y hospitalizaciones son provistos por María-Eglée Pérez  (Departamento de Matemáticas, UPR-RP)\n"),
-    hr(),
-    print("API: https://bioportal.salud.gov.pr/api/administration/reports/minimal-info-unique-tests\n"),
-    hr(),
-    print("Code used to create this site https://github.com/rafalab/pr-covid/tree/master/dashboard")
-))
+    div(class = "footer", includeHTML("footer.html"))))
