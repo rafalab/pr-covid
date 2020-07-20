@@ -46,18 +46,19 @@ shinyServer(function(input, output, session) {
     # -- This creates the positivity rate map by municipio
     output$mapa_positividad <- renderPlot({
       
+      MAX <- 0.25 ## maximum positivity rate
       municipio_tests <- tests_by_strata %>%
+        filter(date >= input$range[1], date <= input$range[2]) %>%
         group_by(date, patientCity) %>%
         dplyr::summarize(positives = sum(positives),
                          tests     = sum(tests)) %>%
         ungroup() %>%
-        filter(date >= input$range[1], date <= input$range[2]) %>%
         group_by(patientCity) %>%
         dplyr::summarize(positives  = sum(positives),
                          tests      = sum(tests),
                          rate       = positives / tests) %>%
         ungroup() %>%
-        mutate(rate = pmax(0.25/1000, rate)) %>%
+        mutate(rate = pmin(MAX, rate)) %>%
         na.omit() %>%
         mutate(lwr  = 100 * qbinom(alpha/2, tests, rate) / tests,
                upr  = 100 * qbinom(1 - alpha/2, tests, rate) / tests, 
@@ -72,11 +73,9 @@ shinyServer(function(input, output, session) {
                   size  = 2.2,
                   color = "black",
                   fontface = "bold") +
-        scale_fill_gradient2(low  = "#2171b5", 
-                             high = "#cb181d", 
-                             mid  = "white", 
-                             name = "Tasa de Positividad:",
-                             midpoint = 5) +
+        scale_fill_gradientn(colors = RColorBrewer::brewer.pal(9, "Reds"),
+          name = "Tasa de Positividad:",
+         limits= c(0, MAX*100)) +
         theme_void() +
         theme(legend.position = "bottom")
     })
@@ -148,7 +147,7 @@ shinyServer(function(input, output, session) {
         mutate(date = format(date, "%B %d")) %>%
         setNames(c("Fecha", "Positivos", "Pruebas", "Tasa", "Promedio 7 dias  (intervalo de confianza)"))
       return(ret)
-    }), 
+    }), caption = "La columna con fechas contiene el día en que se hizo la prueba.", 
     rownames= FALSE,
     options = list(dom = 't', pageLength = -1))
     
