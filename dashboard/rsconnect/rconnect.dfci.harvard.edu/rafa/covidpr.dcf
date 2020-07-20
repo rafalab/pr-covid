@@ -5,8 +5,8 @@ account: rafa
 server: rconnect.dfci.harvard.edu
 hostUrl: https://rconnect.dfci.harvard.edu/__api__
 appId: 30
-bundleId: 124
+bundleId: 128
 url: https://rconnect.dfci.harvard.edu/covidpr/
-when: 1595239782.66845
+when: 1595253687.9758
 asMultiple: FALSE
 asStatic: FALSE

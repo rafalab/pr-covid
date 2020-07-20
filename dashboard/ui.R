@@ -33,8 +33,8 @@ shinyUI(fluidPage(theme = shinytheme("sandstone"),
                          plotOutput("numero_pruebas")),
                 
                 # -- Panel 3
-                tabPanel("Mapa",
-                         plotOutput("mapa_positividad")),
+              ##  tabPanel("Mapa",
+              ##          plotOutput("mapa_positividad")),
 
                 # -- Panel 4
                 tabPanel("Totales diarios",

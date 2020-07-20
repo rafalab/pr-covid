@@ -44,42 +44,42 @@ shinyServer(function(input, output, session) {
     })
     
     # -- This creates the positivity rate map by municipio
-    output$mapa_positividad <- renderPlot({
-      
-      MAX <- 0.25 ## maximum positivity rate
-      municipio_tests <- tests_by_strata %>%
-        filter(date >= input$range[1], date <= input$range[2]) %>%
-        group_by(date, patientCity) %>%
-        dplyr::summarize(positives = sum(positives),
-                         tests     = sum(tests)) %>%
-        ungroup() %>%
-        group_by(patientCity) %>%
-        dplyr::summarize(positives  = sum(positives),
-                         tests      = sum(tests),
-                         rate       = positives / tests) %>%
-        ungroup() %>%
-        mutate(rate = pmin(MAX, rate)) %>%
-        na.omit() %>%
-        mutate(lwr  = 100 * qbinom(alpha/2, tests, rate) / tests,
-               upr  = 100 * qbinom(1 - alpha/2, tests, rate) / tests, 
-               rate = 100 * rate)
-      
-      municipio_tests %>%
-        {merge(map, .,by.x = "ADM1_ES", by.y = "patientCity", all.y = T)} %>%
-        ggplot() +
-        geom_sf(data = map, fill="gray", size=0.15) +
-        geom_sf(aes(fill = rate), color="black", size=0.15) +
-        geom_text(data = map, aes(X, Y, label = ADM1_ES),
-                  size  = 2.2,
-                  color = "black",
-                  fontface = "bold") +
-        scale_fill_gradientn(colors = RColorBrewer::brewer.pal(9, "Reds"),
-          name = "Tasa de Positividad:",
-         limits= c(0, MAX*100)) +
-        theme_void() +
-        theme(legend.position = "bottom")
-    })
-    
+    # output$mapa_positividad <- renderPlot({
+    #   
+    #   MAX <- 0.25 ## maximum positivity rate
+    #   municipio_tests <- tests_by_strata %>%
+    #     filter(date >= input$range[1], date <= input$range[2]) %>%
+    #     group_by(date, patientCity) %>%
+    #     dplyr::summarize(positives = sum(positives),
+    #                      tests     = sum(tests)) %>%
+    #     ungroup() %>%
+    #     group_by(patientCity) %>%
+    #     dplyr::summarize(positives  = sum(positives),
+    #                      tests      = sum(tests),
+    #                      rate       = positives / tests) %>%
+    #     ungroup() %>%
+    #     mutate(rate = pmin(MAX, rate)) %>%
+    #     na.omit() %>%
+    #     mutate(lwr  = 100 * qbinom(alpha/2, tests, rate) / tests,
+    #            upr  = 100 * qbinom(1 - alpha/2, tests, rate) / tests, 
+    #            rate = 100 * rate)
+    #   
+    #   municipio_tests %>%
+    #     {merge(map, .,by.x = "ADM1_ES", by.y = "patientCity", all.y = T)} %>%
+    #     ggplot() +
+    #     geom_sf(data = map, fill="gray", size=0.15) +
+    #     geom_sf(aes(fill = rate), color="black", size=0.15) +
+    #     geom_text(data = map, aes(X, Y, label = ADM1_ES),
+    #               size  = 2.2,
+    #               color = "black",
+    #               fontface = "bold") +
+    #     scale_fill_gradientn(colors = RColorBrewer::brewer.pal(9, "Reds"),
+    #       name = "Tasa de Positividad:",
+    #      limits= c(0, MAX*100)) +
+    #     theme_void() +
+    #     theme(legend.position = "bottom")
+    # })
+    # 
     # -- This creates the map with positivity rate by municipio
     # output$mapa <- renderLeaflet({
     #   
