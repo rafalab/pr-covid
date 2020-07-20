@@ -8,10 +8,10 @@ shinyServer(function(input, output, session) {
        tests %>%
          filter(date >= input$range[1], date <= input$range[2]) %>%
          ggplot(aes(date, rate)) +
-         geom_hline(yintercept = 0.05, lty=2, color="gray") +
-         geom_point(aes(date, rate), size=2, alpha=0.40) +
-         geom_ribbon(aes(ymin= expit(fit - z*se), ymax = expit(fit + z*se)), alpha=0.20) +
-         geom_line(aes(y = expit(fit)), color="blue2", size=0.80) +
+         geom_hline(yintercept = 0.05, lty=2, color = "gray") +
+         geom_point(aes(date, rate), size=2, alpha = 0.65) +
+         geom_ribbon(aes(ymin= expit(fit - z*se), ymax = expit(fit + z*se)), alpha = 0.35) +
+         geom_line(aes(y = expit(fit)), color="blue2", size = 0.80) +
          ylab("Tasa de positividad") +
          xlab("Fecha") +
          ggtitle("Tasa de Positividad en Puerto Rico") +
@@ -21,6 +21,49 @@ shinyServer(function(input, output, session) {
          theme_bw()
     })
     
+    # -- This creates the hospitalization figure
+    output$hospitalizaciones <- renderPlot({
+      
+      tmp <- hosp_mort %>% 
+        filter(!is.na(HospitCOV19)) %>%
+        filter(date >= input$range[1] & date <= input$range[2]) 
+        
+      
+
+      max_y <- pmax(max(tmp$HospitCOV19, na.rm = TRUE), 700)
+      min_date <- min(tmp$date)
+
+      tmp %>% 
+        ggplot(aes(date, HospitCOV19)) +
+        geom_hline(yintercept = 691, lty = 2, color="gray", ) + 
+        geom_point(size = 2, alpha = 0.65) +
+        geom_smooth(formula = y~x, method = "loess", span = 14/nrow(hosp_mort), size = 0.8, alpha = 0.35, 
+                    level = 1 - alpha, method.args = list(degree = 1, family = "symmetric")) +
+        scale_y_continuous(limits = c(0, max_y)) + 
+        annotate("text", x = min_date, y = 695, label = "Total de camas disponibles en los ICU", vjust = 0, hjust = 0) +
+        xlab("Fecha") +
+        ylab("Hospitalizaciones") +
+        ggtitle("Hospitalizaciones actuales por COVID-19 en Puerto Rico") +
+        scale_x_date(date_labels = "%B %d") +
+        theme_bw()
+      
+        })
+   
+    # -- This creates the hospitalization figure
+    output$muertes <- renderPlot({
+      hosp_mort %>%
+        filter(date >= input$range[1], date <= input$range[2]) %>%
+        ggplot(aes(date)) +
+        geom_point(aes(y = IncrementoMuertes), size = 2, alpha = 0.65) +
+        geom_ribbon(aes(ymin= exp(fit - z*se), ymax = exp(fit + z*se)), alpha = 0.35) +
+        geom_line(aes(y = exp(fit)), color="blue2", size = 0.80) +
+        ylab("Muertes") +
+        xlab("Fecha") +
+        ggtitle("Muertes por COVID-19 en Puerto Rico") +
+        scale_x_date(date_labels = "%B %d") +
+        scale_y_continuous(breaks = seq(0, 15, 1)) +
+        theme_bw()
+    })
     
     # -- This creates the daily number of tests figure
     output$numero_pruebas <- renderPlot({
@@ -31,7 +74,7 @@ shinyServer(function(input, output, session) {
                                      week_start = wday(max(date)))) %>%
         dplyr::summarize(tests = sum(tests)) %>%
         ggplot(aes(date, tests)) +
-        geom_bar(color="black", fill="#252525", size=0.20, stat = "identity") +
+        geom_bar(size=0.20, stat = "identity") +
         ggtitle("Número de Pruebas Semanales en Puerto Rico") +
         ylab("Número de pruebas") +
         xlab("Semana acabando en esta fecha") +
@@ -135,17 +178,20 @@ shinyServer(function(input, output, session) {
     #               title     = paste("Tasa de Positividad"))
     # })
     # -- This is used to print table in app
+    
     output$tabla <- DT::renderDataTable(DT::datatable({
-      ret <- tests %>%
+      tmp <- select(hosp_mort, date, HospitCOV19, IncrementoMuertes)
+      
+      ret <- tests %>% left_join(tmp, by = "date") %>%
         filter(date >= input$range[1], date <= input$range[2]) %>%
         mutate(rate = paste0(format(round(100*rate,1), nsmall=1),"%"),
                avg_7_day = paste0(format(round(100*expit(fit), 1), nsmall=1),"% ",
                                   "(",format(round(100*expit(fit - z*se), 1), nsmall=1),"%", ", ",
                                   format(round(100*expit(fit + z*se), 1), nsmall=1),"%", ")")) %>%
-        select(date, positives, tests, rate, avg_7_day) %>%
+        select(date, IncrementoMuertes, HospitCOV19,  positives, tests, rate, avg_7_day ) %>%
         arrange(desc(date)) %>%
         mutate(date = format(date, "%B %d")) %>%
-        setNames(c("Fecha", "Positivos", "Pruebas", "Tasa", "Promedio 7 dias  (intervalo de confianza)"))
+        setNames(c("Fecha",  "Muertes", "Hospitalizaciones", "Positivos", "Pruebas", "Tasa", "Estimado (intervalo de confianza)"))
       return(ret)
     }), caption = "La columna con fechas contiene el día en que se hizo la prueba.", 
     rownames= FALSE,

@@ -28,11 +28,20 @@ shinyUI(fluidPage(theme = shinytheme("sandstone"),
                 tabPanel("Positividad",
                          plotOutput("tasa_positividad")),
 
+                
                 # -- Panel 2
+                tabPanel("Hospitalizaciones",
+                         plotOutput("hospitalizaciones")),
+                
+                # -- Panel 3
+                tabPanel("Muertes",
+                         plotOutput("muertes")),
+                
+                # -- Panel 4
                 tabPanel("Pruebas",
                          plotOutput("numero_pruebas")),
                 
-                # -- Panel 3
+                # -- Panel 5
               ##  tabPanel("Mapa",
               ##          plotOutput("mapa_positividad")),
 
@@ -45,6 +54,8 @@ shinyUI(fluidPage(theme = shinytheme("sandstone"),
                          DT::dataTableOutput("municipios"))
             )
     )),
+    hr(),
+    print("Datos actualizados de mortalidad y hospitalizaciones son provistos por María-Eglée Pérez  (Departamento de Matemáticas, UPR-RP)\n"),
     hr(),
     print("API: https://bioportal.salud.gov.pr/api/administration/reports/minimal-info-unique-tests\n"),
     hr(),

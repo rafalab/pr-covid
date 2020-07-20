@@ -1,5 +1,7 @@
 source("init.R")
 
+#
+first_day <- make_date(2020, 3, 15)
 # -- Getting url
 url <- "https://bioportal.salud.gov.pr/api/administration/reports/minimal-info-unique-tests"
 all_tests <- jsonlite::fromJSON(url)
@@ -42,7 +44,7 @@ if(FALSE){
 
 # -- Observed tasa de positividad
 tests <- all_tests %>%  
-  filter(date>=make_date(2020, 3, 15)) %>%
+  filter(date>=first_day) %>%
   filter(result %in% c("positive", "negative")) %>%
   group_by(date) %>%
   dplyr::summarize(positives = sum(result == "positive"), tests = n()) %>%
@@ -75,13 +77,13 @@ beta <- coef(fit)
 tests$fit <- as.vector(X[, i_s] %*% beta[i_s])
 tests$se  <- sqrt(diag(X[, i_s] %*%
                          summary(fit)$cov.scaled[i_s, i_s] %*%
-                         t(X[, i_s])))
+                         t(X[, i_s])) * pmax(1,summary(fit)$dispersion))
 
 
 # -- summaries stratified by age group and patientID
 # -- Observed tasa de positividad
 tests_by_strata <- all_tests %>%  
-  filter(date>=make_date(2020, 3, 15)) %>%
+  filter(date>=first_day) %>%
   filter(result %in% c("positive", "negative")) %>%
   mutate(patientCity = fct_explicit_na(patientCity, "No reportado")) %>%
   mutate(ageRange = fct_explicit_na(ageRange, "No reportado")) %>%
@@ -94,7 +96,7 @@ attr(all_tests, "date") <- now()
 save(all_tests, file = "rdas/all_tests.rda")
 save(tests_by_strata, file = "rdas/tests_by_strata.rda")
 
-# -- Visualizations
+# -- Check with Visualizations
 if(FALSE){
 tests %>%
   ggplot(aes(date, rate)) +
@@ -102,4 +104,61 @@ tests %>%
   geom_ribbon(aes(ymin= expit(fit - 3*se), ymax = expit(fit + 3*se)), alpha=0.20) +
   geom_line(aes(y = expit(fit)), color="blue2", size=0.80) +
   theme_bw()
+}
+
+
+### Adding mortality and hospitlization
+hosp_mort <- read_csv("data/DatosMortalidad.csv") %>%
+  mutate(date = mdy(Fecha)) %>% 
+  filter(date >= first_day) 
+
+
+
+# -- Extracting variables for model fit
+x <- as.numeric(hosp_mort$date)
+y <- hosp_mort$IncrementoMuertes
+
+# -- Design matrix for splines
+df  <- round(2 * nrow(hosp_mort)/30)
+x_s <- ns(x, df = df, intercept = FALSE)
+i_s <- c(1:(ncol(x_s)+1))
+
+# -- Design matrix for weekday effect
+w            <- factor(wday(hosp_mort$date))
+contrasts(w) <- contr.sum(length(levels(w)), contrasts = TRUE)
+x_w          <- model.matrix(~w)
+
+# -- Design matrix
+X <- cbind(x_s, x_w)
+
+# -- Fitting model 
+fit  <- glm(y ~ -1 + X, family = "quasipoisson")
+beta <- coef(fit)
+
+# -- Computing probabilities
+hosp_mort$fit <- as.vector(X[, i_s] %*% beta[i_s])
+hosp_mort$se  <- sqrt(diag(X[, i_s] %*%
+                         summary(fit)$cov.scaled[i_s, i_s] %*%
+                         t(X[, i_s]))* pmax(1,summary(fit)$dispersion))
+
+save(hosp_mort, file = "rdas/hosp_mort.rda")
+
+if(FALSE){
+
+hosp_mort %>% 
+  ggplot(aes(date, IncrementoMuertes)) +
+  geom_ribbon(aes(ymin = exp(fit - 2*se), ymax = exp(fit + 2*se)), alpha = 0.5) +
+  #geom_bar(stat = "identity") + 
+  geom_point() +
+  geom_line(aes(y = exp(fit))) 
+
+max_y <- pmax(max(hosp_mort$HospitCOV19, na.rm = TRUE), 700)
+hosp_mort %>% 
+  filter(!is.na(HospitCOV19)) %>%
+  ggplot(aes(date, HospitCOV19)) +
+  geom_point() +
+  geom_smooth(formula = y~x, method = "loess", span = 14/nrow(hosp_mort), method.args = list(degree = 1, family = "symmetric")) +
+  scale_y_continuous(limits = c(0, max_y)) + 
+  geom_hline(yintercept = 691, lty = 2, level = 1 - alpha) + 
+  annotate("text", x = make_date(2020, 5, 1), y = 695, label = "Camas disponibles en los ICU", vjust = 0)
 }
