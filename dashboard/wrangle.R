@@ -90,7 +90,7 @@ tests_by_strata <- all_tests %>%
 
 
 save(tests, file = "rdas/tests.rda")
-attr(all_tests, "date") <- today()
+attr(all_tests, "date") <- now()
 save(all_tests, file = "rdas/all_tests.rda")
 save(tests_by_strata, file = "rdas/tests_by_strata.rda")
 
