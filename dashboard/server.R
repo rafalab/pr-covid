@@ -228,7 +228,7 @@ shinyServer(function(input, output, session) {
                format(round(100*upper, 1), nsmall=1),"%", ")"),
                poblacion = prettyNum(poblacion, big.mark=",")) %>%
         select(patientCity, positives, tests, rate, ppc, poblacion, `0 to 9`, `10 to 19`) %>%
-        setNames(c("Municipio", "Positivos", "Pruebas", "Tasa (intervalo de confianza)", "Casos por 100,000 por día", "Población", "Casos 0 a 9 años", "Casos 10 a 19 años"))
+        setNames(c("Municipio", "Positivos", "Pruebas", "Tasa (intervalo de confianza)", "Positivos por 100,000 por día", "Población", "Casos 0 a 9 años", "Casos 10 a 19 años"))
       
         return(ret)
     }), 
