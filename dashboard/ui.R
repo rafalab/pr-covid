@@ -11,13 +11,16 @@ shinyUI(fluidPage(theme = shinytheme("sandstone"),
     sidebarLayout(
         sidebarPanel(
             dateRangeInput("range", "Periodo", 
-                           start = make_date(2020, 3, 21), end=today(),
+                           start = make_date(2020, 3, 21), end=today() -days(1),
                            min = make_date(2020,3,15),
                            format = "M-dd",
                            max = today()),
             br(),
             div("Datos depurados:"),
             downloadButton("downloadData", "Download"), 
+            br(),
+            br(),
+            div("Actualización:", attr(tests, "date")),
             width = 3),
         
         # Show a plot of the generated distribution

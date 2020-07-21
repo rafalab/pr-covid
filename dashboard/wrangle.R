@@ -91,7 +91,7 @@ tests_by_strata <- all_tests %>%
   dplyr::summarize(positives = sum(result == "positive"), tests = n()) %>%
   ungroup()
 
-
+attr(tests, "date") <- now()
 save(tests, file = "rdas/tests.rda")
 attr(all_tests, "date") <- now()
 save(all_tests, file = "rdas/all_tests.rda")
