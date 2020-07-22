@@ -37,15 +37,21 @@ shinyUI(fluidPage(theme = shinytheme("sandstone"),
             br(),
             br(),
             radioButtons("yscale", 
-                         label = "Escala de valores",
-                         choices = list("Predeterminada" = TRUE,
-                                        "Libre" = FALSE),
+                         label = "Rango del gráfico:",
+                         choices = list("Preescogido" = TRUE,
+                                        "Determinado por datos" = FALSE),
                          selected = TRUE),
             div("Datos depurados:"),
-            downloadButton("downloadData", "Download"), 
+            downloadButton("downloadData", "Download", 
+                           style = "color: black; 
+                     background-color: rgb(230, 220, 205); 
+                     position: relative; 
+                     text-align:center;
+                     border-radius: 6px;
+                     border-width: 2px"), 
             br(),
             br(),
-            div("Actualización:", attr(tests, "date")),
+            div("Actualización:", br(), attr(tests, "date")),
             width = 3),
         
         # Show a plot of the generated distribution

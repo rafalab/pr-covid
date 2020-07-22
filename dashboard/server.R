@@ -104,7 +104,7 @@ shinyServer(function(input, output, session) {
     observeEvent(input$reset, {
       updateDateRangeInput(session, "range",
                            start = "2020-03-21",
-                           end   = today())
+                           end   = today() - 1)
     })
     
     # -- This sets range to last two weeks
