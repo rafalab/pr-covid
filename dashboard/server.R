@@ -249,8 +249,8 @@ shinyServer(function(input, output, session) {
                format(round(100*lower, 1), nsmall=1),"%", ", ",
                format(round(100*upper, 1), nsmall=1),"%", ")"),
                poblacion = prettyNum(poblacion, big.mark=",")) %>%
-        select(patientCity, positives, tests, rate, ppc, poblacion, `0 to 9`, `10 to 19`) %>%
-        setNames(c("Municipio", "Positivos", "Pruebas", "Tasa de positividad (IC)", "Positivos por 100,000 por día", "Población", "Casos 0 a 9 años", "Casos 10 a 19 años"))
+        select(patientCity, rate, positives, tests, ppc, poblacion, `0 to 9`, `10 to 19`) %>%
+        setNames(c("Municipio", "Tasa de positividad (IC)", "Positivos", "Pruebas",  "Positivos por 100,000 por día", "Población", "Casos 0 a 9 años", "Casos 10 a 19 años"))
       
         return(ret)
     }), 
@@ -259,8 +259,10 @@ shinyServer(function(input, output, session) {
                      " a ",
                      format(input$range[2], "%B %d"),
                      ". IC = Intervalo de confianza del ", (1-alpha)*100,"%."),
+    class = 'white-space: nowrap',
     rownames= FALSE,
-    options = list(dom = 't', pageLength = -1))
+    options = list(dom = 't', pageLength = -1,
+                   columnDefs = list(list(className = 'dt-right', targets = 2:7))))
     
     
     # -- This allows users to download data

@@ -18,23 +18,31 @@ shinyUI(fluidPage(theme = shinytheme("sandstone"),
                            min = make_date(2020,3,15),
                            format = "M-dd",
                            max = today()),
+            actionButton("reset", "Todas las fechas", 
+            style = "color: black; 
+                     background-color: rgb(230, 220, 205); 
+                     position: relative; 
+                     text-align:center;
+                     border-radius: 6px;
+                     border-width: 2px"),
+            br(),
+            br(),
+            actionButton("weeks", "Últimas dos Semanas", 
+                         style = "color: black; 
+                     background-color: rgb(230, 220, 205); 
+                     position: relative; 
+                     text-align:center;
+                     border-radius: 6px;
+                     border-width: 2px"),
+            br(),
             br(),
             radioButtons("yscale", 
                          label = "Escala de valores",
                          choices = list("Predeterminada" = TRUE,
                                         "Libre" = FALSE),
                          selected = TRUE),
-            br(),
             div("Datos depurados:"),
             downloadButton("downloadData", "Download"), 
-            br(),
-            br(),
-            div("Aquí puede reiniciar el período:"),
-            actionButton("reset", "Reiniciar período"),
-            br(),
-            br(),
-            div("Aquí puede ver las últimas dos semanas:"),
-            actionButton("weeks", "Últimas dos semanas"),
             br(),
             br(),
             div("Actualización:", attr(tests, "date")),
