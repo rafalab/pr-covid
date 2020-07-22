@@ -27,34 +27,28 @@ shinyUI(fluidPage(theme = shinytheme("sandstone"),
         mainPanel(
             tabsetPanel(
                 
-                # -- Panel 1
+                tabPanel("Totales diarios",
+                         DT::dataTableOutput("tabla")),
+                
                 tabPanel("Positividad",
                          plotOutput("tasa_positividad")),
 
                 
-                # -- Panel 2
                 tabPanel("Hospitalizaciones",
                          plotOutput("hospitalizaciones")),
                 
-                # -- Panel 3
                 tabPanel("Muertes",
                          plotOutput("muertes")),
                 
-                # -- Panel 4
                 tabPanel("Pruebas",
                          plotOutput("numero_pruebas")),
                 
-                # -- Panel 5
-              ##  tabPanel("Mapa",
-              ##          plotOutput("mapa_positividad")),
-
-                # -- Panel 4
-                tabPanel("Totales diarios",
-                         DT::dataTableOutput("tabla")),
-                
-                # -- Panel 5
                 tabPanel("Tasas por municipio",
-                         DT::dataTableOutput("municipios"))
+                         DT::dataTableOutput("municipios")),
+                
+                tabPanel("Mapa",
+                         plotOutput("mapa_positividad"))
+                
             )
     )),
     hr(),

@@ -30,17 +30,19 @@ shinyServer(function(input, output, session) {
         
       
 
-      max_y <- pmax(max(tmp$HospitCOV19, na.rm = TRUE), 700)
+      max_y <- pmax(max(tmp$HospitCOV19, na.rm = TRUE), 725)
       min_date <- min(tmp$date)
 
       tmp %>% 
         ggplot(aes(date, HospitCOV19)) +
-        geom_hline(yintercept = 691, lty = 2, color="gray", ) + 
-        geom_point(size = 2, alpha = 0.65) +
-        geom_smooth(formula = y~x, method = "loess", span = 14/nrow(hosp_mort), size = 0.8, alpha = 0.35, 
-                    level = 1 - alpha, method.args = list(degree = 1, family = "symmetric")) +
+        geom_hline(yintercept = 691, lty = 2, color="red") + 
+        geom_bar(stat = "identity") +
+        # geom_point(size = 2, alpha = 0.65) +
+       # geom_smooth(formula = y~x, method = "loess", span = 14/nrow(hosp_mort), size = 0.8, alpha = 0.35, 
+       #            level = 1 - alpha, method.args = list(degree = 1, family = "symmetric")) +
         scale_y_continuous(limits = c(0, max_y)) + 
-        annotate("text", x = min_date, y = 695, label = "Total de camas disponibles en los ICU", vjust = 0, hjust = 0) +
+        annotate("text", x = min_date, y = 700, 
+                 label = "Total de camas disponibles en los ICU  = 691", vjust = 0, hjust = 0) +
         xlab("Fecha") +
         ylab("Hospitalizaciones") +
         ggtitle("Hospitalizaciones actuales por COVID-19 en Puerto Rico") +
@@ -86,99 +88,44 @@ shinyServer(function(input, output, session) {
     
     })
     
-    # -- This creates the positivity rate map by municipio
-    # output$mapa_positividad <- renderPlot({
-    #   
-    #   MAX <- 0.25 ## maximum positivity rate
-    #   municipio_tests <- tests_by_strata %>%
-    #     filter(date >= input$range[1], date <= input$range[2]) %>%
-    #     group_by(date, patientCity) %>%
-    #     dplyr::summarize(positives = sum(positives),
-    #                      tests     = sum(tests)) %>%
-    #     ungroup() %>%
-    #     group_by(patientCity) %>%
-    #     dplyr::summarize(positives  = sum(positives),
-    #                      tests      = sum(tests),
-    #                      rate       = positives / tests) %>%
-    #     ungroup() %>%
-    #     mutate(rate = pmin(MAX, rate)) %>%
-    #     na.omit() %>%
-    #     mutate(lwr  = 100 * qbinom(alpha/2, tests, rate) / tests,
-    #            upr  = 100 * qbinom(1 - alpha/2, tests, rate) / tests, 
-    #            rate = 100 * rate)
-    #   
-    #   municipio_tests %>%
-    #     {merge(map, .,by.x = "ADM1_ES", by.y = "patientCity", all.y = T)} %>%
-    #     ggplot() +
-    #     geom_sf(data = map, fill="gray", size=0.15) +
-    #     geom_sf(aes(fill = rate), color="black", size=0.15) +
-    #     geom_text(data = map, aes(X, Y, label = ADM1_ES),
-    #               size  = 2.2,
-    #               color = "black",
-    #               fontface = "bold") +
-    #     scale_fill_gradientn(colors = RColorBrewer::brewer.pal(9, "Reds"),
-    #       name = "Tasa de Positividad:",
-    #      limits= c(0, MAX*100)) +
-    #     theme_void() +
-    #     theme(legend.position = "bottom")
-    # })
-    # 
-    # -- This creates the map with positivity rate by municipio
-    # output$mapa <- renderLeaflet({
-    #   
-    #   # -- Getting municipio data based on users date range
-    #   municipio_tests <- tests_by_strata %>%
-    #     filter(date >= input$range[1], date <= input$range[2]) %>%
-    #     group_by(date, patientCity) %>%
-    #     dplyr::summarize(positives = sum(positives),
-    #                      tests     = sum(tests)) %>%
-    #     ungroup() %>%
-    #     filter(date >= input$range[1], date <= input$range[2]) %>%
-    #     group_by(patientCity) %>%
-    #     dplyr::summarize(positives  = sum(positives),
-    #                      tests      = sum(tests),
-    #                      rate       = positives / tests) %>%
-    #     ungroup() %>%
-    #     mutate(rate = pmax(0.25/1000, rate)) %>%
-    #     na.omit() %>%
-    #     mutate(lwr  = 100 * qbinom(alpha/2, tests, rate) / tests,
-    #            upr  = 100 * qbinom(1 - alpha/2, tests, rate) / tests, 
-    #            rate = 100 * rate)
-    #   
-    #   # -- Joining with polygons
-    #   geoDat <- geo_join(pr_gjson, municipio_tests, "NAME", "patientCity")
-    #   
-    #   # -- Set up for colors
-    #   pal <- colorNumeric(palette = "Reds", domain = municipio_tests$rate, reverse = FALSE)
-    #   
-    #   # -- Viz
-    #   leaflet(geoDat) %>%
-    #     addProviderTiles(providers$CartoDB) %>%
-    #     addPolygons(stroke       = TRUE,
-    #                 weight       = 1,
-    #                 color        = "black",
-    #                 smoothFactor = 0.30,
-    #                 fillOpacity  = 0.80,
-    #                 fillColor    = ~pal(rate),
-    #                 label        = ~paste0(NAME,
-    #                                        ": ",
-    #                                        formatC(round(rate,2), big.mark = ","),
-    #                                        "% ",
-    #                                        "(",round(lwr,2),
-    #                                        "%, ",
-    #                                        round(upr,2),
-    #                                        "%)"),
-    #                 popup  = ~paste0("Número de pruebas = ", tests)) %>%
-    #     addLegend(pal       = pal, 
-    #               values    = ~rate, 
-    #               opacity   = 1,
-    #               bins      = 4,  
-    #               labFormat = labelFormat(suffix = "%"),
-    #               position  = "bottomleft",
-    #               title     = paste("Tasa de Positividad"))
-    # })
-    # -- This is used to print table in app
-    
+     #-- This creates the positivity rate map by municipio
+     output$mapa_positividad <- renderPlot({
+       
+       MAX <- 0.25 ## maximum positivity rate
+       municipio_tests <- tests_by_strata %>%
+         filter(date >= input$range[1], date <= input$range[2]) %>%
+         group_by(date, patientCity) %>%
+         dplyr::summarize(positives = sum(positives),
+                          tests     = sum(tests)) %>%
+         ungroup() %>%
+         group_by(patientCity) %>%
+         dplyr::summarize(positives  = sum(positives),
+                          tests      = sum(tests),
+                          rate       = positives / tests) %>%
+         ungroup() %>%
+         mutate(rate = pmin(MAX, rate)) %>%
+         na.omit() %>%
+         mutate(lwr  = 100 * qbinom(alpha/2, tests, rate) / tests,
+                upr  = 100 * qbinom(1 - alpha/2, tests, rate) / tests, 
+                rate = 100 * rate)
+       
+       municipio_tests %>%
+         {merge(map, .,by.x = "ADM1_ES", by.y = "patientCity", all.y = T)} %>%
+         ggplot() +
+         geom_sf(data = map, fill="gray", size=0.15) +
+         geom_sf(aes(fill = rate), color="black", size=0.15) +
+         geom_text(data = map, aes(X, Y, label = ADM1_ES),
+                   size  = 2.2,
+                   color = "black",
+                   fontface = "bold") +
+         scale_fill_gradientn(colors = RColorBrewer::brewer.pal(9, "Reds"),
+           name = "Tasa de Positividad:",
+          limits= c(0, MAX*100)) +
+         theme_void() +
+         theme(legend.position = "bottom")
+     })
+     
+     # -- This is used to print table in app
     output$tabla <- DT::renderDataTable(DT::datatable({
       tmp <- select(hosp_mort, date, HospitCOV19, IncMueSalud)
       
