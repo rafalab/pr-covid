@@ -97,7 +97,7 @@ save(all_tests, file = "rdas/all_tests.rda")
 save(tests_by_strata, file = "rdas/tests_by_strata.rda")
 
 # Adding mortality and hospitlization
-hosp_mort <- read_csv("data/DatosMortalidad.csv") %>%
+hosp_mort <- read_csv("https://raw.githubusercontent.com/rafalab/pr-covid/master/dashboard/data/DatosMortalidad.csv") %>%
   mutate(date = mdy(Fecha)) %>% 
   filter(date >= first_day) 
 
