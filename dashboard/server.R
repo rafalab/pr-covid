@@ -64,7 +64,6 @@ shinyServer(function(input, output, session) {
     })
    
     # -- This creates the ICU figure
-    
     output$icu <- renderPlot({
       
       tmp <- hosp_mort %>% 
@@ -101,6 +100,19 @@ shinyServer(function(input, output, session) {
       
     })
     
+    # -- This resets the range
+    observeEvent(input$reset, {
+      updateDateRangeInput(session, "range",
+                           start = "2020-03-21",
+                           end   = today())
+    })
+    
+    # -- This sets range to last two weeks
+    observeEvent(input$weeks, {
+      updateDateRangeInput(session, "range",
+                           start = today() - weeks(2),
+                           end   = today())
+    })
     
     # -- This creates the hospitalization figure
     output$muertes <- renderPlot({
