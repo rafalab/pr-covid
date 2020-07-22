@@ -5,7 +5,7 @@ shinyServer(function(input, output, session) {
     
     # -- This creates the positivity rate figure
     output$tasa_positividad <- renderPlot({
-       tests %>%
+       ret <- tests %>%
          filter(date >= input$range[1], date <= input$range[2]) %>%
          ggplot(aes(date, rate)) +
          geom_hline(yintercept = 0.05, lty=2, color = "gray") +
@@ -16,9 +16,13 @@ shinyServer(function(input, output, session) {
          xlab("Fecha") +
          ggtitle("Tasa de Positividad en Puerto Rico") +
          scale_y_continuous(labels = scales::percent) +
-         coord_cartesian(ylim = c(0, 0.25)) +
          scale_x_date(date_labels = "%B %d") +
          theme_bw()
+       
+       if(input$yscale) ret <- ret+ coord_cartesian(ylim = c(0, 0.25))
+       
+       return(ret)
+         
     })
     
     # -- This creates the hospitalization figure
@@ -28,29 +32,76 @@ shinyServer(function(input, output, session) {
         filter(!is.na(HospitCOV19)) %>%
         filter(date >= input$range[1] & date <= input$range[2]) 
         
-      
-
-      max_y <- pmax(max(tmp$HospitCOV19, na.rm = TRUE), 725)
+      if(input$yscale){
+        max_y <- pmax(max(tmp$HospitCOV19, na.rm = TRUE), 7010)
+      } else
+      {
+        max_y <- max(tmp$HospitCOV19, na.rm = TRUE)
+      }
       min_date <- min(tmp$date)
 
-      tmp %>% 
+      ret <- tmp %>% 
         ggplot(aes(date, HospitCOV19)) +
-        geom_hline(yintercept = 691, lty = 2, color="red") + 
+        geom_hline(yintercept = 6981, lty = 2, color="red") + 
         geom_bar(stat = "identity") +
-        # geom_point(size = 2, alpha = 0.65) +
-       # geom_smooth(formula = y~x, method = "loess", span = 14/nrow(hosp_mort), size = 0.8, alpha = 0.35, 
-       #            level = 1 - alpha, method.args = list(degree = 1, family = "symmetric")) +
-        scale_y_continuous(limits = c(0, max_y)) + 
-        annotate("text", x = min_date, y = 700, 
-                 label = "Total de camas disponibles en los ICU  = 691", vjust = 0, hjust = 0) +
+        ## geom_point(size = 2, alpha = 0.65) +
+        ## geom_smooth(formula = y~x, method = "loess", span = 14/nrow(hosp_mort), size = 0.8, alpha = 0.35, 
+        ##            level = 1 - alpha, method.args = list(degree = 1, family = "symmetric")) +
         xlab("Fecha") +
         ylab("Hospitalizaciones") +
         ggtitle("Hospitalizaciones actuales por COVID-19 en Puerto Rico") +
         scale_x_date(date_labels = "%B %d") +
-        theme_bw()
+        scale_y_continuous(limits = c(0, max_y)) +
+        theme_bw() 
       
-        })
+      if(input$yscale) 
+        ret <- ret +  annotate("text", x = min_date, y = 7010,  
+                               label = "Total de camas disponibles en Hospitales  = 6,981", 
+                               vjust = 0, hjust = 0) 
+        
+      return(ret)
+      
+    })
    
+    # -- This creates the ICU figure
+    
+    output$icu <- renderPlot({
+      
+      tmp <- hosp_mort %>% 
+        filter(!is.na(CamasICU)) %>%
+        filter(date >= input$range[1] & date <= input$range[2]) 
+      
+      if(input$yscale){
+        max_y <- pmax(max(tmp$CamasICU, na.rm = TRUE), 710)
+      } else
+      {
+        max_y <- max(tmp$CamasICU, na.rm = TRUE)
+      }
+      min_date <- min(tmp$date)
+      
+      ret <- tmp %>% 
+        ggplot(aes(date, CamasICU)) +
+        geom_hline(yintercept = 691, lty = 2, color="red") + 
+        geom_bar(stat = "identity") +
+        # geom_point(size = 2, alpha = 0.65) +
+        # geom_smooth(formula = y~x, method = "loess", span = 14/nrow(hosp_mort), size = 0.8, alpha = 0.35, 
+        #            level = 1 - alpha, method.args = list(degree = 1, family = "symmetric")) +
+         xlab("Fecha") +
+        ylab("Pacientes en ICU") +
+        ggtitle("Pacientes en ICU actuales por COVID-19 en Puerto Rico") +
+        scale_x_date(date_labels = "%B %d") +
+        scale_y_continuous(limits = c(0, max_y)) +
+        theme_bw() 
+   
+      if(input$yscale) ret <- ret + annotate("text", x = min_date, y = 700, 
+                                            label = "Total de camas disponibles en los ICU  = 691",
+                                            vjust = 0, hjust = 0) 
+        
+      return(ret)
+      
+    })
+    
+    
     # -- This creates the hospitalization figure
     output$muertes <- renderPlot({
       hosp_mort %>%
@@ -122,27 +173,39 @@ shinyServer(function(input, output, session) {
            name = "Tasa de Positividad:",
           limits= c(0, MAX*100)) +
          theme_void() +
-         theme(legend.position = "bottom")
+         theme(legend.position = "bottom") +
+         ggtitle(paste("Tasa de positividad por municipio para el period de",   
+                       format(input$range[1], "%B %d"),
+                       "a",
+                       format(input$range[2], "%B %d.")))
      })
      
      # -- This is used to print table in app
     output$tabla <- DT::renderDataTable(DT::datatable({
-      tmp <- select(hosp_mort, date, HospitCOV19, IncMueSalud)
+      tmp <- select(hosp_mort, date, HospitCOV19, IncMueSalud, CamasICU)
       
       ret <- tests %>% left_join(tmp, by = "date") %>%
         filter(date >= input$range[1], date <= input$range[2]) %>%
-        mutate(rate = paste0(format(round(100*rate,1), nsmall=1),"%"),
-               avg_7_day = paste0(format(round(100*expit(fit), 1), nsmall=1),"% ",
-                                  "(",format(round(100*expit(fit - z*se), 1), nsmall=1),"%", ", ",
+        mutate(rate = format(round(rate, 2), nsmall=2),
+               avg_7_day = paste0(format(round(100*expit(fit), 1), nsmall=1),
+                                  "% ",
+                                  "(", trimws(format(round(100*expit(fit - z*se), 1), nsmall=1)),"%", 
+                                  ", ",
                                   format(round(100*expit(fit + z*se), 1), nsmall=1),"%", ")")) %>%
-        select(date, IncMueSalud, HospitCOV19,  positives, tests, rate, avg_7_day ) %>%
+        select(date, avg_7_day, positives, tests, rate, IncMueSalud, CamasICU, HospitCOV19) %>%
         arrange(desc(date)) %>%
         mutate(date = format(date, "%B %d")) %>%
-        setNames(c("Fecha",  "Muertes", "Hospitalizaciones", "Positivos", "Pruebas", "Tasa", "Estimado (intervalo de confianza)"))
+        setNames(c("Fecha",  "Tasa de positividad (IC)", "Positivos", "Pruebas", "Pos/\nPruebas",  
+                   "Muertes", "ICU", "Hospitalizaciones"))
       return(ret)
-    }), caption = "La columna con fechas contiene el día en que se hizo la prueba.", 
+    }), 
+    class = 'white-space: nowrap',
+    caption = paste0("La columna con fechas contiene el día en que se hizo la prueba. Tasa de positividad es un estimado basado en la tendencia. IC = Intervalo de confianza del ", (1-alpha)*100,"%."),
     rownames= FALSE,
-    options = list(dom = 't', pageLength = -1))
+    options = list(dom = 't', pageLength = -1,
+                   columnDefs = list(list(className = 'dt-right', targets = 2:7)))
+    )
+
     
     output$municipios <- DT::renderDataTable(DT::datatable({
       
@@ -175,10 +238,15 @@ shinyServer(function(input, output, session) {
                format(round(100*upper, 1), nsmall=1),"%", ")"),
                poblacion = prettyNum(poblacion, big.mark=",")) %>%
         select(patientCity, positives, tests, rate, ppc, poblacion, `0 to 9`, `10 to 19`) %>%
-        setNames(c("Municipio", "Positivos", "Pruebas", "Tasa (intervalo de confianza)", "Positivos por 100,000 por día", "Población", "Casos 0 a 9 años", "Casos 10 a 19 años"))
+        setNames(c("Municipio", "Positivos", "Pruebas", "Tasa de positividad (IC)", "Positivos por 100,000 por día", "Población", "Casos 0 a 9 años", "Casos 10 a 19 años"))
       
         return(ret)
     }), 
+    caption = paste0("Tasa de positividad es un estimado basado en periodo ", 
+                     format(input$range[1], "%B %d"),
+                     " a ",
+                     format(input$range[2], "%B %d"),
+                     ". IC = Intervalo de confianza del ", (1-alpha)*100,"%."),
     rownames= FALSE,
     options = list(dom = 't', pageLength = -1))
     

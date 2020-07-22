@@ -1,5 +1,4 @@
 source("init.R")
-
 #
 first_day <- make_date(2020, 3, 15)
 # -- Getting url
