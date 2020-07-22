@@ -139,8 +139,17 @@ shinyServer(function(input, output, session) {
     
     })
     
+     output$titulo_mapa <- renderUI({
+       tagList(
+         h4(paste("Tasa de positividad por municipio para el periodo de",   
+               format(input$range[1], "%B %d"),
+               "a",
+               format(input$range[2], "%B %d.")))
+       )
+     })
+     
      #-- This creates the positivity rate map by municipio
-     output$mapa_positividad <- renderPlot({
+     output$mapa_positividad <- renderLeaflet({
        
        MAX <- 0.25 ## maximum positivity rate
        municipio_tests <- tests_by_strata %>%
@@ -160,24 +169,48 @@ shinyServer(function(input, output, session) {
                 upr  = 100 * qbinom(1 - alpha/2, tests, rate) / tests, 
                 rate = 100 * rate)
        
-       municipio_tests %>%
+       spatial_df <- municipio_tests %>%
          {merge(map, .,by.x = "ADM1_ES", by.y = "patientCity", all.y = T)} %>%
-         ggplot() +
-         geom_sf(data = map, fill="gray", size=0.15) +
-         geom_sf(aes(fill = rate), color="black", size=0.15) +
-         geom_text(data = map, aes(X, Y, label = ADM1_ES),
-                   size  = 2.2,
-                   color = "black",
-                   fontface = "bold") +
-         scale_fill_gradientn(colors = RColorBrewer::brewer.pal(9, "Reds"),
-           name = "Tasa de Positividad:",
-          limits= c(0, MAX*100)) +
-         theme_void() +
-         theme(legend.position = "bottom") +
-         ggtitle(paste("Tasa de positividad por municipio para el period de",   
-                       format(input$range[1], "%B %d"),
-                       "a",
-                       format(input$range[2], "%B %d.")))
+         filter(ADM1_ES != 'No reportado') %>%
+         sf::st_as_sf() %>%
+         mutate(rate = round(rate, 3),
+                lwr = round(lwr, 3),
+                upr = round(upr, 3))
+       
+       
+       pal <- leaflet::colorQuantile("Reds", domain = spatial_df$rate, n = 5)
+       labels <- glue::glue(
+         "<strong>{spatial_df$ADM1_ES}</strong><br/>Tasa de Positividad: {spatial_df$rate} [{spatial_df$lwr}, {spatial_df$upr}] <br/>Casos Reportados: {spatial_df$positives} <br/> Pruebas Realizadas: {spatial_df$tests}"
+       ) %>% lapply(htmltools::HTML)
+       
+       spatial_df %>% 
+         leaflet::leaflet() %>%
+         leaflet::setView(-66.3, 18.1, 9) %>%
+         leaflet::addProviderTiles("Esri.WorldTerrain") %>%
+         leaflet::addPolygons(
+           fillColor = ~pal(spatial_df$rate),
+           weight = 1,
+           opacity = 1,
+           color = "white",
+           dashArray = "1",
+           fillOpacity = 0.90,
+           highlight = leaflet::highlightOptions(
+             weight = 3,
+             color = "#666",
+             dashArray = "5",
+             fillOpacity = 0.7,
+             bringToFront = TRUE),
+           label = labels,
+           labelOptions = leaflet::labelOptions(
+             style = list("font-weight" = "normal", 
+                          "padding" = "3px 8px"),
+             textsize = "15px",
+             direction = "auto")) %>%
+         leaflet::addLegend(pal = pal, 
+                            values = ~spatial_df$rate, 
+                            opacity = 0.7, 
+                            title = "Percentilas de <br/>Tasas de Positividad",
+                            position = "bottomright")
      })
      
      # -- This is used to print table in app

@@ -56,7 +56,8 @@ shinyUI(fluidPage(theme = shinytheme("sandstone"),
                          DT::dataTableOutput("municipios")),
                 
                 tabPanel("Mapa",
-                         plotOutput("mapa_positividad"))
+                         uiOutput("titulo_mapa"),
+                         leafletOutput("mapa_positividad"))
                 
             )
     )),
