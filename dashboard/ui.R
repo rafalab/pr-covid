@@ -3,7 +3,10 @@ source("init.R")
 
 # -- Define UI for application that draws a histogram
 shinyUI(fluidPage(theme = shinytheme("sandstone"),
-
+                  
+    # -- Google analytics add on
+    tags$head(includeHTML(("google-analytics.html"))),
+    
     # Application title
     titlePanel("Monitoreo de COVID-19 en Puerto Rico"),
 
