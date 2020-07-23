@@ -16,7 +16,6 @@ logit <- function(x) { log(x / (1-x)) }
 expit <- function(x) { 1/ (1 + exp(-x))  }
 
 # -- Loading data
-load(url("https://github.com/rafalab/pr-covid/raw/master/dashboard/rdas/all_tests.rda"))
 load(url("https://github.com/rafalab/pr-covid/raw/master/dashboard/rdas/tests.rda"))
 load(url("https://github.com/rafalab/pr-covid/raw/master/dashboard/rdas/tests_by_strata.rda"))
 load(url("https://github.com/rafalab/pr-covid/raw/master/dashboard/rdas/hosp_mort.rda"))

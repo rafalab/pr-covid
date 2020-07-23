@@ -286,12 +286,12 @@ shinyServer(function(input, output, session) {
     # -- This allows users to download data
     output$downloadData <- downloadHandler(
         filename = function() {
-            load("rdas/all_tests.rda")
-            paste0("pruebas-",format(attr(all_tests, "date"), "%Y-%m-%d_%H:%M:%S"),".csv")
+          load(url("https://github.com/rafalab/pr-covid/raw/master/dashboard/rdas/all_tests.rda"))
+          paste0("pruebas-",format(attr(all_tests, "date"), "%Y-%m-%d_%H:%M:%S"),".csv")
         },
         content = function(file) {
-            load("rdas/all_tests.rda")
-            write.csv(all_tests, file, row.names = FALSE)  
+          load(url("https://github.com/rafalab/pr-covid/raw/master/dashboard/rdas/all_tests.rda"))
+          write.csv(all_tests, file, row.names = FALSE)  
         }
     )
 })
