@@ -77,6 +77,9 @@ shinyUI(fluidPage(theme = shinytheme("sandstone"),
                 tabPanel("Pruebas",
                          plotOutput("numero_pruebas")),
                 
+                tabPanel("Positivos",
+                         plotOutput("positivos_acumulados")),
+                
                 tabPanel("Tasas por municipio",
                          DT::dataTableOutput("municipios")),
                 

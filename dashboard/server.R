@@ -151,7 +151,25 @@ shinyServer(function(input, output, session) {
     
     })
     
-     #-- This creates the positivity rate map by municipio
+    # -- This creates the daily number of tests figure
+    output$positivos_acumulados <- renderPlot({
+      
+      tests %>% 
+        mutate(positives = cumsum(positives)) %>%
+        filter(date >= input$range[1], date <= input$range[2]) %>%
+        ggplot(aes(date, positives)) +
+        geom_bar(size=0.20, stat = "identity") +
+        ggtitle("Pruebas Positivas Acumuladas en Puerto Rico") +
+        ylab("Pruebas Positivas") +
+        xlab("Fecha") +
+        scale_y_continuous(labels = scales::comma) +
+        scale_x_date(date_labels = "%B %d") +
+        theme_bw()
+      # ggplotly(displayModeBar = FALSE)
+      
+    })
+    
+      #-- This creates the positivity rate map by municipio
      output$mapa_positividad <- renderPlot({
        
        MAX <- 0.15 ## maximum positivity rate
