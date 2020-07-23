@@ -154,7 +154,7 @@ shinyServer(function(input, output, session) {
      #-- This creates the positivity rate map by municipio
      output$mapa_positividad <- renderPlot({
        
-       MAX <- 0.25 ## maximum positivity rate
+       MAX <- 0.15 ## maximum positivity rate
        municipio_tests <- tests_by_strata %>%
          filter(date >= input$range[1], date <= input$range[2]) %>%
          group_by(date, patientCity) %>%
