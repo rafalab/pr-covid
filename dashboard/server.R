@@ -230,7 +230,7 @@ shinyServer(function(input, output, session) {
       return(ret)
     }), 
     class = 'white-space: nowrap',
-    caption = paste0("La columna con fechas contiene el día en que se hizo la prueba. Tasa de positividad es un estimado basado en la tendencia. IC = Intervalo de confianza del ", (1-alpha)*100,"%."),
+    caption = paste0("La columna con fechas contiene el día en que se hizo la prueba. Tasa de positividad es un estimado basado en la tendencia. IC = Intervalo de confianza del ", (1-alpha)*100,"%. Ojo: Interpreten los resultados de la última semana con cautela. Los resultados se tardan en llagar lo cual resulta en más variabilidad dado a que hay pocas pruebas reportadas para los últimos 5-6 dias. También es posible que haya un sesgo si los positivos se reportan más temprano que los negativos."),
     rownames= FALSE,
     options = list(dom = 't', pageLength = -1,
                    columnDefs = list(list(className = 'dt-right', targets = 2:7)))

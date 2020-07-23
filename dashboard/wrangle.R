@@ -1,4 +1,10 @@
-source("init.R")
+# -- Libraries
+library(tidyverse)
+library(lubridate)
+library(splines)
+library(scales)
+library(sf)
+
 #
 first_day <- make_date(2020, 3, 15)
 # -- Getting url
@@ -97,7 +103,7 @@ save(all_tests, file = "rdas/all_tests.rda")
 save(tests_by_strata, file = "rdas/tests_by_strata.rda")
 
 # Adding mortality and hospitlization
-hosp_mort <- read_csv("https://raw.githubusercontent.com/rafalab/pr-covid/master/dashboard/data/DatosMortalidad.csv") %>%
+hosp_mort <- read_csv("data/DatosMortalidad.csv") %>%
   mutate(date = mdy(Fecha)) %>% 
   filter(date >= first_day) 
 
@@ -143,6 +149,18 @@ poblacion_municipios <- tibble(patientCity = names(pop), poblacion = pop) %>%
 
 save(poblacion_municipios, file = "rdas/poblacion_municipios.rda")
 
+
+# -- For maps
+map <- st_read("data/pri_adm_2019_shp/pri_admbnda_adm1_2019.shp") %>%
+  st_transform(crs = 4326) %>%
+  st_crop(xmin = -67.3, xmax = -65.3, ymin = 17.9, ymax = 18.5)
+map <- cbind(map, st_coordinates(st_centroid(map)))
+
+save(map, file="rdas/mapa.rda", compress = "xz")
+
+
+
+## 
 # -- Check with Visualizations
 if(FALSE){
   tests %>%
