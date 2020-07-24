@@ -5,6 +5,7 @@ shinyServer(function(input, output, session) {
     
     # -- This creates the positivity rate figure
     output$tasa_positividad <- renderPlot({
+      load("rdas/data.rda")
        ret <- tests %>%
          filter(date >= input$range[1], date <= input$range[2]) %>%
          ggplot(aes(date, rate)) +
@@ -27,6 +28,8 @@ shinyServer(function(input, output, session) {
     
     # -- This creates the hospitalization figure
     output$hospitalizaciones <- renderPlot({
+      
+      load("rdas/data.rda")
       
       tmp <- hosp_mort %>% 
         filter(!is.na(HospitCOV19)) %>%
@@ -65,6 +68,8 @@ shinyServer(function(input, output, session) {
    
     # -- This creates the ICU figure
     output$icu <- renderPlot({
+      
+      load("rdas/data.rda")
       
       tmp <- hosp_mort %>% 
         filter(!is.na(CamasICU)) %>%
@@ -116,6 +121,9 @@ shinyServer(function(input, output, session) {
     
     # -- This creates the hospitalization figure
     output$muertes <- renderPlot({
+      
+      load("rdas/data.rda")
+      
       hosp_mort %>%
         filter(date >= input$range[1], date <= input$range[2]) %>%
         ggplot(aes(date)) +
@@ -132,8 +140,10 @@ shinyServer(function(input, output, session) {
     
     # -- This creates the daily number of tests figure
     output$numero_pruebas <- renderPlot({
-        
-        tests %>% 
+      
+      load("rdas/data.rda")
+      
+      tests %>% 
         filter(date >= input$range[1], date <= input$range[2]) %>%
         group_by(date = ceiling_date(date, unit = "week", 
                                      week_start = wday(max(date)))) %>%
@@ -147,12 +157,14 @@ shinyServer(function(input, output, session) {
                            breaks = seq(0, 30000, by = 5000)) +
         scale_x_date(date_labels = "%B %d") +
         theme_bw()
-        # ggplotly(displayModeBar = FALSE)
-    
+      # ggplotly(displayModeBar = FALSE)
+      
     })
     
     # -- This creates the daily number of tests figure
     output$positivos_acumulados <- renderPlot({
+      
+      load("rdas/data.rda")
       
       tests %>% 
         mutate(positives = cumsum(positives)) %>%
@@ -212,6 +224,9 @@ shinyServer(function(input, output, session) {
      
      # -- This is used to print table in app
     output$tabla <- DT::renderDataTable(DT::datatable({
+      
+      load("rdas/data.rda")
+      
       tmp <- select(hosp_mort, date, HospitCOV19, IncMueSalud, CamasICU)
       
       ret <- tests %>% left_join(tmp, by = "date") %>%
@@ -238,6 +253,8 @@ shinyServer(function(input, output, session) {
 
     
     output$municipios <- DT::renderDataTable(DT::datatable({
+      
+      load("rdas/data.rda")
       
       tmp <- tests_by_strata %>%
         filter(date >= input$range[1], date <= input$range[2]) %>%
@@ -285,13 +302,18 @@ shinyServer(function(input, output, session) {
     
     # -- This allows users to download data
     output$downloadData <- downloadHandler(
-        filename = function() {
-          load(url("https://github.com/rafalab/pr-covid/raw/master/dashboard/rdas/all_tests.rda"))
-          paste0("pruebas-",format(attr(all_tests, "date"), "%Y-%m-%d_%H:%M:%S"),".csv")
-        },
-        content = function(file) {
-          load(url("https://github.com/rafalab/pr-covid/raw/master/dashboard/rdas/all_tests.rda"))
-          write.csv(all_tests, file, row.names = FALSE)  
-        }
+      filename = function() {
+        load("rdas/data.rda")
+        paste0("pruebas-",format(the_stamp, "%Y-%m-%d_%H:%M:%S"),".csv")
+      },
+      content = function(file) {
+        print(file)
+        all_tests <- readRDS("rdas/all_tests.rds")
+        write.csv(all_tests, file = file, row.names = FALSE)  
+      },
+      contentType = "txt/csv"
     )
 })
+
+    
+

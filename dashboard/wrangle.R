@@ -5,15 +5,26 @@ library(splines)
 library(scales)
 library(sf)
 
-#
+# -- Fixed values
 first_day <- make_date(2020, 3, 15)
-# -- Getting url
 url <- "https://bioportal.salud.gov.pr/api/administration/reports/minimal-info-unique-tests"
+
+
+# Reading data from database ----------------------------------------------
 all_tests <- jsonlite::fromJSON(url)
 
+
+# Wrangling test data -----------------------------------------------------
+
+
+
+## defining age levels
 age_levels <-  c("0 to 9", "10 to 19", "20 to 29", "30 to 39", "40 to 49", "50 to 59", "60 to 69", 
                  "70 to 79", "80 to 89", "90 to 99", "100 to 109", "110 to 119", "120 to 129")
 
+
+
+## Defining rda with all the tests 
 all_tests <- all_tests %>%  
   as_tibble() %>%
   mutate(collectedDate  = mdy(collectedDate),
@@ -31,6 +42,7 @@ all_tests <- all_tests %>%
                                     TRUE ~ "other")) %>%
          arrange(reportedDate, collectedDate) 
 
+## fixing dates: if you want to remove bad dates instead, change FALSE TO TRUE
 if(FALSE){
   ## remove bad dates
   all_tests <- all_tests %>% 
@@ -39,7 +51,6 @@ if(FALSE){
 } else{
   ## Impute missing dates
   all_tests <- all_tests %>% mutate(date = if_else(is.na(collectedDate), reportedDate - days(2),  collectedDate))
-
   ## Remove inconsistent dates
   all_tests <- all_tests %>%
     mutate(date = if_else(year(date) != 2020 | date > today(), reportedDate - days(2),  date)) %>%
@@ -47,7 +58,9 @@ if(FALSE){
     arrange(date, reportedDate)
 }
 
-# -- Observed tasa de positividad
+
+# -- Computing observed tasa de positividad and smooth fit
+
 tests <- all_tests %>%  
   filter(date>=first_day) %>%
   filter(result %in% c("positive", "negative")) %>%
@@ -56,29 +69,29 @@ tests <- all_tests %>%
   mutate(rate = positives / tests) %>%
   mutate(weekday = factor(wday(date)))
 
-# -- Extracting variables for model fit
+##Extracting variables for model fit
 x <- as.numeric(tests$date)
 y <- tests$positives
 n <- tests$tests
 
-# -- Design matrix for splines
+## Design matrix for splines
 df  <- round(3 * nrow(tests)/30)
 x_s <- ns(x, df = df, intercept = FALSE)
 i_s <- c(1:(ncol(x_s)+1))
 
-# -- Design matrix for weekday effect
+## Design matrix for weekday effect
 w            <- factor(wday(tests$date))
 contrasts(w) <- contr.sum(length(levels(w)), contrasts = TRUE)
 x_w          <- model.matrix(~w)
 
-# -- Design matrix
+## Design matrix
 X <- cbind(x_s, x_w)
 
-# -- Fitting model 
+## Fitting model 
 fit  <- glm(cbind(y, n-y) ~ -1 + X, family = "quasibinomial")
 beta <- coef(fit)
 
-# -- Computing probabilities
+## Computing probabilities
 tests$fit <- as.vector(X[, i_s] %*% beta[i_s])
 tests$se  <- sqrt(diag(X[, i_s] %*%
                          summary(fit)$cov.scaled[i_s, i_s] %*%
@@ -86,7 +99,6 @@ tests$se  <- sqrt(diag(X[, i_s] %*%
 
 
 # -- summaries stratified by age group and patientID
-# -- Observed tasa de positividad
 tests_by_strata <- all_tests %>%  
   filter(date>=first_day) %>%
   filter(result %in% c("positive", "negative")) %>%
@@ -96,17 +108,11 @@ tests_by_strata <- all_tests %>%
   dplyr::summarize(positives = sum(result == "positive"), tests = n()) %>%
   ungroup()
 
-attr(tests, "date") <- now()
-save(tests, file = "rdas/tests.rda")
-attr(all_tests, "date") <- now()
-save(all_tests, file = "rdas/all_tests.rda")
-save(tests_by_strata, file = "rdas/tests_by_strata.rda")
 
-# Adding mortality and hospitlization
-hosp_mort <- read_csv("data/DatosMortalidad.csv") %>%
+# --Mortality and hospitlization
+hosp_mort <- read_csv("https://raw.githubusercontent.com/rafalab/pr-covid/master/dashboard/data/DatosMortalidad.csv") %>%
   mutate(date = mdy(Fecha)) %>% 
   filter(date >= first_day) 
-
 
 
 # -- Extracting variables for model fit
@@ -133,31 +139,16 @@ beta <- coef(fit)
 # -- Computing probabilities
 hosp_mort$fit <- as.vector(X[, i_s] %*% beta[i_s])
 hosp_mort$se  <- sqrt(diag(X[, i_s] %*%
-                         summary(fit)$cov.scaled[i_s, i_s] %*%
-                         t(X[, i_s]))* pmax(1,summary(fit)$dispersion))
+                             summary(fit)$cov.scaled[i_s, i_s] %*%
+                             t(X[, i_s]))* pmax(1,summary(fit)$dispersion))
 
-save(hosp_mort, file = "rdas/hosp_mort.rda")
+# -- Save data
 
-## Load municipio pop data
-
-pop <- read_csv("data/poblacion-municipios.csv") %>%
-  slice(1) %>% unlist()
-pop <- pop[-1]
-names(pop)[names(pop)=="Comerio"]<- "Comerío"
-poblacion_municipios <- tibble(patientCity = names(pop), poblacion = pop) %>%
-  filter(patientCity != "Puerto Rico")
-
-save(poblacion_municipios, file = "rdas/poblacion_municipios.rda")
-
-
-# -- For maps
-map <- st_read("data/pri_adm_2019_shp/pri_admbnda_adm1_2019.shp") %>%
-  st_transform(crs = 4326) %>%
-  st_crop(xmin = -67.3, xmax = -65.3, ymin = 17.9, ymax = 18.5)
-map <- cbind(map, st_coordinates(st_centroid(map)))
-
-save(map, file="rdas/mapa.rda", compress = "xz")
-
+## define date and time of latest download
+the_stamp <- now()
+save(tests, tests_by_strata, hosp_mort, the_stamp, file = "rdas/data.rda")
+## save the big file for those that want to download it
+saveRDS(all_tests, file = "rdas/all_tests.rds", compress = "xz")
 
 
 ## 

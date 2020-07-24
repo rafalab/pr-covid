@@ -1,5 +1,6 @@
 # -- Set up
-source("init.R")
+library(shiny)
+library(shinythemes)
 
 # -- Define UI for application that draws a histogram
 shinyUI(fluidPage(theme = shinytheme("sandstone"),
@@ -14,7 +15,7 @@ shinyUI(fluidPage(theme = shinytheme("sandstone"),
     sidebarLayout(
         sidebarPanel(
             dateRangeInput("range", "Periodo", 
-                           start = make_date(2020, 3, 21), end=today() -days(1),
+                           start = make_date(2020, 3, 21), end=today() - days(1),
                            min = make_date(2020,3,15),
                            format = "M-dd",
                            max = today()),
@@ -51,7 +52,7 @@ shinyUI(fluidPage(theme = shinytheme("sandstone"),
                      border-width: 2px"), 
             br(),
             br(),
-            div("Actualización:", br(), attr(tests, "date")),
+            div("Actualización:", br(), the_stamp),
             width = 3),
         
         # Show a plot of the generated distribution
