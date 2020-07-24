@@ -4,7 +4,7 @@ library(lubridate)
 library(splines)
 
 # -- Fixed values
-first_day <- make_date(2020, 3, 15)
+first_day <- make_date(2020, 3, 12)
 url <- "https://bioportal.salud.gov.pr/api/administration/reports/minimal-info-unique-tests"
 
 
@@ -60,7 +60,7 @@ if(FALSE){
 # -- Computing observed tasa de positividad and smooth fit
 
 tests <- all_tests %>%  
-  filter(date>=first_day) %>%
+  #filter(date>=first_day) %>%
   filter(result %in% c("positive", "negative")) %>%
   group_by(date) %>%
   dplyr::summarize(positives = sum(result == "positive"), tests = n()) %>%
@@ -74,8 +74,8 @@ y <- tests$positives
 n <- tests$tests
 
 ## Design matrix for splines
-df  <- round(3 * nrow(tests)/30)
-x_s <- ns(x, df = df, intercept = FALSE)
+df  <- round(3 * ((nrow(tests)-7)/30))
+x_s <- ns(x, df = df, intercept = FALSE, Boundary.knots = c(min(x), max(x) - 7))
 i_s <- c(1:(ncol(x_s)+1))
 
 ## Design matrix for weekday effect
@@ -95,7 +95,22 @@ tests$fit <- as.vector(X[, i_s] %*% beta[i_s])
 tests$se  <- sqrt(diag(X[, i_s] %*%
                          summary(fit)$cov.scaled[i_s, i_s] %*%
                          t(X[, i_s])) * pmax(1,summary(fit)$dispersion))
-
+if(FALSE){
+  tests %>%
+    filter(date >= make_date(2020,3,21) & date <= today()) %>%
+    ggplot(aes(date, rate)) +
+    geom_hline(yintercept = 0.05, lty=2, color = "gray") +
+    geom_point(aes(date, rate), size=2, alpha = 0.65) +
+    geom_ribbon(aes(ymin= expit(fit - z*se), ymax = expit(fit + z*se)), alpha = 0.35) +
+    geom_line(aes(y = expit(fit)), color="blue2", size = 0.80) +
+    ylab("Tasa de positividad") +
+    xlab("Fecha") +
+    ggtitle("Tasa de Positividad en Puerto Rico") +
+    scale_y_continuous(labels = scales::percent) +
+    scale_x_date(date_labels = "%B %d") +
+    geom_smooth(method = "loess", formula = "y~x", span = 0.2, method.args = list(degree = 1, weight = tests$tests), color = "red", lty =2, fill = "pink") +
+    theme_bw()
+}
 
 # -- summaries stratified by age group and patientID
 tests_by_strata <- all_tests %>%  

@@ -3,6 +3,9 @@ library(shiny)
 library(shinythemes)
 library(lubridate)
 
+# -- First day
+first_day <- make_date(2020, 3, 12)
+
 # -- Define UI for application that draws a histogram
 shinyUI(fluidPage(theme = shinytheme("sandstone"),
                   
@@ -17,7 +20,7 @@ shinyUI(fluidPage(theme = shinytheme("sandstone"),
         sidebarPanel(
             dateRangeInput("range", "Periodo", 
                            start = make_date(2020, 3, 21), end=today() - days(1),
-                           min = make_date(2020,3,15),
+                           min = first_day,
                            format = "M-dd",
                            max = today()),
             actionButton("reset", "Todas las fechas", 

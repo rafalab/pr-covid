@@ -18,7 +18,6 @@ if(Sys.info()["nodename"] == "fermat.dfci.harvard.edu"){
 Sys.setlocale("LC_TIME", "es_ES")
 
 # -- Helper functions
-logit <- function(x) { log(x / (1-x)) }
 expit <- function(x) { 1/ (1 + exp(-x))  }
 
 # -- For confidence intervals
