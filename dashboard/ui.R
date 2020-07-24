@@ -1,6 +1,7 @@
 # -- Set up
 library(shiny)
 library(shinythemes)
+library(lubridate)
 
 # -- Define UI for application that draws a histogram
 shinyUI(fluidPage(theme = shinytheme("sandstone"),
@@ -50,10 +51,11 @@ shinyUI(fluidPage(theme = shinytheme("sandstone"),
                      text-align:center;
                      border-radius: 6px;
                      border-width: 2px"), 
+           br(),
             br(),
-            br(),
-            div("Actualización:", br(), the_stamp),
-            width = 3),
+           uiOutput("stamp"),
+           #div("Actualización:", br(), the_stamp),
+           width = 3),
         
         # Show a plot of the generated distribution
         mainPanel(

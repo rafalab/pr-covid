@@ -8,6 +8,12 @@ library(shiny)
 library(shinythemes)
 library(sf)
 
+## if on the server get the latest data
+if(Sys.info()["nodename"] == "fermat.dfci.harvard.edu"){
+  rda_path <- "/homes10/rafa/dashboard/rdas"
+} else{
+  rda_path <- "rdas"
+}
 # -- Set locale
 Sys.setlocale("LC_TIME", "es_ES")
 

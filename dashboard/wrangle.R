@@ -2,8 +2,6 @@
 library(tidyverse)
 library(lubridate)
 library(splines)
-library(scales)
-library(sf)
 
 # -- Fixed values
 first_day <- make_date(2020, 3, 15)
@@ -66,6 +64,7 @@ tests <- all_tests %>%
   filter(result %in% c("positive", "negative")) %>%
   group_by(date) %>%
   dplyr::summarize(positives = sum(result == "positive"), tests = n()) %>%
+  ungroup() %>%
   mutate(rate = positives / tests) %>%
   mutate(weekday = factor(wday(date)))
 
@@ -150,31 +149,3 @@ save(tests, tests_by_strata, hosp_mort, the_stamp, file = "rdas/data.rda")
 ## save the big file for those that want to download it
 saveRDS(all_tests, file = "rdas/all_tests.rds", compress = "xz")
 
-
-## 
-# -- Check with Visualizations
-if(FALSE){
-  tests %>%
-    ggplot(aes(date, rate)) +
-    geom_point(aes(date, rate), alpha=0.50, size=1) +
-    geom_ribbon(aes(ymin= expit(fit - 3*se), ymax = expit(fit + 3*se)), alpha=0.20) +
-    geom_line(aes(y = expit(fit)), color="blue2", size=0.80) +
-    theme_bw()
-
-  hosp_mort %>% 
-    ggplot(aes(date, IncMueSalud)) +
-    geom_ribbon(aes(ymin = exp(fit - 2*se), ymax = exp(fit + 2*se)), alpha = 0.5) +
-    #geom_bar(stat = "identity") + 
-    geom_point() +
-    geom_line(aes(y = exp(fit))) 
-  
-  max_y <- pmax(max(hosp_mort$HospitCOV19, na.rm = TRUE), 700)
-  hosp_mort %>% 
-    filter(!is.na(HospitCOV19)) %>%
-    ggplot(aes(date, HospitCOV19)) +
-    geom_point() +
-    geom_smooth(formula = y~x, method = "loess", span = 14/nrow(hosp_mort), method.args = list(degree = 1, family = "symmetric")) +
-    scale_y_continuous(limits = c(0, max_y)) + 
-    geom_hline(yintercept = 691, lty = 2, level = 1 - alpha) + 
-    annotate("text", x = make_date(2020, 5, 1), y = 695, label = "Camas disponibles en los ICU", vjust = 0)
-}
