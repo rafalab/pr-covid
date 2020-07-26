@@ -246,11 +246,11 @@ shinyServer(function(input, output, session) {
                                 ", ",
                                 format(round(100*expit(fit + z*se), 1), nsmall=1),"%", ")"),
              dummy = date) %>%
-      select(date, avg_7_day, positives, tests, rate, IncMueSalud, CamasICU, HospitCOV19, dummy) %>%
+      select(date, avg_7_day, positives, tests, rate, IncMueSalud, CamasICU, HospitCOV19) %>%
       arrange(desc(date)) %>%
-      mutate(date = format(date, "%B %d")) %>%
+      mutate(date = format(date, "%m %d")) %>%
       setNames(c("Fecha", "Tasa de positividad (IC)", "Positivos", "Pruebas", "Pos/\nPruebas",  
-                 "Muertes", "ICU", "Hospitalizaciones", ""))
+                 "Muertes", "ICU", "Hospitalizaciones"))
     return(ret)
   }), 
   class = 'white-space: nowrap',
@@ -258,8 +258,8 @@ shinyServer(function(input, output, session) {
   rownames= FALSE,
   options = list(dom = 't', pageLength = -1,
                  columnDefs = list(
-                     list(targets = 0, orderData = 8),
-                     list(targets = 8, visible = FALSE),
+                   #  list(targets = 0, orderData = 8),
+                   #  list(targets = 8, visible = FALSE),
                      list(className = 'dt-right', targets = 2:7)))
   )
   
