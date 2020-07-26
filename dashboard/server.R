@@ -244,19 +244,23 @@ shinyServer(function(input, output, session) {
                                 "% ",
                                 "(", trimws(format(round(100*expit(fit - z*se), 1), nsmall=1)),"%", 
                                 ", ",
-                                format(round(100*expit(fit + z*se), 1), nsmall=1),"%", ")")) %>%
-      select(date, avg_7_day, positives, tests, rate, IncMueSalud, CamasICU, HospitCOV19) %>%
+                                format(round(100*expit(fit + z*se), 1), nsmall=1),"%", ")"),
+             dummy = date) %>%
+      select(date, avg_7_day, positives, tests, rate, IncMueSalud, CamasICU, HospitCOV19, dummy) %>%
       arrange(desc(date)) %>%
       mutate(date = format(date, "%B %d")) %>%
-      setNames(c("Fecha",  "Tasa de positividad (IC)", "Positivos", "Pruebas", "Pos/\nPruebas",  
-                 "Muertes", "ICU", "Hospitalizaciones"))
+      setNames(c("Fecha", "Tasa de positividad (IC)", "Positivos", "Pruebas", "Pos/\nPruebas",  
+                 "Muertes", "ICU", "Hospitalizaciones", ""))
     return(ret)
   }), 
   class = 'white-space: nowrap',
-  caption = paste0("La columna con fechas contiene el día en que se hizo la prueba. Tasa de positividad es un estimado basado en la tendencia. IC = Intervalo de confianza del ", (1-alpha)*100,"%. Ojo: Interpreten los resultados de la última semana con cautela. Los resultados se tardan en llagar lo cual resulta en más variabilidad dado a que hay pocas pruebas reportadas para los últimos 5-6 dias. También es posible que haya un sesgo si los positivos se reportan más temprano que los negativos."),
+  caption = paste0("La columna con fechas contiene el día en que se hizo la prueba. Tasa de positividad es un estimado basado en la tendencia usando un método estadístico, llamado regresión por splines, parecido a tomar el promedio de los siete días alrededor de cada fecha. IC = Intervalo de confianza del ", (1-alpha)*100,"%. Ojo: Interpreten los resultados de la última semana con cautela. Los resultados tardan en llegar lo cual resulta en más variabilidad dado a que hay pocas pruebas reportadas para los últimos 5-6 días. También es posible que haya un sesgo si los positivos se reportan más temprano que los negativos o si las pruebas se comienzan a restringir a asintomáticos."),
   rownames= FALSE,
   options = list(dom = 't', pageLength = -1,
-                 columnDefs = list(list(className = 'dt-right', targets = 2:7)))
+                 columnDefs = list(
+                     list(targets = 0, orderData = 8),
+                     list(targets = 8, visible = FALSE),
+                     list(className = 'dt-right', targets = 2:7)))
   )
   
   
