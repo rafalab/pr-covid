@@ -255,7 +255,7 @@ shinyServer(function(input, output, session) {
       select(date, avg_7_day, positives, tests, rate, IncMueSalud, CamasICU, HospitCOV19, dummy, warning) %>%
       arrange(desc(date)) %>%
       mutate(date = format(date, "%B %d")) %>%
-      setNames(c("Fecha", "Tasa de positividad (IC)", "Positivos", "Pruebas", "Pos/\nPruebas",  
+      setNames(c("Fecha", "Tasa de positividad (IC)", "Positivos", "Pruebas", "Positivos/Pruebas",  
                  "Muertes", "ICU", "Hospitalizaciones", "dateorder", "warning"))
     
     ret <- DT::datatable(ret, class = 'white-space: nowrap',
@@ -306,7 +306,7 @@ shinyServer(function(input, output, session) {
                            format(round(100*upper, 1), nsmall=1),"%", ")"),
              poblacion = prettyNum(poblacion, big.mark=",")) %>%
       select(patientCity, rate, positives, tests, ppc, poblacion, `0 to 9`, `10 to 19`) %>%
-      setNames(c("Municipio", "Tasa de positividad (IC)", "Positivos", "Pruebas",  "Positivos por\n100,000 por día", "Población", "Casos 0 a 9 años", "Casos 10 a 19 años"))
+      setNames(c("Municipio", "Tasa de positividad (IC)", "Positivos", "Pruebas",  "Positivos por\n100,000 por día", "Población", "Positiovs 0 a 9 años", "Positivos 10 a 19 años"))
     
     ret <- DT::datatable(ret, class = 'white-space: nowrap',
                          caption = paste0("Tasa de positividad es un estimado basado en periodo ", 
