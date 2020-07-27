@@ -236,7 +236,7 @@ shinyServer(function(input, output, session) {
   })
   
   # -- This is used to print table in app
-  output$tabla <- DT::renderDataTable({
+  output$tabla <- DT::renderDataTable(server = FALSE, {
     
     load(file.path(rda_path,"data.rda"))
     
