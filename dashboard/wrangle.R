@@ -11,16 +11,11 @@ url <- "https://bioportal.salud.gov.pr/api/administration/reports/minimal-info-u
 # Reading data from database ----------------------------------------------
 all_tests <- jsonlite::fromJSON(url)
 
-
 # Wrangling test data -----------------------------------------------------
-
-
 
 ## defining age levels
 age_levels <-  c("0 to 9", "10 to 19", "20 to 29", "30 to 39", "40 to 49", "50 to 59", "60 to 69", 
                  "70 to 79", "80 to 89", "90 to 99", "100 to 109", "110 to 119", "120 to 129")
-
-
 
 ## Defining rda with all the tests 
 all_tests <- all_tests %>%  
@@ -60,7 +55,7 @@ if(FALSE){
 # -- Computing observed tasa de positividad and smooth fit
 
 tests <- all_tests %>%  
-  #filter(date>=first_day) %>%
+  filter(date>=first_day) %>%
   filter(result %in% c("positive", "negative")) %>%
   group_by(date) %>%
   dplyr::summarize(positives = sum(result == "positive"), tests = n()) %>%
@@ -74,8 +69,15 @@ y <- tests$positives
 n <- tests$tests
 
 ## Design matrix for splines
-df  <- round(3 * ((nrow(tests)-7)/30))
-x_s <- ns(x, df = df, intercept = FALSE, Boundary.knots = c(min(x), max(x) - 7))
+## We are using 3 knots per monnth
+df  <- round(3 * (nrow(tests))/30)
+nknots <- df - 1
+# remove boundaries and also 
+# remove the last knot to avoid unstability due to lack of tests during last week
+knots <- seq.int(from = 0, to = 1, length.out = nknots + 2L)[-c(1L, nknots + 1L, nknots + 2L)]
+knots <- quantile(x, knots)
+x_s <- ns(x, knots = knots, intercept = FALSE)
+
 i_s <- c(1:(ncol(x_s)+1))
 
 ## Design matrix for weekday effect
@@ -96,6 +98,11 @@ tests$se  <- sqrt(diag(X[, i_s] %*%
                          summary(fit)$cov.scaled[i_s, i_s] %*%
                          t(X[, i_s])) * pmax(1,summary(fit)$dispersion))
 if(FALSE){
+  alpha <- 0.01
+  z <- qnorm(1-alpha/2)
+  
+  expit <- function(x) { 1/ (1 + exp(-x))  }
+  
   tests %>%
     filter(date >= make_date(2020,3,21) & date <= today()) %>%
     ggplot(aes(date, rate)) +
@@ -158,9 +165,17 @@ hosp_mort$se  <- sqrt(diag(X[, i_s] %*%
 
 # -- Save data
 
+## if on server, save with full path
+## if not on server, save to home directory
+if(Sys.info()["nodename"] == "fermat.dfci.harvard.edu"){
+  rda_path <- "/homes10/rafa/dashboard/rdas"
+} else{
+  rda_path <- "rdas"
+}
+
 ## define date and time of latest download
 the_stamp <- now()
-save(tests, tests_by_strata, hosp_mort, the_stamp, file = "rdas/data.rda")
+save(tests, tests_by_strata, hosp_mort, the_stamp, file = file.path(rda_path,"data.rda"))
 ## save the big file for those that want to download it
-saveRDS(all_tests, file = "rdas/all_tests.rds", compress = "xz")
+saveRDS(all_tests, file = file.path(rda_path, "all_tests.rds"), compress = "xz")
 

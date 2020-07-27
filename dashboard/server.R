@@ -12,22 +12,27 @@ shinyServer(function(input, output, session) {
   # -- This creates the positivity rate figure
   output$tasa_positividad <- renderPlot({
     load(file.path(rda_path,"data.rda"))
+    
+    xlim <- c(input$range[1]-days(1), input$range[2]+days(1))
+    
     ret <- tests %>%
       filter(date >= input$range[1], date <= input$range[2]) %>%
       ggplot(aes(date, rate)) +
+      geom_rect(aes(xmin=pmax(xlim[1],today() - 8), xmax = pmin(today()+1, xlim[2]), ymin=-Inf, ymax=Inf), fill="#ffcccb") + 
       geom_hline(yintercept = 0.05, lty=2, color = "gray") +
       geom_point(aes(date, rate), size=2, alpha = 0.65) +
       geom_ribbon(aes(ymin= expit(fit - z*se), ymax = expit(fit + z*se)), alpha = 0.35) +
       geom_line(aes(y = expit(fit)), color="blue2", size = 0.80) +
       ylab("Tasa de positividad") +
       xlab("Fecha") +
-      ggtitle("Tasa de Positividad en Puerto Rico") +
       scale_y_continuous(labels = scales::percent) +
-      scale_x_date(date_labels = "%B %d") +
-      theme_bw()
+      scale_x_date(date_labels = "%B %d", expand = c(0, 0), limits = xlim)  +
+      labs(title = "Tasa de Positividad en Puerto Rico", caption = str_wrap("Ojo: Interpreten los resultados de la última semana (en rojo) con cautela. Los resultados tardan en llegar lo cual resulta en más variabilidad dado a que hay pocas pruebas reportadas para los últimos 5-6 días.También es posible que haya un sesgo si los positivos se reportan más temprano que los negativos o si las pruebas se comienzan a restringir a asintomáticos.")) +
+      theme_bw() +
+      theme(plot.caption=element_text(hjust = 0))
     
-    if(input$yscale) ret <- ret+ coord_cartesian(ylim = c(0, 0.25))
-    
+    if(input$yscale) ret <- ret+ coord_cartesian(xlim = xlim, ylim = c(0, 0.25)) else ret <- ret+ coord_cartesian(xlim = xlim)
+  
     return(ret)
     
   })
@@ -231,37 +236,39 @@ shinyServer(function(input, output, session) {
   })
   
   # -- This is used to print table in app
-  output$tabla <- DT::renderDataTable(DT::datatable({
+  output$tabla <- DT::renderDataTable({
     
     load(file.path(rda_path,"data.rda"))
     
     tmp <- select(hosp_mort, date, HospitCOV19, IncMueSalud, CamasICU)
     
     ret <- tests %>% left_join(tmp, by = "date") %>%
-      filter(date >= input$range[1], date <= input$range[2]) %>%
+     filter(date >= input$range[1], date <= input$range[2]) %>%
       mutate(rate = format(round(rate, 2), nsmall=2),
              avg_7_day = paste0(format(round(100*expit(fit), 1), nsmall=1),
                                 "% ",
                                 "(", trimws(format(round(100*expit(fit - z*se), 1), nsmall=1)),"%", 
                                 ", ",
                                 format(round(100*expit(fit + z*se), 1), nsmall=1),"%", ")"),
-             dummy = date) %>%
-      select(date, avg_7_day, positives, tests, rate, IncMueSalud, CamasICU, HospitCOV19) %>%
+             dummy = date,
+             warning = as.numeric(date >= today()- days(7))) %>%
+      select(date, avg_7_day, positives, tests, rate, IncMueSalud, CamasICU, HospitCOV19, dummy, warning) %>%
       arrange(desc(date)) %>%
-      mutate(date = format(date, "%m %d")) %>%
+      mutate(date = format(date, "%B %d")) %>%
       setNames(c("Fecha", "Tasa de positividad (IC)", "Positivos", "Pruebas", "Pos/\nPruebas",  
-                 "Muertes", "ICU", "Hospitalizaciones"))
+                 "Muertes", "ICU", "Hospitalizaciones", "dateorder", "warning"))
+    
+    ret <- DT::datatable(ret, class = 'white-space: nowrap',
+                  caption = paste0("La columna con fechas contiene el día en que se hizo la prueba. Tasa de positividad es un estimado basado en la tendencia usando un método estadístico, llamado regresión por splines, parecido a tomar el promedio de los siete días alrededor de cada fecha. IC = Intervalo de confianza del ", (1-alpha)*100,"%. Ojo: Interpreten los resultados de la última semana (en rojo) con cautela. Los resultados tardan en llegar lo cual resulta en más variabilidad dado a que hay pocas pruebas reportadas para los últimos 5-6 días. También es posible que haya un sesgo si los positivos se reportan más temprano que los negativos o si las pruebas se comienzan a restringir a asintomáticos."),
+    rownames = FALSE,
+    options = list(dom = 't', pageLength = -1,
+                   columnDefs = list(
+                     list(targets = 0, orderData = 8),
+                     list(targets = c(8,9), visible = FALSE),
+                     list(className = 'dt-right', targets = 2:7)))) %>%
+      DT::formatStyle("warning", target = "row", backgroundColor = DT::styleEqual(c(0,1), c("#ffffff00", "#ffcccb")))
     return(ret)
-  }), 
-  class = 'white-space: nowrap',
-  caption = paste0("La columna con fechas contiene el día en que se hizo la prueba. Tasa de positividad es un estimado basado en la tendencia usando un método estadístico, llamado regresión por splines, parecido a tomar el promedio de los siete días alrededor de cada fecha. IC = Intervalo de confianza del ", (1-alpha)*100,"%. Ojo: Interpreten los resultados de la última semana con cautela. Los resultados tardan en llegar lo cual resulta en más variabilidad dado a que hay pocas pruebas reportadas para los últimos 5-6 días. También es posible que haya un sesgo si los positivos se reportan más temprano que los negativos o si las pruebas se comienzan a restringir a asintomáticos."),
-  rownames= FALSE,
-  options = list(dom = 't', pageLength = -1,
-                 columnDefs = list(
-                   #  list(targets = 0, orderData = 8),
-                   #  list(targets = 8, visible = FALSE),
-                     list(className = 'dt-right', targets = 2:7)))
-  )
+  })
   
   
   output$municipios <- DT::renderDataTable(DT::datatable({
