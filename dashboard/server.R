@@ -266,7 +266,9 @@ shinyServer(function(input, output, session) {
                      list(targets = 0, orderData = 8),
                      list(targets = c(8,9), visible = FALSE),
                      list(className = 'dt-right', targets = 2:7)))) %>%
-      DT::formatStyle("warning", target = "row", backgroundColor = DT::styleEqual(c(0,1), c("#ffffff00", "#ffcccb")))
+      DT::formatStyle(columns = 2:5,
+                      valueColumns = "warning", 
+                      backgroundColor = DT::styleEqual(c(0,1), c("#ffffff00", "#ffcccb")))
     return(ret)
   })
   
