@@ -109,7 +109,7 @@ shinyServer(function(input, output, session) {
       theme_bw() 
     
     if(input$yscale) ret <- ret + annotate("text", x = min_date, y = 700, 
-                                           label = "Total de camas en los ICU  = 691",
+                                           label = "Total de camas en los ICU = 691",
                                            vjust = 0, hjust = 0) 
     
     return(ret)
