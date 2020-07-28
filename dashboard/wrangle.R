@@ -141,7 +141,7 @@ x <- as.numeric(hosp_mort$date)
 y <- hosp_mort$IncMueSalud
 
 # -- Design matrix for splines
-df  <- round(nrow(hosp_mort)/30)
+df  <- round(1.5 * nrow(hosp_mort)/30)
 x_s <- ns(x, df = df, intercept = FALSE)
 i_s <- c(1:(ncol(x_s)+1))
 
@@ -163,6 +163,20 @@ hosp_mort$se  <- sqrt(diag(X[, i_s] %*%
                              summary(fit)$cov.scaled[i_s, i_s] %*%
                              t(X[, i_s]))* pmax(1,summary(fit)$dispersion))
 
+if(FALSE){
+  hosp_mort %>%
+    ggplot(aes(date)) +
+    #geom_point(aes(y = IncMueSalud), size = 2, alpha = 0.65) +
+    geom_bar(aes(y = IncMueSalud), stat = "identity", width = 0.75, alpha = 0.65) +
+    # geom_ribbon(aes(ymin= exp(fit - z*se), ymax = exp(fit + z*se)), alpha = 0.35) +
+    geom_line(aes(y = exp(fit)), color="black", size = 1.25) +
+    ylab("Muertes") +
+    xlab("Fecha") +
+    ggtitle("Muertes por COVID-19 en Puerto Rico") +
+    scale_x_date(date_labels = "%B %d") +
+    scale_y_continuous(breaks = seq(0, 15, 1)) +
+    theme_bw()
+}
 # -- Save data
 
 ## if on server, save with full path

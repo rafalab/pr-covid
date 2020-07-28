@@ -136,11 +136,11 @@ shinyServer(function(input, output, session) {
     load(file.path(rda_path,"data.rda"))
     
     hosp_mort %>%
-      filter(date >= input$range[1], date <= input$range[2]) %>%
       ggplot(aes(date)) +
-      geom_point(aes(y = IncMueSalud), size = 2, alpha = 0.65) +
-      geom_ribbon(aes(ymin= exp(fit - z*se), ymax = exp(fit + z*se)), alpha = 0.35) +
-      geom_line(aes(y = exp(fit)), color="blue2", size = 0.80) +
+      #geom_point(aes(y = IncMueSalud), size = 2, alpha = 0.65) +
+      geom_bar(aes(y = IncMueSalud), stat = "identity", width = 0.75, alpha = 0.65) +
+      # geom_ribbon(aes(ymin= exp(fit - z*se), ymax = exp(fit + z*se)), alpha = 0.35) +
+      geom_line(aes(y = exp(fit)), color="black", size = 1.25) +
       ylab("Muertes") +
       xlab("Fecha") +
       ggtitle("Muertes por COVID-19 en Puerto Rico") +
