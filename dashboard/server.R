@@ -236,7 +236,7 @@ shinyServer(function(input, output, session) {
   })
   
   # -- This is used to print table in app
-  output$tabla <- DT::renderDataTable(server = FALSE, {
+  output$tabla <- DT::renderDataTable({
     
     load(file.path(rda_path,"data.rda"))
     
@@ -270,7 +270,7 @@ shinyServer(function(input, output, session) {
                       valueColumns = "warning", 
                       backgroundColor = DT::styleEqual(c(0,1), c("#ffffff00", "#ffcccb")))
     return(ret)
-  })
+  }, server = FALSE)
   
   
   output$municipios <- DT::renderDataTable({
@@ -320,9 +320,38 @@ shinyServer(function(input, output, session) {
                                           list(className = 'dt-right', targets = 2:7)))) 
    
     return(ret)
-  })
+  }, server = FALSE)
   
-  
+  output$age <- renderPlot({
+    
+    load(file.path(rda_path,"data.rda"))
+    
+    age_levels <- levels(tests_by_strata$ageRange)
+    ret <- tests_by_strata %>%
+      filter(date >= input$range[1], date <= input$range[2]) %>%
+      filter(ageRange != "No reportado") %>%
+      mutate(ageRange = age_levels[ifelse(as.numeric(ageRange) >=9, 9, as.numeric(ageRange))]) %>%
+      mutate(ageRange = ifelse(ageRange == "80 to 89", "80+", ageRange)) %>%
+      group_by(ageRange) %>%
+      summarize(positivos = sum(positives)) %>%
+      ungroup() %>%
+      mutate(percent = positivos/sum(positivos)) %>%
+      ggplot(aes(ageRange, percent)) +
+      geom_bar(stat = "identity") +
+      scale_y_continuous(labels = scales::percent) +
+      xlab("Edad") +
+      ylab("Porciento") +
+      ggtitle(paste("Distribución de pruebas positivas por edad en Puerto Rico de", 
+                     format(input$range[1], "%B %d"),
+                     "a",
+                     format(input$range[2], "%B %d."))) +
+      theme_bw()
+    
+    if(input$yscale) ret <- ret+ coord_cartesian(ylim = c(0, 0.23))
+    
+    return(ret)
+  })    
+    
   # -- This allows users to download data
   output$downloadData <- downloadHandler(
     filename = function() {
