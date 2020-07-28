@@ -57,7 +57,7 @@ shinyServer(function(input, output, session) {
     ret <- tmp %>% 
       ggplot(aes(date, HospitCOV19)) +
       geom_hline(yintercept = 6981, lty = 2, color="red") + 
-      geom_bar(stat = "identity") +
+      geom_bar(stat = "identity", width = 0.75, fill = "#8CC8F4") +
       ## geom_point(size = 2, alpha = 0.65) +
       ## geom_smooth(formula = y~x, method = "loess", span = 14/nrow(hosp_mort), size = 0.8, alpha = 0.35, 
       ##            level = 1 - alpha, method.args = list(degree = 1, family = "symmetric")) +
@@ -97,7 +97,7 @@ shinyServer(function(input, output, session) {
     ret <- tmp %>% 
       ggplot(aes(date, CamasICU)) +
       geom_hline(yintercept = 691, lty = 2, color="red") + 
-      geom_bar(stat = "identity") +
+      geom_bar(stat = "identity", width = 0.75, fill = "#8CC8F4") +
       # geom_point(size = 2, alpha = 0.65) +
       # geom_smooth(formula = y~x, method = "loess", span = 14/nrow(hosp_mort), size = 0.8, alpha = 0.35, 
       #            level = 1 - alpha, method.args = list(degree = 1, family = "symmetric")) +
@@ -136,6 +136,7 @@ shinyServer(function(input, output, session) {
     load(file.path(rda_path,"data.rda"))
     
     hosp_mort %>%
+      filter(date >= input$range[1], date <= input$range[2]) %>%
       ggplot(aes(date)) +
       #geom_point(aes(y = IncMueSalud), size = 2, alpha = 0.65) +
       geom_bar(aes(y = IncMueSalud), stat = "identity", width = 0.75, alpha = 0.65) +
@@ -154,21 +155,18 @@ shinyServer(function(input, output, session) {
     
     load(file.path(rda_path,"data.rda"))
     
-    tests %>% 
+    tests %>%
       filter(date >= input$range[1], date <= input$range[2]) %>%
-      group_by(date = ceiling_date(date, unit = "week", 
-                                   week_start = wday(max(date)))) %>%
-      dplyr::summarize(tests = sum(tests)) %>%
       ggplot(aes(date, tests)) +
-      geom_bar(size=0.20, stat = "identity") +
-      ggtitle("Número de Pruebas Semanales en Puerto Rico") +
-      ylab("Número de pruebas") +
-      xlab("Semana acabando en esta fecha") +
-      scale_y_continuous(labels = scales::comma,
-                         breaks = seq(0, 30000, by = 5000)) +
+      geom_bar(stat = "identity", width = 0.75, fill = "#D1D1E8") +
+      geom_line(aes(y = fit_test), color = "#31347A", size = 1.25) +
+      ylab("Pruebas") +
+      xlab("Fecha") +
+      ggtitle("Pruebas moleculares por día en Puerto Rico") +
+      scale_x_date(date_labels = "%B %d") +
+      scale_y_continuous(labels = scales::comma) +
       scale_x_date(date_labels = "%B %d") +
       theme_bw()
-    # ggplotly(displayModeBar = FALSE)
     
   })
   
@@ -181,8 +179,8 @@ shinyServer(function(input, output, session) {
       mutate(positives = cumsum(positives)) %>%
       filter(date >= input$range[1], date <= input$range[2]) %>%
       ggplot(aes(date, positives)) +
-      geom_bar(size=0.20, stat = "identity") +
-      ggtitle("Pruebas Positivas Acumuladas en Puerto Rico") +
+      geom_bar(stat = "identity", fill = "#FBBCB2", width= 0.75) +
+      ggtitle("Pruebas positivas acumuladas en Puerto Rico") +
       ylab("Pruebas Positivas") +
       xlab("Fecha") +
       scale_y_continuous(labels = scales::comma) +

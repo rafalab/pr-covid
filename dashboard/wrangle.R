@@ -39,7 +39,7 @@ all_tests <- all_tests %>%
 if(FALSE){
   ## remove bad dates
   all_tests <- all_tests %>% 
-  filter(!is.na(collectedDate) & year(collectedDate) == 2020 & collectedDate <= today()) %>%
+  filter(!is.na(collecedDate) & year(collectedDate) == 2020 & collectedDate <= today()) %>%
   mutate(date = collectedDate) 
 } else{
   ## Impute missing dates
@@ -119,6 +119,35 @@ if(FALSE){
     theme_bw()
 }
 
+##apply same model to tests, one knot per week
+y <- tests$tests
+df  <- round((nrow(tests))/7)
+nknots <- df - 1
+knots <- seq.int(from = 0, to = 1, length.out = nknots + 2L)[-c(1L,  nknots + 2L)]
+knots <- quantile(x, knots)
+x_s <- ns(x, knots = knots, intercept = FALSE)
+i_s <- c(1:(ncol(x_s)+1))
+X <- cbind(x_s, x_w)
+fit  <- lm(y ~ -1 + X)#, family = "quasipoisson")
+beta <- coef(fit)
+tests$fit_test <- pmax(0, as.vector(X[, i_s] %*% beta[i_s]))
+
+if(FALSE){
+  tests %>%
+    filter(date >= make_date(2020,3,21) & date <= today()) %>%
+    ggplot(aes(date, tests)) +
+    geom_bar(stat = "identity", width = 0.75, alpha = 0.65) +
+    geom_line(aes(y = fit_test), color="blue2", size = 0.80) +
+    ylab("Prueba") +
+    xlab("Fecha") +
+    ggtitle("Pruebas en Puerto Rico") +
+    scale_x_date(date_labels = "%B %d") +
+    geom_smooth(method = "loess", formula = "y~x", span = 0.2, method.args = list(degree = 1, weight = tests$tests), color = "red", lty =2, fill = "pink") +
+    theme_bw()
+}
+
+
+
 # -- summaries stratified by age group and patientID
 tests_by_strata <- all_tests %>%  
   filter(date>=first_day) %>%
@@ -166,9 +195,7 @@ hosp_mort$se  <- sqrt(diag(X[, i_s] %*%
 if(FALSE){
   hosp_mort %>%
     ggplot(aes(date)) +
-    #geom_point(aes(y = IncMueSalud), size = 2, alpha = 0.65) +
     geom_bar(aes(y = IncMueSalud), stat = "identity", width = 0.75, alpha = 0.65) +
-    # geom_ribbon(aes(ymin= exp(fit - z*se), ymax = exp(fit + z*se)), alpha = 0.35) +
     geom_line(aes(y = exp(fit)), color="black", size = 1.25) +
     ylab("Muertes") +
     xlab("Fecha") +
