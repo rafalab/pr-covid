@@ -78,13 +78,11 @@ nknots <- df - 1
 knots <- seq.int(from = 0, to = 1, length.out = nknots + 2L)[-c(1L, nknots + 1L, nknots + 2L)]
 knots <- quantile(x, knots)
 x_s <- ns(x, knots = knots, intercept = FALSE)
-
-i_s <- c(1:(ncol(x_s)+1))
-
 ## Design matrix for weekday effect
 w            <- factor(wday(tests$date))
 contrasts(w) <- contr.sum(length(levels(w)), contrasts = TRUE)
 x_w          <- model.matrix(~w)
+i_s <- 1:(ncol(x_s)+1) ## last column comes from first column of w which is intercept
 
 ## Design matrix
 X <- cbind(x_s, x_w)
@@ -120,16 +118,17 @@ if(FALSE){
     theme_bw()
 }
 
-##apply same model to tests, one knot per week
+##apply similar model to tests, one knot per week
 y <- tests$tests
 df  <- round((nrow(tests))/7)
 nknots <- df - 1
 knots <- seq.int(from = 0, to = 1, length.out = nknots + 2L)[-c(1L,  nknots + 2L)]
 knots <- quantile(x, knots)
 x_s <- ns(x, knots = knots, intercept = FALSE)
-i_s <- c(1:(ncol(x_s)+1))
+i_s <- 1:(ncol(x_s) + 1)
+# x_w as defined above
 X <- cbind(x_s, x_w)
-fit  <- lm(y ~ -1 + X)#, family = "quasipoisson")
+fit  <- lm(y ~ -1 + X)
 beta <- coef(fit)
 tests$fit_test <- pmax(0, as.vector(X[, i_s] %*% beta[i_s]))
 
@@ -165,29 +164,15 @@ hosp_mort <- read_csv("https://raw.githubusercontent.com/rafalab/pr-covid/master
   mutate(date = mdy(Fecha)) %>% 
   filter(date >= first_day) 
 
-
-# -- Extracting variables for model fit
+# -- model to deaths. Here there is no weekend effect
 x <- as.numeric(hosp_mort$date)
 y <- hosp_mort$IncMueSalud
-
-# -- Design matrix for splines
-df  <- round(1.5 * nrow(hosp_mort)/30)
-x_s <- ns(x, df = df, intercept = FALSE)
-i_s <- c(1:(ncol(x_s)+1))
-
-# -- Design matrix for weekday effect
-w            <- factor(wday(hosp_mort$date))
-contrasts(w) <- contr.sum(length(levels(w)), contrasts = TRUE)
-x_w          <- model.matrix(~w)
-
-# -- Design matrix
-X <- cbind(x_s, x_w)
-
-# -- Fitting model 
+df  <- round(2 * nrow(hosp_mort)/30)
+x_s <- ns(x, df = df, intercept = TRUE)
+i_s <- 1:ncol(x_s)
+X <- x_s
 fit  <- glm(y ~ -1 + X, family = "quasipoisson")
 beta <- coef(fit)
-
-# -- Computing probabilities
 hosp_mort$fit <- as.vector(X[, i_s] %*% beta[i_s])
 hosp_mort$se  <- sqrt(diag(X[, i_s] %*%
                              summary(fit)$cov.scaled[i_s, i_s] %*%
