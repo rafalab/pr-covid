@@ -67,10 +67,11 @@ tests <- all_tests %>%
 x <- as.numeric(tests$date)
 y <- tests$positives
 n <- tests$tests
-
+wts <- as.numeric(tests$date < today() - weeks(1))
 ## Design matrix for splines
 ## We are using 3 knots per monnth
-df  <- round(3 * (nrow(tests))/30)
+## And ignoring last week
+df  <- round(3 * nrow(tests)/30 )
 nknots <- df - 1
 # remove boundaries and also 
 # remove the last knot to avoid unstability due to lack of tests during last week
@@ -89,7 +90,7 @@ x_w          <- model.matrix(~w)
 X <- cbind(x_s, x_w)
 
 ## Fitting model 
-fit  <- glm(cbind(y, n-y) ~ -1 + X, family = "quasibinomial")
+fit  <- glm(cbind(y, n-y) ~ -1 + X, family = "quasibinomial", weights = wts)
 beta <- coef(fit)
 
 ## Computing probabilities

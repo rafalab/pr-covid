@@ -14,15 +14,17 @@ shinyServer(function(input, output, session) {
     load(file.path(rda_path,"data.rda"))
     
     xlim <- c(input$range[1]-days(1), input$range[2]+days(1))
-    
+    ylim <- with(filter(tests, date >= input$range[1], date <= input$range[2]),
+                 c(min(expit(fit-z*se), rate), max(expit(fit+z*se), rate)))
     ret <- tests %>%
       filter(date >= input$range[1], date <= input$range[2]) %>%
       ggplot(aes(date, rate)) +
-      geom_rect(aes(xmin=pmax(xlim[1],today() - 8), xmax = pmin(today()+1, xlim[2]), ymin=-Inf, ymax=Inf), fill="#ffcccb") + 
       geom_hline(yintercept = 0.05, lty=2, color = "gray") +
       geom_point(aes(date, rate), size=2, alpha = 0.65) +
       geom_ribbon(aes(ymin= expit(fit - z*se), ymax = expit(fit + z*se)), alpha = 0.35) +
       geom_line(aes(y = expit(fit)), color="blue2", size = 0.80) +
+      annotate("rect", xmin=pmax(xlim[1], today() - 8), xmax = pmin(today()+1, xlim[2]), ymin=-1, ymax=2, 
+                fill="#ffcccb", alpha = 0.5) + 
       ylab("Tasa de positividad") +
       xlab("Fecha") +
       scale_y_continuous(labels = scales::percent) +
@@ -31,8 +33,11 @@ shinyServer(function(input, output, session) {
       theme_bw() +
       theme(plot.caption=element_text(hjust = 0))
     
-    if(input$yscale) ret <- ret+ coord_cartesian(xlim = xlim, ylim = c(0, 0.25)) else ret <- ret+ coord_cartesian(xlim = xlim)
-  
+    if(input$yscale){
+      ret <- ret+ coord_cartesian(xlim = xlim, ylim = c(0, 0.25))
+    } else{
+      ret <- ret+ coord_cartesian(xlim = xlim, ylim = ylim)
+    }
     return(ret)
     
   })
@@ -165,7 +170,6 @@ shinyServer(function(input, output, session) {
       ggtitle("Pruebas moleculares por día en Puerto Rico") +
       scale_x_date(date_labels = "%B %d") +
       scale_y_continuous(labels = scales::comma) +
-      scale_x_date(date_labels = "%B %d") +
       theme_bw()
     
   })
