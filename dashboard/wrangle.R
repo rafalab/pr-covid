@@ -67,17 +67,17 @@ tests <- all_tests %>%
 x <- as.numeric(tests$date)
 y <- tests$positives
 n <- tests$tests
-wts <- as.numeric(tests$date < today() - weeks(1))
+## revmoe last week of data from spline fit
+ind <- which(tests$date < today() - weeks(1))
 ## Design matrix for splines
 ## We are using 3 knots per monnth
 ## And ignoring last week
-df  <- round(3 * nrow(tests)/30 )
+df  <- round(2 * length(ind)/30 )
 nknots <- df - 1
 # remove boundaries and also 
-# remove the last knot to avoid unstability due to lack of tests during last week
-knots <- seq.int(from = 0, to = 1, length.out = nknots + 2L)[-c(1L, nknots + 1L, nknots + 2L)]
-knots <- quantile(x, knots)
-x_s <- ns(x, knots = knots, intercept = FALSE)
+knots <- seq.int(from = 0, to = 1, length.out = nknots + 2L)[-c(1L, nknots + 2L)]
+knots <- quantile(x[ind], knots)
+x_s <- ns(x, knots = knots, Boundary.knots = range(x[ind]), intercept = FALSE)
 ## Design matrix for weekday effect
 w            <- factor(wday(tests$date))
 contrasts(w) <- contr.sum(length(levels(w)), contrasts = TRUE)
@@ -88,7 +88,7 @@ i_s <- 1:(ncol(x_s)+1) ## last column comes from first column of w which is inte
 X <- cbind(x_s, x_w)
 
 ## Fitting model 
-fit  <- glm(cbind(y, n-y) ~ -1 + X, family = "quasibinomial", weights = wts)
+fit  <- glm(cbind(y, n-y)[ind,] ~ -1 + X[ind,], family = "quasibinomial")
 beta <- coef(fit)
 
 ## Computing probabilities

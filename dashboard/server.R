@@ -190,8 +190,7 @@ shinyServer(function(input, output, session) {
       scale_y_continuous(labels = scales::comma) +
       scale_x_date(date_labels = "%B %d") +
       theme_bw()
-    # ggplotly(displayModeBar = FALSE)
-    
+
   })
   
   #-- This creates the positivity rate map by municipio
