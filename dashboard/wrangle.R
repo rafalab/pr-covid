@@ -55,7 +55,7 @@ if(FALSE){
 # -- Computing observed tasa de positividad and smooth fit
 
 tests <- all_tests %>%  
-  filter(date>=first_day) %>%
+  filter(date >= first_day) %>%
   filter(result %in% c("positive", "negative")) %>%
   group_by(date) %>%
   dplyr::summarize(positives = sum(result == "positive"), tests = n()) %>%
@@ -67,8 +67,8 @@ tests <- all_tests %>%
 x <- as.numeric(tests$date)
 y <- tests$positives
 n <- tests$tests
-## revmoe last week of data from spline fit
-ind <- which(tests$date < today() - weeks(1))
+## revmoe last few days of data from spline fit
+ind <- which(tests$date <= today() - days(2))
 ## Design matrix for splines
 ## We are using 3 knots per monnth
 ## And ignoring last week
