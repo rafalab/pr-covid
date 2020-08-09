@@ -208,7 +208,25 @@ if(FALSE){
     theme_bw()
 }
 
+# -- summaries stratified by age group and patientID
+tests_by_strata <- all_tests %>%  
+  filter(date>=first_day) %>%
+  filter(result %in% c("positive", "negative")) %>%
+  mutate(region = fct_explicit_na(region, "No reportado")) %>%
+  mutate(ageRange = fct_explicit_na(ageRange, "No reportado")) %>%
+  group_by(date, region, ageRange, .drop = FALSE) %>%
+  dplyr::summarize(positives = sum(result == "positive"), tests = n()) %>%
+  ungroup()
 
+cases_by_strata <- cases %>%
+  filter(date>=first_day) %>%
+  group_by(date, region, ageRange, .drop = FALSE) %>%
+  dplyr::summarize(cases = n()) %>%
+  ungroup()
+
+tests_by_strata <- tests_by_strata %>% 
+  left_join(cases_by_strata, by = c("date", "region", "ageRange")) %>%
+  replace_na(list(cases = 0L))
 
 # --Mortality and hospitlization
 hosp_mort <- read_csv("https://raw.githubusercontent.com/rafalab/pr-covid/master/dashboard/data/DatosMortalidad.csv") %>%
