@@ -7,7 +7,6 @@ library(splines)
 first_day <- make_date(2020, 3, 12)
 url <- "https://bioportal.salud.gov.pr/api/administration/reports/minimal-info-unique-tests"
 
-
 # Reading data from database ----------------------------------------------
 all_tests <- jsonlite::fromJSON(url)
 
@@ -25,15 +24,13 @@ all_tests <- all_tests %>%
          createdAt      = mdy_hm(createdAt),
          ageRange       = na_if(ageRange, "N/A"),
          ageRange       = factor(ageRange, levels = age_levels),
-         patientCity    = ifelse(patientCity == "Loiza", "Loíza", patientCity),
-         patientCity    = ifelse(patientCity == "Rio Grande", "Río Grande", patientCity),
-         patientCity    = factor(patientCity),
+         region         = factor(region),
          result         = tolower(result),
          result         = case_when(grepl("positive", result) ~ "positive",
                                     grepl("negative", result) ~ "negative",
                                     result == "not detected" ~ "negative",
                                     TRUE ~ "other")) %>%
-         arrange(reportedDate, collectedDate) 
+         arrange(reportedDate, collectedDate, patientId) 
 
 ## fixing dates: if you want to remove bad dates instead, change FALSE TO TRUE
 if(FALSE){
@@ -51,9 +48,7 @@ if(FALSE){
     arrange(date, reportedDate)
 }
 
-
 # -- Computing observed tasa de positividad and smooth fit
-
 tests <- all_tests %>%  
   filter(date >= first_day) %>%
   filter(result %in% c("positive", "negative")) %>%
@@ -118,26 +113,20 @@ if(FALSE){
     theme_bw()
 }
 
-##apply similar model to tests, one knot per week
-y <- tests$tests
-df  <- round((nrow(tests))/7)
-nknots <- df - 1
-knots <- seq.int(from = 0, to = 1, length.out = nknots + 2L)[-c(1L,  nknots + 2L)]
-knots <- quantile(x, knots)
-x_s <- ns(x, knots = knots, intercept = FALSE)
-i_s <- 1:(ncol(x_s) + 1)
-# x_w as defined above
-X <- cbind(x_s, x_w)
-fit  <- lm(y ~ -1 + X)
-beta <- coef(fit)
-tests$fit_test <- pmax(0, as.vector(X[, i_s] %*% beta[i_s]))
+##apply similar model to tests, show weekly average
+tests <- tests %>% 
+  mutate(week = floor_date(date, unit = "week", week_start = 1)) %>%
+  group_by(week) %>%
+  mutate(tests_week_avg = mean(tests, na.rm = TRUE)) %>%
+  ungroup() %>%
+  select(-week)
 
 if(FALSE){
   tests %>%
     filter(date >= make_date(2020,3,21) & date <= today()) %>%
     ggplot(aes(date, tests)) +
     geom_bar(stat = "identity", width = 0.75, alpha = 0.65) +
-    geom_line(aes(y = fit_test), color="blue2", size = 0.80) +
+    geom_line(aes(y = tests_week_avg), color="blue2", size = 0.80) +
     ylab("Prueba") +
     xlab("Fecha") +
     ggtitle("Pruebas en Puerto Rico") +
@@ -146,17 +135,79 @@ if(FALSE){
     theme_bw()
 }
 
-
-
-# -- summaries stratified by age group and patientID
-tests_by_strata <- all_tests %>%  
-  filter(date>=first_day) %>%
-  filter(result %in% c("positive", "negative")) %>%
-  mutate(patientCity = fct_explicit_na(patientCity, "No reportado")) %>%
+# unique cases ------------------------------------------------------------
+cases <- all_tests %>%
+  filter(date>=first_day &
+         result == c("positive")) %>%
+  group_by(patientId) %>%
+  mutate(n=n()) %>%
+  filter(order(date) == 1) %>% ##min can be more than 1
+  ungroup() %>%
+  mutate(region = fct_explicit_na(region, "No reportado")) %>%
   mutate(ageRange = fct_explicit_na(ageRange, "No reportado")) %>%
-  group_by(date, patientCity, ageRange, .drop = FALSE) %>%
-  dplyr::summarize(positives = sum(result == "positive"), tests = n()) %>%
-  ungroup()
+  select(-patientId, -result)
+
+# Add cases to tests data frame -------------------------------------------
+cases_per_day <- cases %>%
+  group_by(date) %>% 
+  summarize(cases = n())
+  
+tests <-tests %>% left_join(cases_per_day, by="date") %>%
+  replace_na(list(cases = 0L))
+
+
+# smooth for cases --------------------------------------------------------
+x <- as.numeric(tests$date)
+y <- tests$cases
+## revmoe last few days of data from spline fit
+ind <- which(tests$date <= today() - days(2))
+## Design matrix for splines
+## We are using 3 knots per monnth
+## And ignoring last week
+df  <- round(2 * length(ind)/30 )
+nknots <- df - 1
+# remove boundaries and also 
+knots <- seq.int(from = 0, to = 1, length.out = nknots + 2L)[-c(1L, nknots + 2L)]
+knots <- quantile(x[ind], knots)
+x_s <- ns(x, knots = knots, Boundary.knots = range(x[ind]), intercept = FALSE)
+## Design matrix for weekday effect
+w            <- factor(wday(tests$date))
+contrasts(w) <- contr.sum(length(levels(w)), contrasts = TRUE)
+x_w          <- model.matrix(~w)
+i_s <- 1:(ncol(x_s)+1) ## last column comes from first column of w which is intercept
+
+## Design matrix
+X <- cbind(x_s, x_w)
+
+## Fitting model 
+fit  <- glm(y[ind] ~ -1 + X[ind,], family = "quasipoisson")
+beta <- coef(fit)
+
+## Computing probabilities
+tests$cases_fit <- as.vector(X[, i_s] %*% beta[i_s])
+tests$cases_fit_se  <- sqrt(diag(X[, i_s] %*%
+                         summary(fit)$cov.scaled[i_s, i_s] %*%
+                         t(X[, i_s])) * pmax(1,summary(fit)$dispersion))
+
+if(FALSE){
+  alpha <- 0.01
+  z <- qnorm(1-alpha/2)
+  
+  tests %>%
+    filter(date >= make_date(2020,3,21) & date <= today()) %>%
+    ggplot(aes(date, cases)) +
+    geom_hline(yintercept = 0.05, lty=2, color = "gray") +
+    geom_point(aes(date, cases), size=2, alpha = 0.65) +
+    geom_ribbon(aes(ymin= exp(cases_fit - z*cases_fit_se), ymax = exp(cases_fit + z*cases_fit_se)), alpha = 0.35) +
+    geom_line(aes(y = exp(cases_fit)), color="blue2", size = 0.80) +
+    ylab("Tasa de positividad") +
+    xlab("Fecha") +
+    ggtitle("Casos en Puerto Rico") +
+    scale_x_date(date_labels = "%B %d") +
+    geom_smooth(method = "loess", formula = "y~x", span = 0.2, method.args = list(degree = 1, weight = tests$tests), color = "red", lty =2, fill = "pink") +
+    theme_bw()
+}
+
 
 
 # --Mortality and hospitlization

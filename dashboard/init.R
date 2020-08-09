@@ -1,5 +1,6 @@
 # -- Libraries
 library(tidyverse)
+library(gridExtra)
 library(lubridate)
 library(splines)
 library(scales)
@@ -7,7 +8,6 @@ library(plotly)
 library(shiny)
 library(shinythemes)
 library(sf)
-
 ## if on the server get the latest data
 if(Sys.info()["nodename"] == "fermat.dfci.harvard.edu"){
   rda_path <- "/homes10/rafa/dashboard/rdas"

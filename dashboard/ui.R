@@ -19,7 +19,7 @@ shinyUI(fluidPage(theme = shinytheme("sandstone"),
     sidebarLayout(
         sidebarPanel(
             dateRangeInput("range", "Periodo", 
-                           start = make_date(2020, 3, 21), end=today() - days(1),
+                           start = make_date(2020, 3, 21), end=today() - days(3),
                            min = first_day,
                            format = "M-dd",
                            max = today()),
@@ -46,7 +46,13 @@ shinyUI(fluidPage(theme = shinytheme("sandstone"),
                          choices = list("Preescogido" = TRUE,
                                         "Determinado por datos" = FALSE),
                          selected = TRUE),
-            div("Datos depurados:"),
+            radioButtons("acumulativo", 
+                         label = "Tipo de gráfico",
+                         choices = list("Diario" = FALSE,
+                                        "Acumulativo" = TRUE),
+                         selected = FALSE),
+            br(),
+            div("Datos depurados:"),            
             downloadButton("downloadData", "Download", 
                            style = "color: black; 
                      background-color: rgb(230, 220, 205); 
@@ -67,10 +73,13 @@ shinyUI(fluidPage(theme = shinytheme("sandstone"),
                 tabPanel("Totales diarios",
                          DT::dataTableOutput("tabla")),
                 
+                tabPanel("Resumen",
+                         h2("Resumen de datos COVID-19 en Puerto Rico"),
+                         plotOutput("resumen")),
+                
                 tabPanel("Positividad",
                          plotOutput("tasa_positividad")),
 
-                
                 tabPanel("Hospitalizaciones",
                          plotOutput("hospitalizaciones")),
                 
@@ -83,15 +92,15 @@ shinyUI(fluidPage(theme = shinytheme("sandstone"),
                 tabPanel("Pruebas",
                          plotOutput("numero_pruebas")),
                 
-                tabPanel("Positivos",
-                         plotOutput("positivos_acumulados")),
+                tabPanel("Casos",
+                         plotOutput("casos")),
                 
-                tabPanel("Tasas por municipio",
-                         DT::dataTableOutput("municipios")),
+                tabPanel("Tasas por región",
+                         DT::dataTableOutput("regiones")),
                 
-                tabPanel("Mapa",
-                         plotOutput("mapa_positividad")),
-                
+                # tabPanel("Mapa",
+                #          plotOutput("mapa_positividad")),
+                # 
                 tabPanel("Positivos por Edad",
                          plotOutput("age"))
                 

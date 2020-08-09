@@ -8,6 +8,62 @@ shinyServer(function(input, output, session) {
     load(file.path(rda_path,"data.rda"))
     HTML(paste("Actualización:<br>", the_stamp)) 
   })
+
+  # -- Resumen -----------------------------------------------------------------
+  output$resumen <- renderPlot({
+    load(file.path(rda_path,"data.rda"))
+    
+    p1 <-   tests %>%
+      filter(date >= input$range[1], date <= input$range[2]) %>%
+      ggplot(aes(date, tests)) +
+      geom_bar(stat = "identity", width = 0.75, fill = "#D1D1E8") +
+      geom_line(aes(y = tests_week_avg), color = "#31347A", size = 1.25) +
+      ylab("Pruebas") +
+      xlab("Fecha") +
+      ggtitle("Pruebas") +
+      scale_x_date(date_labels = "%B %d") +
+      scale_y_continuous(labels = scales::comma) +
+      theme_bw()
+    
+    p2 <-  tests %>%
+      filter(date >= input$range[1], date <= input$range[2]) %>%
+      ggplot(aes(date, cases)) +
+      geom_hline(yintercept = 0.05, lty=2, color = "gray") +
+      geom_bar(stat = "identity", fill = "#FBBCB2", width= 0.75) +
+      geom_line(aes(y = exp(cases_fit)), color = "#CC523A", size = 1.25) +
+      ylab("Casos únicos") +
+      xlab("Fecha") +
+      ggtitle("Casos") +
+      scale_x_date(date_labels = "%B %d") +
+      theme_bw()
+    
+    p3 <- hosp_mort %>% 
+      replace_na(list(HospitCOV19 = 0, CamasICU = 0)) %>%
+      filter(date >= input$range[1], date <= input$range[2]) %>%
+      ggplot(aes(date, HospitCOV19)) +
+      geom_bar(stat = "identity", width = 0.75, fill = "#8CC8F4") +
+      geom_bar(aes(date, CamasICU), stat = "identity", width = 0.75, alpha = 0.5, fill = "darkblue") +
+      xlab("Fecha") +
+      ylab("Pacientes") +
+      ggtitle("Hospitalizaciones y ICU") +
+      scale_x_date(date_labels = "%B %d") +
+      theme_bw() 
+    
+  p4 <- hosp_mort %>%
+    filter(date >= input$range[1], date <= input$range[2]) %>%
+    ggplot(aes(date)) +
+    geom_bar(aes(y = IncMueSalud), stat = "identity", width = 0.75, alpha = 0.65) +
+    geom_line(aes(y = exp(fit)), color="black", size = 1.25) +
+    ylab("Muertes") +
+    xlab("Fecha") +
+    ggtitle("Muertes") +
+    scale_x_date(date_labels = "%B %d") +
+    scale_y_continuous(breaks = seq(0, 15, 1)) +
+    theme_bw()
+  
+  gridExtra::grid.arrange(p1, p2, p3, p4, ncol = 2)  
+  
+})
   
   # -- This creates the positivity rate figure
   output$tasa_positividad <- renderPlot({
@@ -140,19 +196,33 @@ shinyServer(function(input, output, session) {
     
     load(file.path(rda_path,"data.rda"))
     
-    hosp_mort %>%
-      filter(date >= input$range[1], date <= input$range[2]) %>%
-      ggplot(aes(date)) +
-      #geom_point(aes(y = IncMueSalud), size = 2, alpha = 0.65) +
-      geom_bar(aes(y = IncMueSalud), stat = "identity", width = 0.75, alpha = 0.65) +
-      # geom_ribbon(aes(ymin= exp(fit - z*se), ymax = exp(fit + z*se)), alpha = 0.35) +
-      geom_line(aes(y = exp(fit)), color="black", size = 1.25) +
-      ylab("Muertes") +
-      xlab("Fecha") +
-      ggtitle("Muertes por COVID-19 en Puerto Rico") +
-      scale_x_date(date_labels = "%B %d") +
-      scale_y_continuous(breaks = seq(0, 15, 1)) +
-      theme_bw()
+    if(input$acumulativo){
+      hosp_mort %>%
+        replace_na(list(IncMueSalud = 0)) %>%
+        mutate(IncMueSalud = cumsum(IncMueSalud)) %>%
+        filter(date >= input$range[1], date <= input$range[2]) %>%
+        ggplot(aes(date)) +
+        geom_bar(aes(y = IncMueSalud), stat = "identity", width = 0.75, alpha = 0.65) +
+        ylab("Muertes acumuladas") +
+        xlab("Fecha") +
+        ggtitle("Muertes acumuladas por COVID-19 en Puerto Rico") +
+        scale_x_date(date_labels = "%B %d") +
+        theme_bw()
+    } else{
+      hosp_mort %>%
+        filter(date >= input$range[1], date <= input$range[2]) %>%
+        ggplot(aes(date)) +
+        #geom_point(aes(y = IncMueSalud), size = 2, alpha = 0.65) +
+        geom_bar(aes(y = IncMueSalud), stat = "identity", width = 0.75, alpha = 0.65) +
+        # geom_ribbon(aes(ymin= exp(fit - z*se), ymax = exp(fit + z*se)), alpha = 0.35) +
+        geom_line(aes(y = exp(fit)), color="black", size = 1.25) +
+        ylab("Muertes") +
+        xlab("Fecha") +
+        ggtitle("Muertes por COVID-19 en Puerto Rico") +
+        scale_x_date(date_labels = "%B %d") +
+        scale_y_continuous(breaks = seq(0, 15, 1)) +
+        theme_bw()
+    }
   })
   
   # -- This creates the daily number of tests figure
@@ -160,82 +230,109 @@ shinyServer(function(input, output, session) {
     
     load(file.path(rda_path,"data.rda"))
     
-    tests %>%
-      filter(date >= input$range[1], date <= input$range[2]) %>%
-      ggplot(aes(date, tests)) +
-      geom_bar(stat = "identity", width = 0.75, fill = "#D1D1E8") +
-      geom_line(aes(y = fit_test), color = "#31347A", size = 1.25) +
-      ylab("Pruebas") +
-      xlab("Fecha") +
-      ggtitle("Pruebas moleculares por día en Puerto Rico") +
-      scale_x_date(date_labels = "%B %d") +
-      scale_y_continuous(labels = scales::comma) +
-      theme_bw()
-    
+    if(input$acumulativo){
+      tests %>%
+        mutate(tests = cumsum(tests)) %>%
+        filter(date >= input$range[1], date <= input$range[2]) %>%
+        ggplot(aes(date, tests)) +
+        geom_bar(stat = "identity", width = 0.75, fill = "#D1D1E8") +
+        ylab("Pruebas acumuladas") +
+        xlab("Fecha") +
+        ggtitle("Total de pruebas moleculares hechas en Puerto Rico") +
+        scale_x_date(date_labels = "%B %d") +
+        scale_y_continuous(labels = scales::comma) +
+        theme_bw()
+    } else{
+      tests %>%
+        filter(date >= input$range[1], date <= input$range[2]) %>%
+        ggplot(aes(date, tests)) +
+        geom_bar(stat = "identity", width = 0.75, fill = "#D1D1E8") +
+        geom_line(aes(y = tests_week_avg), color = "#31347A", size = 1.25) +
+        ylab("Pruebas") +
+        xlab("Fecha") +
+        ggtitle("Pruebas moleculares por día en Puerto Rico") +
+        scale_x_date(date_labels = "%B %d") +
+        scale_y_continuous(labels = scales::comma) +
+        theme_bw()
+    }    
   })
   
   # -- This creates the daily number of tests figure
-  output$positivos_acumulados <- renderPlot({
+  output$casos <- renderPlot({
     
     load(file.path(rda_path,"data.rda"))
     
-    tests %>% 
-      mutate(positives = cumsum(positives)) %>%
-      filter(date >= input$range[1], date <= input$range[2]) %>%
-      ggplot(aes(date, positives)) +
-      geom_bar(stat = "identity", fill = "#FBBCB2", width= 0.75) +
-      ggtitle("Pruebas positivas acumuladas en Puerto Rico") +
-      ylab("Pruebas Positivas") +
-      xlab("Fecha") +
-      scale_y_continuous(labels = scales::comma) +
-      scale_x_date(date_labels = "%B %d") +
-      theme_bw()
-
+    if(input$acumulativo){
+      tests %>% 
+        mutate(cases = cumsum(cases)) %>%
+        filter(date >= input$range[1], date <= input$range[2]) %>%
+        ggplot(aes(date, cases)) +
+        geom_bar(stat = "identity", fill = "#FBBCB2", width= 0.75) +
+        ggtitle("Casos acumuladas en Puerto Rico") +
+        ylab("Casos únicos") +
+        xlab("Fecha") +
+        scale_y_continuous(labels = scales::comma) +
+        scale_x_date(date_labels = "%B %d") +
+        theme_bw()
+    } else{
+      tests %>%
+        filter(date >= input$range[1], date <= input$range[2]) %>%
+        ggplot(aes(date, cases)) +
+        geom_hline(yintercept = 0.05, lty=2, color = "gray") +
+        geom_bar(stat = "identity", fill = "#FBBCB2", width= 0.75) +
+        #geom_ribbon(aes(ymin= exp(cases_fit - z*cases_fit_se), ymax = exp(cases_fit + z*cases_fit_se)), fill = "#FBBCB2", alpha = 0.35) +
+        geom_line(aes(y = exp(cases_fit)), color = "#CC523A", size = 1.25) +
+        ylab("Casos únicos") +
+        xlab("Fecha") +
+        ggtitle("Casos únicos en Puerto Rico") +
+        scale_x_date(date_labels = "%B %d") +
+        theme_bw()
+    }
   })
   
   #-- This creates the positivity rate map by municipio
-  output$mapa_positividad <- renderPlot({
-    
-    load(file.path(rda_path,"data.rda"))
-    
-    MAX <- 0.15 ## maximum positivity rate
-    municipio_tests <- tests_by_strata %>%
-      filter(date >= input$range[1], date <= input$range[2]) %>%
-      group_by(date, patientCity) %>%
-      dplyr::summarize(positives = sum(positives),
-                       tests     = sum(tests)) %>%
-      ungroup() %>%
-      group_by(patientCity) %>%
-      dplyr::summarize(positives  = sum(positives),
-                       tests      = sum(tests),
-                       rate       = positives / tests) %>%
-      ungroup() %>%
-      mutate(rate = pmin(MAX, rate)) %>%
-      na.omit() %>%
-      mutate(lwr  = 100 * qbinom(alpha/2, tests, rate) / tests,
-             upr  = 100 * qbinom(1 - alpha/2, tests, rate) / tests, 
-             rate = 100 * rate)
-    
-    municipio_tests %>%
-      {merge(map, .,by.x = "ADM1_ES", by.y = "patientCity", all.y = T)} %>%
-      ggplot() +
-      geom_sf(data = map, fill="gray", size=0.15) +
-      geom_sf(aes(fill = rate), color="black", size=0.15) +
-      geom_text(data = map, aes(X, Y, label = ADM1_ES),
-                size  = 2.2,
-                color = "black",
-                fontface = "bold") +
-      scale_fill_gradientn(colors = RColorBrewer::brewer.pal(9, "Reds"),
-                           name = "Tasa de Positividad:",
-                           limits= c(0, MAX*100)) +
-      theme_void() +
-      theme(legend.position = "bottom") +
-      ggtitle(paste("Tasa de positividad por municipio para el period de",   
-                    format(input$range[1], "%B %d"),
-                    "a",
-                    format(input$range[2], "%B %d.")))
-  })
-  
+  # output$mapa_positividad <- renderPlot({
+  #   
+  #   load(file.path(rda_path,"data.rda"))
+  #   
+  #   MAX <- 0.15 ## maximum positivity rate
+  #   municipio_tests <- tests_by_strata %>%
+  #     filter(date >= input$range[1], date <= input$range[2]) %>%
+  #     group_by(date, patientCity) %>%
+  #     dplyr::summarize(positives = sum(positives),
+  #                      tests     = sum(tests)) %>%
+  #     ungroup() %>%
+  #     group_by(patientCity) %>%
+  #     dplyr::summarize(positives  = sum(positives),
+  #                      tests      = sum(tests),
+  #                      rate       = positives / tests) %>%
+  #     ungroup() %>%
+  #     mutate(rate = pmin(MAX, rate)) %>%
+  #     na.omit() %>%
+  #     mutate(lwr  = 100 * qbinom(alpha/2, tests, rate) / tests,
+  #            upr  = 100 * qbinom(1 - alpha/2, tests, rate) / tests, 
+  #            rate = 100 * rate)
+  #   
+  #   municipio_tests %>%
+  #     {merge(map, .,by.x = "ADM1_ES", by.y = "patientCity", all.y = T)} %>%
+  #     ggplot() +
+  #     geom_sf(data = map, fill="gray", size=0.15) +
+  #     geom_sf(aes(fill = rate), color="black", size=0.15) +
+  #     geom_text(data = map, aes(X, Y, label = ADM1_ES),
+  #               size  = 2.2,
+  #               color = "black",
+  #               fontface = "bold") +
+  #     scale_fill_gradientn(colors = RColorBrewer::brewer.pal(9, "Reds"),
+  #                          name = "Tasa de Positividad:",
+  #                          limits= c(0, MAX*100)) +
+  #     theme_void() +
+  #     theme(legend.position = "bottom") +
+  #     ggtitle(paste("Tasa de positividad por municipio para el period de",   
+  #                   format(input$range[1], "%B %d"),
+  #                   "a",
+  #                   format(input$range[2], "%B %d.")))
+  # })
+  # 
   # -- This is used to print table in app
   output$tabla <- DT::renderDataTable({
     
@@ -253,10 +350,10 @@ shinyServer(function(input, output, session) {
                                 format(round(100*expit(fit + z*se), 1), nsmall=1),"%", ")"),
              dummy = date,
              warning = as.numeric(date >= today()- days(7))) %>%
-      select(date, avg_7_day, positives, tests, rate, IncMueSalud, CamasICU, HospitCOV19, dummy, warning) %>%
+      select(date, avg_7_day, positives, tests, rate, cases, IncMueSalud, CamasICU, HospitCOV19, dummy, warning) %>%
       arrange(desc(date)) %>%
       mutate(date = format(date, "%B %d")) %>%
-      setNames(c("Fecha", "Tasa de positividad (IC)", "Positivos", "Pruebas", "Positivos/Pruebas",  
+      setNames(c("Fecha", "Tasa de positividad (IC)", "Positivos", "Pruebas", "Positivos/Pruebas",  "Casos",
                  "Muertes", "ICU", "Hospitalizaciones", "dateorder", "warning"))
     
     ret <- DT::datatable(ret, class = 'white-space: nowrap',
@@ -264,50 +361,100 @@ shinyServer(function(input, output, session) {
     rownames = FALSE,
     options = list(dom = 't', pageLength = -1,
                    columnDefs = list(
-                     list(targets = 0, orderData = 8),
-                     list(targets = c(8,9), visible = FALSE),
-                     list(className = 'dt-right', targets = 2:7)))) %>%
-      DT::formatStyle(columns = 2:5,
+                     list(targets = 0, orderData = 9),
+                     list(targets = c(9,10), visible = FALSE),
+                     list(className = 'dt-right', targets = 2:8)))) %>%
+      DT::formatStyle(columns = 2:6,
                       valueColumns = "warning", 
                       backgroundColor = DT::styleEqual(c(0,1), c("#ffffff00", "#ffcccb")))
     return(ret)
   }, server = FALSE)
   
   
-  output$municipios <- DT::renderDataTable({
+  # output$municipios <- DT::renderDataTable({
+  #   
+  #   load(file.path(rda_path,"data.rda"))
+  #   
+  #   tmp <- tests_by_strata %>%
+  #     filter(date >= input$range[1], date <= input$range[2]) %>%
+  #     mutate(patientCity = as.character(patientCity))
+  #   
+  #   children <- tmp %>%
+  #     filter(as.numeric(ageRange) <= 2) %>%
+  #     group_by(patientCity, ageRange) %>%
+  #     summarize(value = sum(positives)) %>%
+  #     ungroup() %>%
+  #     spread(ageRange, value)
+  #   
+  #   ndays <- as.numeric(diff(input$range))+1
+  #   
+  #   ret <- tmp %>%
+  #     group_by(patientCity) %>%
+  #     summarize(positives = sum(positives), tests = sum(tests),
+  #               rate =  positives/tests) %>%
+  #     ungroup() %>%
+  #     left_join(children, by = "patientCity") %>%
+  #     left_join(poblacion_municipios, by = "patientCity") %>%
+  #     mutate(lower = qbinom(alpha/2, tests, rate) / tests,
+  #            upper = qbinom(1 - alpha/2, tests, rate) / tests,
+  #            ppc = round(positives/poblacion * 100000 / ndays, 1)) %>%
+  #     arrange(desc(rate)) %>%
+  #     mutate(rate = paste0(format(round(100*rate,1), nsmall=1),"% ", "(",
+  #                          format(round(100*lower, 1), nsmall=1),"%", ", ",
+  #                          format(round(100*upper, 1), nsmall=1),"%", ")"),
+  #            poblacion = prettyNum(poblacion, big.mark=",")) %>%
+  #     select(patientCity, rate, positives, tests, ppc, poblacion, `0 to 9`, `10 to 19`) %>%
+  #     setNames(c("Municipio", "Tasa de positividad (IC)", "Positivos", "Pruebas",  "Positivos por\n100,000 por día", "Población", "Positiovs 0 a 9 años", "Positivos 10 a 19 años"))
+  #   
+  #   ret <- DT::datatable(ret, class = 'white-space: nowrap',
+  #                        caption = paste0("Tasa de positividad es un estimado basado en periodo ", 
+  #                                         format(input$range[1], "%B %d"),
+  #                                         " a ",
+  #                                         format(input$range[2], "%B %d"),
+  #                                         ". IC = Intervalo de confianza del ", (1-alpha)*100,"%."),
+  #                        rownames = FALSE,
+  #                        options = list(dom = 't', pageLength = -1,
+  #                                       columnDefs = list(
+  #                                         list(className = 'dt-right', targets = 2:7)))) 
+  #  
+  #   return(ret)
+  # }, server = FALSE)
+  # 
+  
+  output$regiones <- DT::renderDataTable({
     
     load(file.path(rda_path,"data.rda"))
     
     tmp <- tests_by_strata %>%
       filter(date >= input$range[1], date <= input$range[2]) %>%
-      mutate(patientCity = as.character(patientCity))
+      mutate(region = as.character(region))
     
     children <- tmp %>%
       filter(as.numeric(ageRange) <= 2) %>%
-      group_by(patientCity, ageRange) %>%
-      summarize(value = sum(positives)) %>%
+      group_by(region, ageRange) %>%
+      summarize(value = sum(cases)) %>%
       ungroup() %>%
       spread(ageRange, value)
     
     ndays <- as.numeric(diff(input$range))+1
     
     ret <- tmp %>%
-      group_by(patientCity) %>%
+      group_by(region) %>%
       summarize(positives = sum(positives), tests = sum(tests),
-                rate =  positives/tests) %>%
+                cases = sum(cases), rate =  positives/tests) %>%
       ungroup() %>%
-      left_join(children, by = "patientCity") %>%
-      left_join(poblacion_municipios, by = "patientCity") %>%
+      left_join(children, by = "region") %>%
       mutate(lower = qbinom(alpha/2, tests, rate) / tests,
              upper = qbinom(1 - alpha/2, tests, rate) / tests,
-             ppc = round(positives/poblacion * 100000 / ndays, 1)) %>%
+             #cpp = round(cases/poblacion * 100000 / ndays, 1)) %>%
+             casos = cases) %>%
       arrange(desc(rate)) %>%
       mutate(rate = paste0(format(round(100*rate,1), nsmall=1),"% ", "(",
                            format(round(100*lower, 1), nsmall=1),"%", ", ",
-                           format(round(100*upper, 1), nsmall=1),"%", ")"),
-             poblacion = prettyNum(poblacion, big.mark=",")) %>%
-      select(patientCity, rate, positives, tests, ppc, poblacion, `0 to 9`, `10 to 19`) %>%
-      setNames(c("Municipio", "Tasa de positividad (IC)", "Positivos", "Pruebas",  "Positivos por\n100,000 por día", "Población", "Positiovs 0 a 9 años", "Positivos 10 a 19 años"))
+                           format(round(100*upper, 1), nsmall=1),"%", ")")) %>%
+             #poblacion = prettyNum(poblacion, big.mark=",")) %>%
+      select(region, rate, positives, tests, casos,  `0 to 9`, `10 to 19`) %>%
+      setNames(c("Municipio", "Tasa de positividad (IC)", "Positivos", "Pruebas",  "Casos", "Casos 0 a 9 años", "Casos 10 a 19 años"))
     
     ret <- DT::datatable(ret, class = 'white-space: nowrap',
                          caption = paste0("Tasa de positividad es un estimado basado en periodo ", 
@@ -318,10 +465,11 @@ shinyServer(function(input, output, session) {
                          rownames = FALSE,
                          options = list(dom = 't', pageLength = -1,
                                         columnDefs = list(
-                                          list(className = 'dt-right', targets = 2:7)))) 
-   
+                                          list(className = 'dt-right', targets = 2:6)))) 
+    
     return(ret)
   }, server = FALSE)
+  
   
   output$age <- renderPlot({
     
