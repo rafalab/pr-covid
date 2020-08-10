@@ -35,21 +35,22 @@ shinyServer(function(input, output, session) {
     load(file.path(rda_path,"data.rda"))
     
     p1 <-   tests %>%
-      filter(date >= input$range[1], date <= input$range[2]) %>%
+      filter(testType == input$testType &
+             date >= input$range[1] & date <= input$range[2]) %>%
       ggplot(aes(date, tests)) +
       geom_bar(stat = "identity", width = 0.75, fill = "#D1D1E8") +
-      geom_line(aes(y = tests_week_avg), color = "#31347A", size = 1.25) +
+      geom_step(aes(y = tests_week_avg), color = "#31347A", size = 1.25) +
       ylab("Pruebas") +
       xlab("Fecha") +
-      ggtitle("Pruebas") +
+      ggtitle(paste("Pruebas", ifelse(input$testType=="Molecular", "moleculares", "serológicas"))) +
       scale_x_date(date_labels = "%B %d") +
       scale_y_continuous(labels = scales::comma) +
       theme_bw()
     
     p2 <-  tests %>%
-      filter(date >= input$range[1], date <= input$range[2]) %>%
+      filter(testType == input$testType &
+             date >= input$range[1] & date <= input$range[2]) %>%
       ggplot(aes(date, cases)) +
-      geom_hline(yintercept = 0.05, lty=2, color = "gray") +
       geom_bar(stat = "identity", fill = "#FBBCB2", width= 0.75) +
       geom_line(aes(y = exp(cases_fit)), color = "#CC523A", size = 1.25) +
       ylab("Casos únicos") +
@@ -60,7 +61,7 @@ shinyServer(function(input, output, session) {
     
     p3 <- hosp_mort %>% 
       replace_na(list(HospitCOV19 = 0, CamasICU = 0)) %>%
-      filter(date >= input$range[1], date <= input$range[2]) %>%
+      filter(date >= input$range[1] & date <= input$range[2]) %>%
       ggplot(aes(date, HospitCOV19)) +
       geom_bar(stat = "identity", width = 0.75, fill = "#8CC8F4") +
       geom_bar(aes(date, CamasICU), stat = "identity", width = 0.75, alpha = 0.5, fill = "darkblue") +
@@ -71,7 +72,7 @@ shinyServer(function(input, output, session) {
       theme_bw() 
     
   p4 <- hosp_mort %>%
-    filter(date >= input$range[1], date <= input$range[2]) %>%
+    filter(date >= input$range[1] & date <= input$range[2]) %>%
     ggplot(aes(date)) +
     geom_bar(aes(y = IncMueSalud), stat = "identity", width = 0.75, alpha = 0.65) +
     geom_line(aes(y = exp(fit)), color="black", size = 1.25) +
@@ -91,22 +92,24 @@ shinyServer(function(input, output, session) {
     load(file.path(rda_path,"data.rda"))
     
     xlim <- c(input$range[1]-days(1), input$range[2]+days(1))
-    ylim <- with(filter(tests, date >= input$range[1], date <= input$range[2]),
-                 c(min(expit(fit-z*se), rate), max(expit(fit+z*se), rate)))
+    ylim <- with(filter(tests, testType == input$testType & date >= input$range[1] & date <= input$range[2]),
+                 c(min(expit(rate_fit-z*rate_se), rate), max(expit(rate_fit+z*rate_se), rate)))
     ret <- tests %>%
-      filter(date >= input$range[1], date <= input$range[2]) %>%
+      filter(testType == input$testType,
+             date >= input$range[1] & date <= input$range[2]) %>%
       ggplot(aes(date, rate)) +
       geom_hline(yintercept = 0.05, lty=2, color = "gray") +
       geom_point(aes(date, rate), size=2, alpha = 0.65) +
-      geom_ribbon(aes(ymin= expit(fit - z*se), ymax = expit(fit + z*se)), alpha = 0.35) +
-      geom_line(aes(y = expit(fit)), color="blue2", size = 0.80) +
+      geom_ribbon(aes(ymin= expit(rate_fit - z*rate_se), ymax = expit(rate_fit + z*rate_se)), alpha = 0.35) +
+      geom_line(aes(y = expit(rate_fit)), color="blue2", size = 0.80) +
       annotate("rect", xmin=pmax(xlim[1], today() - 8), xmax = pmin(today()+1, xlim[2]), ymin=-1, ymax=2, 
                 fill="#ffcccb", alpha = 0.5) + 
       ylab("Tasa de positividad") +
       xlab("Fecha") +
       scale_y_continuous(labels = scales::percent) +
       scale_x_date(date_labels = "%B %d", expand = c(0, 0), limits = xlim)  +
-      labs(title = "Tasa de Positividad en Puerto Rico", caption = str_wrap("Ojo: Interpreten los resultados de la última semana (en rojo) con cautela. Los resultados tardan en llegar lo cual resulta en más variabilidad dado a que hay pocas pruebas reportadas para los últimos 5-6 días.También es posible que haya un sesgo si los positivos se reportan más temprano que los negativos o si las pruebas se comienzan a restringir a asintomáticos.")) +
+      labs(title = paste("Tasa de Positividad en Puerto Rico basada en pruebas" , ifelse(input$testType=="Molecular", "moleculares", "serológicas")),
+                         caption = str_wrap("Ojo: Interpreten los resultados de la última semana (en rojo) con cautela. Los resultados tardan en llegar lo cual resulta en más variabilidad dado a que hay pocas pruebas reportadas para los últimos 5-6 días.También es posible que haya un sesgo si los positivos se reportan más temprano que los negativos o si las pruebas se comienzan a restringir a asintomáticos.")) +
       theme_bw() +
       theme(plot.caption=element_text(hjust = 0))
     
@@ -207,7 +210,7 @@ shinyServer(function(input, output, session) {
       hosp_mort %>%
         replace_na(list(IncMueSalud = 0)) %>%
         mutate(IncMueSalud = cumsum(IncMueSalud)) %>%
-        filter(date >= input$range[1], date <= input$range[2]) %>%
+        filter(date >= input$range[1] & date <= input$range[2]) %>%
         ggplot(aes(date)) +
         geom_bar(aes(y = IncMueSalud), stat = "identity", width = 0.75, alpha = 0.65) +
         ylab("Muertes acumuladas") +
@@ -217,11 +220,9 @@ shinyServer(function(input, output, session) {
         theme_bw()
     } else{
       hosp_mort %>%
-        filter(date >= input$range[1], date <= input$range[2]) %>%
+        filter(date >= input$range[1] & date <= input$range[2]) %>%
         ggplot(aes(date)) +
-        #geom_point(aes(y = IncMueSalud), size = 2, alpha = 0.65) +
         geom_bar(aes(y = IncMueSalud), stat = "identity", width = 0.75, alpha = 0.65) +
-        # geom_ribbon(aes(ymin= exp(fit - z*se), ymax = exp(fit + z*se)), alpha = 0.35) +
         geom_line(aes(y = exp(fit)), color="black", size = 1.25) +
         ylab("Muertes") +
         xlab("Fecha") +
@@ -240,24 +241,24 @@ shinyServer(function(input, output, session) {
     if(input$acumulativo){
       tests %>%
         mutate(tests = cumsum(tests)) %>%
-        filter(date >= input$range[1], date <= input$range[2]) %>%
+        filter(testType == input$testType & date >= input$range[1] & date <= input$range[2]) %>%
         ggplot(aes(date, tests)) +
         geom_bar(stat = "identity", width = 0.75, fill = "#D1D1E8") +
         ylab("Pruebas acumuladas") +
         xlab("Fecha") +
-        ggtitle("Total de pruebas moleculares hechas en Puerto Rico") +
+        ggtitle(paste("Total de pruebas", ifelse(input$testType=="Molecular", "moleculares", "serológicas"), "hechas en Puerto Rico")) +
         scale_x_date(date_labels = "%B %d") +
         scale_y_continuous(labels = scales::comma) +
         theme_bw()
     } else{
       tests %>%
-        filter(date >= input$range[1], date <= input$range[2]) %>%
+        filter(testType == input$testType & date >= input$range[1] & date <= input$range[2]) %>%
         ggplot(aes(date, tests)) +
         geom_bar(stat = "identity", width = 0.75, fill = "#D1D1E8") +
-        geom_line(aes(y = tests_week_avg), color = "#31347A", size = 1.25) +
+        geom_step(aes(y = tests_week_avg), color = "#31347A", size = 1.25) +
         ylab("Pruebas") +
         xlab("Fecha") +
-        ggtitle("Pruebas moleculares por día en Puerto Rico") +
+        ggtitle(paste("Pruebas", ifelse(input$testType=="Molecular", "moleculares", "serológicas"), "por día en Puerto Rico")) +
         scale_x_date(date_labels = "%B %d") +
         scale_y_continuous(labels = scales::comma) +
         theme_bw()
@@ -271,8 +272,9 @@ shinyServer(function(input, output, session) {
     
     if(input$acumulativo){
       tests %>% 
+        filter(testType == input$testType) %>%
         mutate(cases = cumsum(cases)) %>%
-        filter(date >= input$range[1], date <= input$range[2]) %>%
+        filter(date >= input$range[1] & date <= input$range[2]) %>%
         ggplot(aes(date, cases)) +
         geom_bar(stat = "identity", fill = "#FBBCB2", width= 0.75) +
         ggtitle("Casos acumuladas en Puerto Rico") +
@@ -283,11 +285,10 @@ shinyServer(function(input, output, session) {
         theme_bw()
     } else{
       tests %>%
-        filter(date >= input$range[1], date <= input$range[2]) %>%
+        filter(testType == input$testType & date >= input$range[1] & date <= input$range[2]) %>%
         ggplot(aes(date, cases)) +
         geom_hline(yintercept = 0.05, lty=2, color = "gray") +
         geom_bar(stat = "identity", fill = "#FBBCB2", width= 0.75) +
-        #geom_ribbon(aes(ymin= exp(cases_fit - z*cases_fit_se), ymax = exp(cases_fit + z*cases_fit_se)), fill = "#FBBCB2", alpha = 0.35) +
         geom_line(aes(y = exp(cases_fit)), color = "#CC523A", size = 1.25) +
         ylab("Casos únicos") +
         xlab("Fecha") +
@@ -304,7 +305,7 @@ shinyServer(function(input, output, session) {
   #   
   #   MAX <- 0.15 ## maximum positivity rate
   #   municipio_tests <- tests_by_strata %>%
-  #     filter(date >= input$range[1], date <= input$range[2]) %>%
+  #     filter(date >= input$range[1] &  date <= input$range[2]) %>%
   #     group_by(date, patientCity) %>%
   #     dplyr::summarize(positives = sum(positives),
   #                      tests     = sum(tests)) %>%
@@ -347,14 +348,16 @@ shinyServer(function(input, output, session) {
     
     tmp <- select(hosp_mort, date, HospitCOV19, IncMueSalud, CamasICU)
     
-    ret <- tests %>% left_join(tmp, by = "date") %>%
-     filter(date >= input$range[1], date <= input$range[2]) %>%
+    ret <- tests %>% 
+      filter(testType == input$testType) %>%
+      left_join(tmp, by = "date") %>%
+      filter(date >= input$range[1] & date <= input$range[2]) %>%
       mutate(rate = format(round(rate, 2), nsmall=2),
-             avg_7_day = paste0(format(round(100*expit(fit), 1), nsmall=1),
+             avg_7_day = paste0(format(round(100*expit(rate_fit), 1), nsmall=1),
                                 "% ",
-                                "(", trimws(format(round(100*expit(fit - z*se), 1), nsmall=1)),"%", 
+                                "(", trimws(format(round(100*expit(rate_fit - z*rate_se), 1), nsmall=1)),"%", 
                                 ", ",
-                                format(round(100*expit(fit + z*se), 1), nsmall=1),"%", ")"),
+                                format(round(100*expit(rate_fit + z*rate_se), 1), nsmall=1),"%", ")"),
              dummy = date,
              warning = as.numeric(date >= today() - days(7))) %>%
       select(date, avg_7_day, positives, tests, rate, cases, IncMueSalud, CamasICU, HospitCOV19, dummy, warning) %>%
@@ -364,7 +367,7 @@ shinyServer(function(input, output, session) {
                  "Muertes", "ICU", "Hospitalizaciones", "dateorder", "warning"))
     
     ret <- DT::datatable(ret, class = 'white-space: nowrap',
-                  caption = paste0("La columna con fechas contiene el día en que se hizo la prueba. Tasa de positividad es un estimado basado en la tendencia usando un método estadístico, llamado regresión por splines, parecido a tomar el promedio de los siete días alrededor de cada fecha. IC = Intervalo de confianza del ", (1-alpha)*100,"%. Ojo: Interpreten los resultados de la última semana (en rojo) con cautela. Los resultados tardan en llegar lo cual resulta en más variabilidad dado a que hay pocas pruebas reportadas para los últimos 5-6 días. También es posible que haya un sesgo si los positivos se reportan más temprano que los negativos o si las pruebas se comienzan a restringir a asintomáticos. El \"periodo original\" no incluye los datos de los últimos 3 dias pues la mayoría de las pruebas toman por lo menos dos días en ser reportadas, pero se pueden ver los datos de todos los días. También tengan en cuanta que los fines de semana se hacen menos preubas y por lo tanto se reportan menos casos."),
+                  caption = paste("Positivos y casos son de pruebas", ifelse(input$testType=="Molecular", "moleculares.", "serológicas."), "La columna con fechas contiene el día en que se hizo la prueba. Tasa de positividad es un estimado basado en la tendencia usando un método estadístico, llamado regresión por splines, parecido a tomar el promedio de los siete días alrededor de cada fecha. IC = Intervalo de confianza del ", (1-alpha)*100,"%. Ojo: Interpreten los resultados de la última semana (en rojo) con cautela. Los resultados tardan en llegar lo cual resulta en más variabilidad dado a que hay pocas pruebas reportadas para los últimos 5-6 días. También es posible que haya un sesgo si los positivos se reportan más temprano que los negativos o si las pruebas se comienzan a restringir a asintomáticos. El \"periodo original\" no incluye los datos de los últimos 3 dias pues la mayoría de las pruebas toman por lo menos dos días en ser reportadas, pero se pueden ver los datos de todos los días. También tengan en cuanta que los fines de semana se hacen menos preubas y por lo tanto se reportan menos casos."),
     rownames = FALSE,
     options = list(dom = 't', pageLength = -1,
                    columnDefs = list(
@@ -383,7 +386,7 @@ shinyServer(function(input, output, session) {
   #   load(file.path(rda_path,"data.rda"))
   #   
   #   tmp <- tests_by_strata %>%
-  #     filter(date >= input$range[1], date <= input$range[2]) %>%
+  #     filter(date >= input$range[1] &  date <= input$range[2]) %>%
   #     mutate(patientCity = as.character(patientCity))
   #   
   #   children <- tmp %>%
@@ -433,7 +436,7 @@ shinyServer(function(input, output, session) {
     load(file.path(rda_path,"data.rda"))
     
     tmp <- tests_by_strata %>%
-      filter(date >= input$range[1], date <= input$range[2]) %>%
+      filter(testType == input$testType & date >= input$range[1] & date <= input$range[2]) %>%
       mutate(region = as.character(region))
     
     children <- tmp %>%
@@ -464,7 +467,7 @@ shinyServer(function(input, output, session) {
       setNames(c("Municipio", "Tasa de positividad (IC)", "Positivos", "Pruebas",  "Casos por 100,000 por dia", "Poblacion:", "Casos 0 a 9 años", "Casos 10 a 19 años"))
     
     ret <- DT::datatable(ret, class = 'white-space: nowrap',
-                         caption = paste0("Tasa de positividad es un estimado basado en periodo ", 
+                         caption = paste0("Tasa de positividad es un estimado basado pruebas ", ifelse(input$testType=="Molecular", "moleculares", "serológicas"), " en el periodo ", 
                                           format(input$range[1], "%B %d"),
                                           " a ",
                                           format(input$range[2], "%B %d"),
@@ -484,7 +487,7 @@ shinyServer(function(input, output, session) {
     
     age_levels <- levels(tests_by_strata$ageRange)
     ret <- tests_by_strata %>%
-      filter(date >= input$range[1], date <= input$range[2]) %>%
+      filter(testType == input$testType & date >= input$range[1] & date <= input$range[2]) %>%
       filter(ageRange != "No reportado") %>%
       mutate(ageRange = age_levels[ifelse(as.numeric(ageRange) >=9, 9, as.numeric(ageRange))]) %>%
       mutate(ageRange = ifelse(ageRange == "80 to 89", "80+", ageRange)) %>%
@@ -497,7 +500,7 @@ shinyServer(function(input, output, session) {
       scale_y_continuous(labels = scales::percent) +
       xlab("Edad") +
       ylab("Porciento") +
-      ggtitle(paste("Distribución de pruebas positivas por edad en Puerto Rico de", 
+      ggtitle(paste("Distribución de pruebas",  ifelse(input$testType=="Molecular", "moleculares", "serológicas"), "positivas por edad en Puerto Rico de", 
                      format(input$range[1], "%B %d"),
                      "a",
                      format(input$range[2], "%B %d."))) +
@@ -515,8 +518,8 @@ shinyServer(function(input, output, session) {
       paste0("pruebas-",format(the_stamp, "%Y-%m-%d_%H:%M:%S"),".csv")
     },
     content = function(file) {
-      all_tests <- readRDS(file.path(rda_path,"all_tests.rds"))
-      write.csv(all_tests, file = file, row.names = FALSE)  
+      load(file.path(rda_path,"data.rda"))
+      write.csv(tests_by_strata, file = file, row.names = FALSE)  
     },
     contentType = "txt/csv"
   )
