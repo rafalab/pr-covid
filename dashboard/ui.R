@@ -84,7 +84,7 @@ shinyUI(fluidPage(theme = shinytheme("sandstone"),
                          DT::dataTableOutput("tabla")),
                 
                 tabPanel("Resumen",
-                         h2("Resumen de datos COVID-19 en Puerto Rico"),
+                         h3("Resumen de datos COVID-19 en Puerto Rico"),
                          plotOutput("resumen")),
                 
                 tabPanel("Positividad",
