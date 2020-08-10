@@ -2,7 +2,28 @@
 source("init.R")
 
 shinyServer(function(input, output, session) {
-    
+   
+  # -- This resets the range
+  observeEvent(input$reset, {
+    updateDateRangeInput(session, "range",
+                         start = "2020-03-21",
+                         end   = today() - days(3))
+  })
+  
+  # -- This sets range to last two weeks
+  observeEvent(input$weeks, {
+    updateDateRangeInput(session, "range",
+                         start = today() - 1 - weeks(2),
+                         end   = today() - 1)
+  })
+  
+  # -- This sets range to last two weeks
+  observeEvent(input$alldates, {
+    updateDateRangeInput(session, "range",
+                         start = first_day,
+                         end   = today())
+  })
+  
   ## get date and time of latest update
   output$stamp = renderUI({
     load(file.path(rda_path,"data.rda"))
@@ -177,21 +198,7 @@ shinyServer(function(input, output, session) {
     
   })
   
-  # -- This resets the range
-  observeEvent(input$reset, {
-    updateDateRangeInput(session, "range",
-                         start = "2020-03-21",
-                         end   = today() - 1)
-  })
-  
-  # -- This sets range to last two weeks
-  observeEvent(input$weeks, {
-    updateDateRangeInput(session, "range",
-                         start = today() -1 - weeks(2),
-                         end   = today() - 1)
-  })
-  
-  # -- This creates the hospitalization figure
+   # -- This creates the hospitalization figure
   output$muertes <- renderPlot({
     
     load(file.path(rda_path,"data.rda"))
@@ -349,7 +356,7 @@ shinyServer(function(input, output, session) {
                                 ", ",
                                 format(round(100*expit(fit + z*se), 1), nsmall=1),"%", ")"),
              dummy = date,
-             warning = as.numeric(date >= today()- days(7))) %>%
+             warning = as.numeric(date >= today() - days(7))) %>%
       select(date, avg_7_day, positives, tests, rate, cases, IncMueSalud, CamasICU, HospitCOV19, dummy, warning) %>%
       arrange(desc(date)) %>%
       mutate(date = format(date, "%B %d")) %>%
@@ -357,7 +364,7 @@ shinyServer(function(input, output, session) {
                  "Muertes", "ICU", "Hospitalizaciones", "dateorder", "warning"))
     
     ret <- DT::datatable(ret, class = 'white-space: nowrap',
-                  caption = paste0("La columna con fechas contiene el día en que se hizo la prueba. Tasa de positividad es un estimado basado en la tendencia usando un método estadístico, llamado regresión por splines, parecido a tomar el promedio de los siete días alrededor de cada fecha. IC = Intervalo de confianza del ", (1-alpha)*100,"%. Ojo: Interpreten los resultados de la última semana (en rojo) con cautela. Los resultados tardan en llegar lo cual resulta en más variabilidad dado a que hay pocas pruebas reportadas para los últimos 5-6 días. También es posible que haya un sesgo si los positivos se reportan más temprano que los negativos o si las pruebas se comienzan a restringir a asintomáticos."),
+                  caption = paste0("La columna con fechas contiene el día en que se hizo la prueba. Tasa de positividad es un estimado basado en la tendencia usando un método estadístico, llamado regresión por splines, parecido a tomar el promedio de los siete días alrededor de cada fecha. IC = Intervalo de confianza del ", (1-alpha)*100,"%. Ojo: Interpreten los resultados de la última semana (en rojo) con cautela. Los resultados tardan en llegar lo cual resulta en más variabilidad dado a que hay pocas pruebas reportadas para los últimos 5-6 días. También es posible que haya un sesgo si los positivos se reportan más temprano que los negativos o si las pruebas se comienzan a restringir a asintomáticos. El \"periodo original\" no incluye los datos de los últimos 3 dias pues la mayoría de las pruebas toman por lo menos dos días en ser reportadas, pero se pueden ver los datos de todos los días. También tengan en cuanta que los fines de semana se hacen menos preubas y por lo tanto se reportan menos casos."),
     rownames = FALSE,
     options = list(dom = 't', pageLength = -1,
                    columnDefs = list(
@@ -444,17 +451,17 @@ shinyServer(function(input, output, session) {
                 cases = sum(cases), rate =  positives/tests) %>%
       ungroup() %>%
       left_join(children, by = "region") %>%
+      left_join(region_pop, by = "region") %>%
       mutate(lower = qbinom(alpha/2, tests, rate) / tests,
              upper = qbinom(1 - alpha/2, tests, rate) / tests,
-             #cpp = round(cases/poblacion * 100000 / ndays, 1)) %>%
-             casos = cases) %>%
+             cpp = format(round(cases/poblacion * 100000 / ndays, 1), nsmall = 1)) %>%
       arrange(desc(rate)) %>%
-      mutate(rate = paste0(format(round(100*rate,1), nsmall=1),"% ", "(",
+      mutate(rate = paste0(format(round(100*rate, 1), nsmall=1),"% ", "(",
                            format(round(100*lower, 1), nsmall=1),"%", ", ",
-                           format(round(100*upper, 1), nsmall=1),"%", ")")) %>%
-             #poblacion = prettyNum(poblacion, big.mark=",")) %>%
-      select(region, rate, positives, tests, casos,  `0 to 9`, `10 to 19`) %>%
-      setNames(c("Municipio", "Tasa de positividad (IC)", "Positivos", "Pruebas",  "Casos", "Casos 0 a 9 años", "Casos 10 a 19 años"))
+                           format(round(100*upper, 1), nsmall=1),"%", ")"), 
+             poblacion = prettyNum(poblacion, big.mark=",")) %>%
+      select(region, rate, positives, tests, cpp, poblacion, `0 to 9`, `10 to 19`) %>%
+      setNames(c("Municipio", "Tasa de positividad (IC)", "Positivos", "Pruebas",  "Casos por 100,000 por dia", "Poblacion:", "Casos 0 a 9 años", "Casos 10 a 19 años"))
     
     ret <- DT::datatable(ret, class = 'white-space: nowrap',
                          caption = paste0("Tasa de positividad es un estimado basado en periodo ", 

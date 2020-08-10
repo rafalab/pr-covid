@@ -17,6 +17,9 @@ if(Sys.info()["nodename"] == "fermat.dfci.harvard.edu"){
 # -- Set locale
 Sys.setlocale("LC_TIME", "es_ES")
 
+# -- First day
+first_day <- make_date(2020, 3, 12)
+
 # -- Helper functions
 expit <- function(x) { 1/ (1 + exp(-x))  }
 
@@ -24,7 +27,7 @@ expit <- function(x) { 1/ (1 + exp(-x))  }
 alpha <- 0.01
 z <- qnorm(1-alpha/2)
 
-# -- Loading data
+# -- Loading population data 
 pop <- read_csv("data/poblacion-municipios.csv") %>%
   slice(1) %>% unlist()
 pop <- pop[-1]
@@ -32,6 +35,8 @@ names(pop)[names(pop)=="Comerio"]<- "Comerío"
 poblacion_municipios <- tibble(patientCity = names(pop), poblacion = pop) %>%
   filter(patientCity != "Puerto Rico")
 
+region_pop <- read_csv("data/poblacion-region.csv", skip = 1,
+                       col_names=c("row", "region", "poblacion"))[,-1]
 # -- For maps
 map <- st_read("data/pri_adm_2019_shp/pri_admbnda_adm1_2019.shp") %>%
   st_transform(crs = 4326) %>%

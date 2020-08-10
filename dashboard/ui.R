@@ -19,19 +19,11 @@ shinyUI(fluidPage(theme = shinytheme("sandstone"),
     sidebarLayout(
         sidebarPanel(
             dateRangeInput("range", "Periodo", 
-                           start = make_date(2020, 3, 21), end=today() - days(3),
+                           start = make_date(2020, 3, 21), end= today() - days(3),
                            min = first_day,
                            format = "M-dd",
                            max = today()),
-            actionButton("reset", "Todas las fechas", 
-            style = "color: black; 
-                     background-color: rgb(230, 220, 205); 
-                     position: relative; 
-                     text-align:center;
-                     border-radius: 6px;
-                     border-width: 2px"),
-            br(),
-            br(),
+            
             actionButton("weeks", "Últimas dos Semanas", 
                          style = "color: black; 
                      background-color: rgb(230, 220, 205); 
@@ -41,17 +33,35 @@ shinyUI(fluidPage(theme = shinytheme("sandstone"),
                      border-width: 2px"),
             br(),
             br(),
-            radioButtons("yscale", 
-                         label = "Rango del gráfico:",
-                         choices = list("Preescogido" = TRUE,
-                                        "Determinado por datos" = FALSE),
-                         selected = TRUE),
+            actionButton("reset", "Periodo original", 
+            style = "color: black; 
+                     background-color: rgb(230, 220, 205); 
+                     position: relative; 
+                     text-align:center;
+                     border-radius: 6px;
+                     border-width: 2px"),
+            br(),
+            br(),
+            actionButton("alldates", "Todas las fechas", 
+                         style = "color: black; 
+                     background-color: rgb(230, 220, 205); 
+                     position: relative; 
+                     text-align:center;
+                     border-radius: 6px;
+                     border-width: 2px"),
+            br(),
+            br(),
             radioButtons("acumulativo", 
                          label = "Tipo de gráfico",
                          choices = list("Diario" = FALSE,
                                         "Acumulativo" = TRUE),
                          selected = FALSE),
-            br(),
+            radioButtons("yscale", 
+                         label = "Rango del gráfico:",
+                         choices = list("Preescogido" = TRUE,
+                                        "Determinado por datos" = FALSE),
+                         selected = TRUE),
+              br(),
             div("Datos depurados:"),            
             downloadButton("downloadData", "Download", 
                            style = "color: black; 

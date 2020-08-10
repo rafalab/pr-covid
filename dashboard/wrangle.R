@@ -24,6 +24,8 @@ all_tests <- all_tests %>%
          createdAt      = mdy_hm(createdAt),
          ageRange       = na_if(ageRange, "N/A"),
          ageRange       = factor(ageRange, levels = age_levels),
+         region         = ifelse(region == "Bayamon", "Bayamón", region),
+         region         = ifelse(region == "Mayaguez", "Mayagüez", region),
          region         = factor(region),
          result         = tolower(result),
          result         = case_when(grepl("positive", result) ~ "positive",
@@ -136,8 +138,8 @@ if(FALSE){
 }
 
 # unique cases ------------------------------------------------------------
-cases <- all_tests %>%
-  filter(date>=first_day &
+cases <- all_tests %>%          
+  filter(date>=first_day &                                   
          result == c("positive")) %>%
   group_by(patientId) %>%
   mutate(n=n()) %>%
@@ -145,7 +147,7 @@ cases <- all_tests %>%
   ungroup() %>%
   mutate(region = fct_explicit_na(region, "No reportado")) %>%
   mutate(ageRange = fct_explicit_na(ageRange, "No reportado")) %>%
-  select(-patientId, -result)
+  select(-patientId, -result) 
 
 # Add cases to tests data frame -------------------------------------------
 cases_per_day <- cases %>%
