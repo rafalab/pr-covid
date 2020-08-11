@@ -123,8 +123,8 @@ if(FALSE){
 ##apply similar model to tests, one knot per week
 tests <- tests %>% 
   mutate(week = floor_date(date, unit = "week", week_start = 1)) %>%
-  group_by(testType, week) %>%
-  mutate(tests_week_avg = mean(tests, na.rm = TRUE)) %>%
+  group_by(week) %>%
+  mutate(fit_test = mean(tests, na.rm = TRUE)) %>%
   ungroup() %>%
   select(-week)
 
