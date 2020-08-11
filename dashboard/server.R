@@ -171,7 +171,6 @@ shinyServer(function(input, output, session) {
       scale_x_date(date_labels = "%B %d") +
       scale_y_continuous(labels = scales::comma) +
       theme_bw()
-    
   })
   
   # -- This creates the daily number of tests figure
