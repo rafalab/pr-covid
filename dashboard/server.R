@@ -180,11 +180,11 @@ shinyServer(function(input, output, session) {
     load(file.path(rda_path,"data.rda"))
     
     tests %>% 
-      mutate(positives = cumsum(positives)) %>%
+    #  mutate(positives = cumsum(positives)) %>%
       filter(date >= input$range[1], date <= input$range[2]) %>%
       ggplot(aes(date, positives)) +
       geom_bar(stat = "identity", fill = "#FBBCB2", width= 0.75) +
-      ggtitle("Pruebas positivas acumuladas en Puerto Rico") +
+      ggtitle("Pruebas positivas en Puerto Rico") +
       ylab("Pruebas Positivas") +
       xlab("Fecha") +
       scale_y_continuous(labels = scales::comma) +

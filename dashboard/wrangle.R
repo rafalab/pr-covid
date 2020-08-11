@@ -19,6 +19,8 @@ age_levels <-  c("0 to 9", "10 to 19", "20 to 29", "30 to 39", "40 to 49", "50 t
 
 ## Defining rda with all the tests 
 all_tests <- all_tests %>%  
+  filter(testType == "Molecular") %>%
+  rename(patientCity = city) %>%
   as_tibble() %>%
   mutate(collectedDate  = mdy(collectedDate),
          reportedDate   = mdy(reportedDate),
@@ -119,18 +121,12 @@ if(FALSE){
 }
 
 ##apply similar model to tests, one knot per week
-y <- tests$tests
-df  <- round((nrow(tests))/7)
-nknots <- df - 1
-knots <- seq.int(from = 0, to = 1, length.out = nknots + 2L)[-c(1L,  nknots + 2L)]
-knots <- quantile(x, knots)
-x_s <- ns(x, knots = knots, intercept = FALSE)
-i_s <- 1:(ncol(x_s) + 1)
-# x_w as defined above
-X <- cbind(x_s, x_w)
-fit  <- lm(y ~ -1 + X)
-beta <- coef(fit)
-tests$fit_test <- pmax(0, as.vector(X[, i_s] %*% beta[i_s]))
+tests <- tests %>% 
+  mutate(week = floor_date(date, unit = "week", week_start = 1)) %>%
+  group_by(testType, week) %>%
+  mutate(tests_week_avg = mean(tests, na.rm = TRUE)) %>%
+  ungroup() %>%
+  select(-week)
 
 if(FALSE){
   tests %>%
