@@ -164,7 +164,7 @@ shinyServer(function(input, output, session) {
       filter(date >= input$range[1], date <= input$range[2]) %>%
       ggplot(aes(date, tests)) +
       geom_bar(stat = "identity", width = 0.75, fill = "#D1D1E8") +
-      geom_line(aes(y = fit_test), color = "#31347A", size = 1.25) +
+      geom_step(aes(y = fit_test), color = "#31347A", size = 1.25) +
       ylab("Pruebas") +
       xlab("Fecha") +
       ggtitle("Pruebas moleculares por día en Puerto Rico") +
