@@ -70,7 +70,7 @@ x <- as.numeric(tests$date)
 y <- tests$positives
 n <- tests$tests
 ## revmoe last few days of data from spline fit
-ind <- which(tests$date <= today() - days(2))
+ind <- which(tests$date <= today() - days(3))
 ## Design matrix for splines
 ## We are using 3 knots per monnth
 ## And ignoring last week
@@ -163,11 +163,17 @@ hosp_mort <- read_csv("https://raw.githubusercontent.com/rafalab/pr-covid/master
 # -- model to deaths. Here there is no weekend effect
 x <- as.numeric(hosp_mort$date)
 y <- hosp_mort$IncMueSalud
-df  <- round(2 * nrow(hosp_mort)/30)
-x_s <- ns(x, df = df, intercept = TRUE)
+ind <- which(hosp_mort$date <= today() - days(3))
+df  <- round(2 * length(ind)/30)
+nknots <- df - 1
+
+knots <- seq.int(from = 0, to = 1, length.out = nknots + 2L)[-c(1L, nknots + 2L)]
+knots <- quantile(x[ind], knots)
+
+x_s <- ns(x, knots = knots, Boundary.knots = range(x[ind]), intercept = TRUE)
 i_s <- 1:ncol(x_s)
 X <- x_s
-fit  <- glm(y ~ -1 + X, family = "quasipoisson")
+fit  <- glm(y[ind] ~ -1 + X[ind,], family = "quasipoisson")
 beta <- coef(fit)
 hosp_mort$fit <- as.vector(X[, i_s] %*% beta[i_s])
 hosp_mort$se  <- sqrt(diag(X[, i_s] %*%
