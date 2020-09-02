@@ -3,8 +3,9 @@ library(shiny)
 library(shinythemes)
 library(lubridate)
 
-# -- First day
+# -- load to get first day
 first_day <- make_date(2020, 3, 12)
+last_day <- today() - days(6)
 
 # -- Define UI for application that draws a histogram
 shinyUI(fluidPage(theme = shinytheme("sandstone"),
@@ -19,7 +20,7 @@ shinyUI(fluidPage(theme = shinytheme("sandstone"),
     sidebarLayout(
         sidebarPanel(
             dateRangeInput("range", "Periodo", 
-                           start = make_date(2020, 3, 21), end= today() - days(3),
+                           start = make_date(2020, 3, 21), end = last_day,
                            min = first_day,
                            format = "M-dd",
                            max = today()),
@@ -66,15 +67,15 @@ shinyUI(fluidPage(theme = shinytheme("sandstone"),
                          choices = list("Preescogido" = TRUE,
                                         "Determinado por datos" = FALSE),
                          selected = TRUE),
-              br(),
-            div("Datos depurados:"),            
-            downloadButton("downloadData", "Download", 
-                           style = "color: black; 
-                     background-color: rgb(230, 220, 205); 
-                     position: relative; 
-                     text-align:center;
-                     border-radius: 6px;
-                     border-width: 2px"), 
+          #    br(),
+          #  div("Datos depurados:"),            
+          #  downloadButton("downloadData", "Download", 
+          #                 style = "color: black; 
+          #           background-color: rgb(230, 220, 205); 
+          #           position: relative; 
+          #           text-align:center;
+          #           border-radius: 6px;
+          #           border-width: 2px"), 
            br(),
             br(),
            uiOutput("stamp"),
@@ -110,12 +111,12 @@ shinyUI(fluidPage(theme = shinytheme("sandstone"),
                 tabPanel("Casos",
                          plotOutput("casos")),
                 
-                tabPanel("Tasas por región",
-                         DT::dataTableOutput("regiones")),
+                tabPanel("Tasas por municipio",
+                         DT::dataTableOutput("municipios")),
                 
-                # tabPanel("Mapa",
-                #          plotOutput("mapa_positividad")),
-                # 
+                tabPanel("Mapa",
+                          plotOutput("mapa_positividad")),
+                 
                 tabPanel("Positivos por Edad",
                          plotOutput("age"))
                 
