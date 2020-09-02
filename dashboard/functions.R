@@ -60,10 +60,10 @@ plot_positivity <- function(tests,
     geom_hline(yintercept = 0.03, lty=2, color = "gray") +
     geom_hline(yintercept = 0.10, lty=2, color = "gray") +
     geom_hline(yintercept = 0.20, lty=2, color = "gray") +
-    annotate("text", end_date + days(2), 0.015, label = "Bajo", color = "#01D474") +
-    annotate("text", end_date + days(2), 0.065, label = "Medio", color = "#FFC900") +
-    annotate("text", end_date + days(2), 0.15, label = "Alto", color = "#FF9600") +
-    annotate("text", end_date + days(2), 0.225, label = "Crítico", color = "#FF0034") +
+    annotate("text", end_date + days(2), 0.015, label = "Bajo") + #, color = "#01D474") +
+    annotate("text", end_date + days(2), 0.065, label = "Medio") + #, color = "#FFC900") +
+    annotate("text", end_date + days(2), 0.15, label = "Alto") + #, color = "#FF9600") +
+    annotate("text", end_date + days(2), 0.225, label = "Crítico") + #, color = "#FF0034") +
     geom_point(aes(date, rate), size=2, alpha = 0.65) +
     geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.35) +
     geom_line(aes(y = fit), color="blue2", size = 0.80) +
@@ -71,7 +71,7 @@ plot_positivity <- function(tests,
     xlab("Fecha") +
     scale_y_continuous(labels = scales::percent) +
     scale_x_date(date_labels = "%B %d")  +
-    labs(title = paste("Tasa de Positividad en Puerto Rico basada en pruebas" , 
+    labs(title = paste("Tasa de Positividad basada en pruebas" , 
                        ifelse(type=="Molecular", "moleculares", "serológicas"))) +
     theme_bw() +
     theme(plot.caption=element_text(hjust = 0))
@@ -110,14 +110,14 @@ plot_icu <- function(hosp_mort,
     geom_hline(yintercept = 0.60, lty=2, color = "gray") +
     geom_hline(yintercept = 0.70, lty=2, color = "gray") +
     geom_hline(yintercept = 1.00, lty=2, color = "gray") +
-    annotate("text", end_date + days(2), 0.25, label = "Bajo", color = "#01D474") +
-    annotate("text", end_date + days(2), 0.55, label = "Medio", color = "#FFC900") +
-    annotate("text", end_date + days(2), 0.65, label = "Alto", color = "#FF9600") +
-    annotate("text", end_date + days(2), 0.75, label = "Crítico", color = "#FF0034") +
-    geom_line(lwd = 1.5) +
+    annotate("text", end_date + days(2), 0.25, label = "Bajo") + #, color = "#01D474") +
+    annotate("text", end_date + days(2), 0.55, label = "Medio") + #, color = "#FFC900") +
+    annotate("text", end_date + days(2), 0.65, label = "Alto") + #, color = "#FF9600") +
+    annotate("text", end_date + days(2), 0.75, label = "Crítico") + #, color = "#FF0034") +
+    geom_line(lwd = 1.5, color = "darkblue") +
     xlab("Fecha") +
-    ylab("Uso de camas ICU") +
-    ggtitle("Porciento de camas ICU disponibles usadas por pacientes de COVID-19 en Puerto Rico") +
+    ylab("Porciento") +
+    ggtitle("Camas ICU disponibles usadas por pacientes COVID-19") +
     scale_x_date(date_labels = "%B %d") +
     scale_y_continuous(limits = lim, labels = scales::percent) +
     theme_bw() 
@@ -141,7 +141,7 @@ plot_deaths <- function(hosp_mort,
       geom_bar(aes(y = IncMueSalud), stat = "identity", width = 0.75, alpha = 0.65) +
       ylab("Muertes acumuladas") +
       xlab("Fecha") +
-      ggtitle("Muertes acumuladas por COVID-19 en Puerto Rico") +
+      ggtitle("Muertes acumuladas por COVID-19") +
       scale_x_date(date_labels = "%B %d") +
       theme_bw()
   } else{
@@ -152,7 +152,7 @@ plot_deaths <- function(hosp_mort,
       geom_line(aes(y = fit), color="black", size = 1.25) +
       ylab("Muertes") +
       xlab("Fecha") +
-      ggtitle("Muertes por COVID-19 en Puerto Rico") +
+      ggtitle("Muertes por COVID-19") +
       scale_x_date(date_labels = "%B %d") +
       scale_y_continuous(breaks = seq(0, 15, 1)) +
       theme_bw()
@@ -194,8 +194,8 @@ plot_cases <- function(cases,
       filter(date >= start_date & date <= end_date) %>%
       ggplot(aes(date, cases)) +
       geom_bar(stat = "identity", fill = "#FBBCB2", width= 0.75) +
-      ggtitle(paste0("Casos acumulados en Puerto Rico (por pruebas ", 
-                     ifelse(type=="Molecular", "moleculares", "serológicas"), ")")) +
+      ggtitle(paste0("Casos acumulados basado en pruebas ", 
+                     ifelse(type=="Molecular", "moleculares", "serológicas"))) +
       ylab("Casos") +
       xlab("Fecha") +
       scale_y_continuous(labels = scales::comma) +
@@ -209,8 +209,8 @@ plot_cases <- function(cases,
       geom_line(aes(y = moving_avg), color = "#CC523A", size = 1.25) +
       ylab("Casos únicos") +
       xlab("Fecha") +
-      ggtitle(paste0("Casos único en Puerto Rico (por pruebas ", 
-                    ifelse(type=="Molecular", "moleculares", "serológicas"), ")")) +
+      ggtitle(paste0("Casos únicos basado en pruebas ", 
+                    ifelse(type=="Molecular", "moleculares", "serológicas"))) +
       
       scale_x_date(date_labels = "%B %d") +
       theme_bw()
@@ -230,7 +230,7 @@ plot_test <- function(tests,
       geom_bar(stat = "identity", width = 0.75, fill = "#D1D1E8") +
       ylab("Pruebas acumuladas") +
       xlab("Fecha") +
-      ggtitle(paste("Total de pruebas", ifelse(type == "Molecular", "moleculares", "serológicas"), "hechas en Puerto Rico")) +
+      ggtitle(paste("Total de pruebas", ifelse(type == "Molecular", "moleculares", "serológicas"))) +
       scale_x_date(date_labels = "%B %d") +
       scale_y_continuous(labels = scales::comma) +
       theme_bw()
@@ -242,7 +242,7 @@ plot_test <- function(tests,
       geom_step(aes(y = tests_week_avg), color = "#31347A", size = 1.25) +
       ylab("Pruebas") +
       xlab("Fecha") +
-      ggtitle(paste("Pruebas", ifelse(type=="Molecular", "moleculares", "serológicas"), "por día en Puerto Rico")) +
+      ggtitle(paste("Pruebas", ifelse(type=="Molecular", "moleculares", "serológicas"), "por día")) +
       scale_x_date(date_labels = "%B %d") +
       scale_y_continuous(labels = scales::comma) +
       theme_bw()
@@ -259,12 +259,12 @@ plot_map <- function(test_by_strata,
     filter(date >= start_date &  date <= end_date & testType == type) %>%
     group_by(testType, date, patientCity) %>%
     summarize(positives = sum(positives),
-              tests     = sum(tests)) %>%
+              tests     = sum(tests), .groups = "drop") %>%
     ungroup() %>%
     group_by(patientCity) %>%
     summarize(positives  = sum(positives),
               tests      = sum(tests),
-              rate       = positives / tests) %>%
+              rate       = positives / tests, groups = "drop") %>%
     ungroup() %>%
     mutate(rate = 100*pmin(max_rate, rate)) %>%
     na.omit() %>%
@@ -299,6 +299,8 @@ make_table <- function(test, cases, hosp_mort,
 
   cases <- filter(cases, testType == type)
   
+  cases$moving_avg[cases$date > last_day] <- NA
+
   ret <- tests %>%
     filter(testType == type) %>%
     left_join(cases, by = "date") %>%
@@ -403,7 +405,7 @@ plot_agedist <- function(tests_by_strata,
     scale_y_continuous(labels = scales::percent) +
     xlab("Edad") +
     ylab("Porciento") +
-    ggtitle(paste("Distribución de positivos",  ifelse(type=="Molecular", "moleculares", "serológicas"), "positivas por edad en Puerto Rico de",
+    ggtitle(paste("Distribución de pruebas",  ifelse(type=="Molecular", "moleculares", "serológicas"), "positivas por edad",
                   format(start_date, "%B %d"),
                   "a",
                   format(end_date, "%B %d."))) +
@@ -413,3 +415,44 @@ plot_agedist <- function(tests_by_strata,
   
   return(ret)
 }
+
+compute_summary <- function(tests, hosp_mort, cases, beds = icu_beds){
+  
+  make_pct <- function(x) paste0(round(100*x), "%")
+  delta <- function(x){
+    paste0(ifelse(x[2]-x[1]>0, "+", ""),
+           paste0(round(100*(x[2] - x[1])/x[1]), "%"))
+  }
+
+  tmp1 <- filter(tests, testType == "Molecular" & date %in% c(last_day, last_day - weeks(1))) %>%
+    arrange(date)
+  
+  tmp2 <- hosp_mort %>% select(date, CamasICU) %>% 
+    filter(!is.na(CamasICU)) %>%
+    filter(date %in% c(max(date), max(date) - weeks(1))) %>%
+    arrange(date)
+  
+  tmp3 <- filter(cases, testType == "Molecular" & date %in% c(last_day, last_day - weeks(1)))  %>%
+    arrange(date)
+  
+  
+  ret <- tibble(metrica = c("Tasa de positividad", "Uso de camas ICU", "Casos por día", "Pruebas por día"),
+                meta = c("Menos de 3%", "Menos de 50%", "Menos de 30", ""),
+                valor =  c(make_pct(tmp1$fit[2]), make_pct(tmp2$CamasICU[2]/beds), round(tmp3$moving_avg[2]), prettyNum(round(tmp1$tests_week_avg[2]), big.mark = ",")),
+                cambio = c(delta(tmp1$fit), delta(tmp2$CamasICU), delta(tmp3$moving_avg), delta(tmp1$tests_week_avg)))
+
+  colnames(ret) <- c("Métrica", "Meta", "Nivel actual", "Tendencia")
+  
+  ret <- DT::datatable(ret, class = 'white-space: nowrap',
+                       rownames = FALSE,
+                       options = list(dom = 't', ordering = FALSE, pageLength = -1, 
+                                      columnDefs = list(
+                                        list(className = 'dt-center', targets = 0:3)))) %>%
+    DT::formatStyle(columns = 1:4, fontSize = '125%')
+  
+  
+  ret
+  return(ret)
+  
+}
+  
