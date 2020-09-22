@@ -2,7 +2,56 @@
 library(tidyverse)
 library(lubridate)
 library(splines)
-source("functions.R")
+
+# fit glm spline ----------------------------------------------------------
+# no longer used. we now use moving average to match other dashboards
+# spline_fit <- function(d, y, n = NULL, 
+#                        week_effect = TRUE, 
+#                        knots_per_month = 2, 
+#                        family = quasibinomial, 
+#                        alpha = 0.05){
+#   
+#   z <- qnorm(1 - alpha/2)
+#   
+#   x <- as.numeric(d)
+#   
+#   df  <- round(knots_per_month * length(x) / 30) + 1
+#   
+#   if(family()$family %in% c("binomial", "quasibinomial")){
+#     if(is.null(n)) stop("Must supply n with binomial or quasibinomial")
+#     y <- cbind(y, n-y)
+#   }
+#   
+#   if(week_effect){
+#     
+#     w <- factor(wday(d))
+#     contrasts(w) <- contr.sum(length(levels(w)), contrasts = TRUE)
+#     w <- model.matrix(~w)[,-1]
+#     
+#     glm_fit  <- glm(y ~ ns(x, df = df, intercept = TRUE) + w - 1, family = family)
+#     
+#   } else {
+#     
+#     glm_fit  <- glm(y ~ ns(x, df = df, intercept = TRUE) - 1, family = family)
+#     
+#   }
+#   
+#   glm_pred <- predict(glm_fit, type = "terms", se.fit = TRUE)
+#   
+#   fit <- family()$linkinv(glm_pred$fit[,1])
+#   
+#   lower <- family()$linkinv(glm_pred$fit[,1] - z * glm_pred$se.fit[,1])
+#   
+#   upper <- family()$linkinv(glm_pred$fit[,1] + z * glm_pred$se.fit[,1])
+#   
+#   return(tibble(date = d, fit = fit, lower = lower, upper = upper))  
+# }
+
+# moving average ----------------------------------------------------------
+
+ma7 <- function(d, y, k = 7) 
+  tibble(date = d, moving_avg = as.numeric(stats::filter(y, rep(1/k, k), side = 1)))
+
 
 # -- Fixed values
 icu_beds <- 229 #if available beds is missing change to this
@@ -17,6 +66,8 @@ age_levels <-  c("0 to 9", "10 to 19", "20 to 29", "30 to 39", "40 to 49", "50 t
 test_url <- "https://bioportal.salud.gov.pr/api/administration/reports/minimal-info-unique-tests"
 
 cases_url <- "https://bioportal.salud.gov.pr/api/administration/reports/orders/minimal-info"
+
+imputation_delay  <- 2
 
 alpha <- 0.05
 
@@ -51,8 +102,8 @@ if(FALSE){
 } else{
   ## Impute missing dates and remove inconsistent dates
   all_tests <- all_tests %>% 
-    mutate(date = if_else(is.na(collectedDate), reportedDate - days(2),  collectedDate)) %>%
-    mutate(date = if_else(year(date) != 2020 | date > today(), reportedDate - days(2),  date)) %>%
+    mutate(date = if_else(is.na(collectedDate), reportedDate - days(imputation_delay),  collectedDate)) %>%
+    mutate(date = if_else(year(date) != 2020 | date > today(), reportedDate - days(imputation_delay),  date)) %>%
     filter(year(date) == 2020 & date <= today()) %>%
     arrange(date, reportedDate)
 }
@@ -87,8 +138,8 @@ if(FALSE){
     mutate(date = collectedDate) 
 } else{
   ## Impute missing dates
-  all_tests_with_id <- all_tests_with_id %>% mutate(date = if_else(is.na(collectedDate), reportedDate - days(2),  collectedDate)) %>%
-    mutate(date = if_else(year(date) != 2020 | date > today(), reportedDate - days(2),  date)) %>%
+  all_tests_with_id <- all_tests_with_id %>% mutate(date = if_else(is.na(collectedDate), reportedDate - days(imputation_delay),  collectedDate)) %>%
+    mutate(date = if_else(year(date) != 2020 | date > today(), reportedDate - days(imputation_delay),  date)) %>%
     filter(year(date) == 2020 & date <= today()) %>%
     arrange(date, reportedDate)
 }
@@ -106,17 +157,16 @@ tests <- all_tests_with_id %>%
   mutate(rate = positives / tests,
          old_rate = all_positives / all_tests)
 
-
 positivity <- function(dat){
   day_seq <- seq(first_day + weeks(1), max(dat$date), by = "day")
   map_df(day_seq, function(the_day){
-  dat %>% filter(date >= the_day - weeks(1) & date <= the_day) %>%
+  dat %>% filter(date > the_day - weeks(1) & date <= the_day) %>%
     summarize(date = the_day, 
               positives = n_distinct(patientId[result == "positive"]),
               tests = n_distinct(patientId),
               fit = positives / tests,
-              lower = qbinom(0.025, tests, fit)/tests,
-              upper = qbinom(0.975, tests, fit)/tests) %>%
+              lower = qbinom(0.025, tests, fit) / tests,
+              upper = qbinom(0.975, tests, fit) / tests) %>%
       select(date, fit, lower, upper)
   })
 }
@@ -156,13 +206,12 @@ all_cases <- all_tests_with_id %>%
   select(-patientId, -result) %>%
   arrange(testType, date)
 
-  
 # Add cases to tests data frame -------------------------------------------
 cases <- all_cases %>%
   group_by(testType, date) %>% 
   summarize(cases = n(), .groups = "drop")
 
-## Make sure all dates are included
+# Make sure all dates are included
 cases <-  left_join(select(tests, testType, date), cases, by = c("testType","date")) %>%
   replace_na(list(cases = 0))
 
@@ -183,7 +232,7 @@ tests_by_strata <- all_tests %>%
   mutate(patientCity = fct_explicit_na(patientCity, "No reportado")) %>%
   mutate(ageRange = fct_explicit_na(ageRange, "No reportado")) %>%
   group_by(testType, date, patientCity, ageRange, .drop = FALSE) %>%
-  dplyr::summarize(positives = sum(result == "positive"), tests = n(), .groups="drop") %>%
+  summarize(positives = sum(result == "positive"), tests = n(), .groups="drop") %>%
   ungroup()
 
 # --Mortality and hospitlization
@@ -200,9 +249,11 @@ fits <- with(hosp_mort,
              ma7(d = date, y = IncMueSalud))
 hosp_mort$fit <- fits$moving_avg
 
+if(FALSE){
+  plot_deaths(hosp_mort)
+}
 
 # Compute time it takes tests to come in ----------------------------------
-
 rezago <- all_tests_with_id  %>% 
   filter(result %in% c("positive", "negative")) %>%
   group_by(testType) %>%
@@ -212,15 +263,10 @@ rezago <- all_tests_with_id  %>%
   select(testType, date, Resultado, diff) %>%
   filter(!is.na(diff))
 
-if(FALSE){
- plot_deaths(hosp_mort)
-}
 # -- Save data
-
 ## if on server, save with full path
 ## if not on server, save to home directory
-#if(Sys.info()["nodename"] == "fermat.dfci.harvard.edu"){
-if(FALSE){
+if(Sys.info()["nodename"] == "fermat.dfci.harvard.edu"){
   rda_path <- "/homes10/rafa/dashboard/rdas"
 } else{
   rda_path <- "rdas"
@@ -230,8 +276,9 @@ if(FALSE){
 the_stamp <- now()
 save(first_day, last_day, alpha, the_stamp, 
      tests, tests_by_strata, cases,
-     hosp_mort, rezago,
+     hosp_mort, 
      file = file.path(rda_path, "data.rda"))
+save(rezago, file = file.path(rda_path, "rezago.rda"))
 
 ## Because API added an ID to one of the tables, we will remove download option
 ## saveRDS(all_tests, file = file.path(rda_path, "all_tests.rds"), compress = "xz")

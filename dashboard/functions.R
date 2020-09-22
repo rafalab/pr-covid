@@ -1,52 +1,4 @@
-# fit glm spline ----------------------------------------------------------
-# no longer used. we now use moving average to match other dashboards
-spline_fit <- function(d, y, n = NULL, 
-                       week_effect = TRUE, 
-                       knots_per_month = 2, 
-                       family = quasibinomial, 
-                       alpha = 0.05){
-  
-  z <- qnorm(1 - alpha/2)
-  
-  x <- as.numeric(d)
-  
-  df  <- round(knots_per_month * length(x) / 30) + 1
-  
-  if(family()$family %in% c("binomial", "quasibinomial")){
-    if(is.null(n)) stop("Must supply n with binomial or quasibinomial")
-    y <- cbind(y, n-y)
-  }
-  
-  if(week_effect){
-    
-    w <- factor(wday(d))
-    contrasts(w) <- contr.sum(length(levels(w)), contrasts = TRUE)
-    w <- model.matrix(~w)[,-1]
-    
-    glm_fit  <- glm(y ~ ns(x, df = df, intercept = TRUE) + w - 1, family = family)
-  
-  } else {
-    
-    glm_fit  <- glm(y ~ ns(x, df = df, intercept = TRUE) - 1, family = family)
-  
-  }
-  
-  glm_pred <- predict(glm_fit, type = "terms", se.fit = TRUE)
-  
-  fit <- family()$linkinv(glm_pred$fit[,1])
-
-  lower <- family()$linkinv(glm_pred$fit[,1] - z * glm_pred$se.fit[,1])
-  
-  upper <- family()$linkinv(glm_pred$fit[,1] + z * glm_pred$se.fit[,1])
- 
-  return(tibble(date = d, fit = fit, lower = lower, upper = upper))  
-}
-
-
-# moving average ----------------------------------------------------------
-
-ma7 <- function(d, y, k = 7) 
-  tibble(date = d, moving_avg = as.numeric(stats::filter(y, rep(1/k, k), side = 1)))
+# positivity plot ---------------------------------------------------------
 
 plot_positivity <- function(tests, 
                             start_date = first_day, 
@@ -268,7 +220,7 @@ plot_map <- function(test_by_strata,
     group_by(patientCity) %>%
     summarize(positives  = sum(positives),
               tests      = sum(tests),
-              rate       = positives / tests, groups = "drop") %>%
+              rate       = positives / tests, .groups = "drop") %>%
     ungroup() %>%
     mutate(rate = 100*pmin(max_rate, rate)) %>%
     na.omit() %>%
@@ -322,7 +274,7 @@ make_table <- function(test, cases, hosp_mort,
     arrange(desc(date)) %>%
     mutate(date = format(date, "%B %d")) %>%
     setNames(c("Fecha", "Tasa de positividad (IC)",  "Casos únicos", "Promedio de 7 días",
-               "Muertes", "ICU", "Hospitali- zaciones", "Positivos", "Pruebas", 
+               "Muertes", "ICU", "Hospital", "Positivos", "Pruebas", 
                "Positivos/ Pruebas", "dateorder"))
   
       ret <- DT::datatable(ret, #class = 'white-space: nowrap',
@@ -361,7 +313,7 @@ make_municipio_table <- function(test_by_strata,
     children <- tmp %>%
       filter(as.numeric(ageRange) <= 2) %>%
       group_by(patientCity, ageRange) %>%
-      summarize(value = sum(positives)) %>%
+      summarize(value = sum(positives), .groups = "drop") %>%
       ungroup() %>%
       spread(ageRange, value)
  
@@ -370,7 +322,7 @@ make_municipio_table <- function(test_by_strata,
     ret <- tmp %>%
       group_by(patientCity) %>%
       summarize(positives = sum(positives), tests = sum(tests),
-                rate =  positives/tests) %>%
+                rate =  positives/tests, .groups = "drop") %>%
       ungroup() %>%
       left_join(children, by = "patientCity") %>%
       left_join(poblacion_municipios, by = "patientCity") %>%
@@ -489,7 +441,10 @@ plot_rezago <- function(rezago,
     stat_ecdf() + 
     xlab("Días") + 
     ylab("Porciento de pruebas") +
-    ggtitle("Rezago entre toma de muestra y día en que se reporta") +
+    ggtitle(paste("Rezago entre toma de muestra y día en que se reporta prueba",  ifelse(type=="Molecular", "moleculares", "serológicas"), "durante",
+                  format(start_date, "%B %d"),
+                  "a",
+                  format(end_date, "%B %d."))) +
     scale_y_continuous(labels=scales::percent) +
     xlim(0,20) +
     theme_bw()
