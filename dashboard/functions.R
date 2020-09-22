@@ -1,5 +1,5 @@
 # fit glm spline ----------------------------------------------------------
-
+# no longer used. we now use moving average to match other dashboards
 spline_fit <- function(d, y, n = NULL, 
                        week_effect = TRUE, 
                        knots_per_month = 2, 
@@ -87,20 +87,20 @@ plot_positivity <- function(tests,
 plot_icu <- function(hosp_mort,  
                       start_date = first_day, 
                       end_date = last_day, 
-                      yscale = FALSE,
-                      beds = 403){
+                      yscale = FALSE){
   
   tmp <- hosp_mort %>% 
     filter(!is.na(CamasICU)) %>%
     filter(date >= start_date & date <= end_date) %>%
-    mutate(icu = CamasICU / beds)
+    mutate(icu = CamasICU / (CamasICU + CamasICU_disp))
   
   if(yscale){
     lim  <- c(0,1)
   } else
   {
     lim <- c(min(tmp$icu, na.rm = TRUE),
-             pmax(max(tmp$icu, na.rm = TRUE), 1/beds))
+             pmax(max(tmp$icu, na.rm = TRUE), 
+                  1/max(tmp$CamasICU + tmp$CamasICU_disp, na.rm=TRUE)))
   }
   min_date <- min(tmp$date)
   
@@ -117,7 +117,8 @@ plot_icu <- function(hosp_mort,
     geom_line(lwd = 1.5, color = "darkblue") +
     xlab("Fecha") +
     ylab("Porciento") +
-    ggtitle("Camas ICU disponibles usadas por pacientes COVID-19") +
+    labs(title = "Camas ICU disponibles usadas por pacientes COVID-19",
+         caption = "Algunas pacientes en el ICU están ahí por otras causas.\nLa gráfica muestra el porcentaje de las camas restantes ocupadas por pacientes COVID-19.") +
     scale_x_date(date_labels = "%B %d") +
     scale_y_continuous(limits = lim, labels = scales::percent) +
     theme_bw() 
@@ -224,25 +225,28 @@ plot_test <- function(tests,
                       cumm = FALSE){
   if(cumm){
     tests %>%
-      mutate(tests = cumsum(tests)) %>%
-      filter(testType == type & date >= start_date & date <= end_date) %>%
+      filter(testType == type) %>%
+      mutate(tests = cumsum(all_tests)) %>%
+      filter(date >= start_date & date <= end_date) %>%
       ggplot(aes(date, tests)) +
       geom_bar(stat = "identity", width = 0.75, fill = "#D1D1E8") +
       ylab("Pruebas acumuladas") +
       xlab("Fecha") +
-      ggtitle(paste("Total de pruebas", ifelse(type == "Molecular", "moleculares", "serológicas"))) +
+      labs(title = paste("Total de pruebas", ifelse(type == "Molecular", "moleculares", "serológicas")),
+           caption = "Incluye pruebas duplicadas.") + 
       scale_x_date(date_labels = "%B %d") +
       scale_y_continuous(labels = scales::comma) +
-      theme_bw()
+      theme_bw() 
   } else{
     tests %>%
       filter(testType == type & date >= start_date & date <= end_date) %>%
-      ggplot(aes(date, tests)) +
+      ggplot(aes(date, all_tests)) +
       geom_bar(stat = "identity", width = 0.75, fill = "#D1D1E8") +
       geom_step(aes(y = tests_week_avg), color = "#31347A", size = 1.25) +
       ylab("Pruebas") +
       xlab("Fecha") +
-      ggtitle(paste("Pruebas", ifelse(type=="Molecular", "moleculares", "serológicas"), "por día")) +
+      labs(title = paste("Pruebas", ifelse(type=="Molecular", "moleculares", "serológicas"), "por día"),
+           caption = "Incluye pruebas duplicadas.") + 
       scale_x_date(date_labels = "%B %d") +
       scale_y_continuous(labels = scales::comma) +
       theme_bw()
@@ -299,7 +303,7 @@ make_table <- function(test, cases, hosp_mort,
 
   cases <- filter(cases, testType == type)
   
-  cases$moving_avg[cases$date > last_day] <- NA
+  #cases$moving_avg[cases$date > last_day] <- NA
 
   ret <- tests %>%
     filter(testType == type) %>%
@@ -313,23 +317,34 @@ make_table <- function(test, cases, hosp_mort,
                                format(round(100*upper, 1), nsmall=1),"%", ")")), 
            moving_avg = round(moving_avg),
            dummy = date) %>%
-    select(date, fit, positives, tests, rate, cases, moving_avg, IncMueSalud, CamasICU, HospitCOV19, dummy) %>%
+    select(date, fit, cases, moving_avg, IncMueSalud, CamasICU, HospitCOV19, 
+           positives, tests, rate, dummy) %>%
     arrange(desc(date)) %>%
     mutate(date = format(date, "%B %d")) %>%
-    setNames(c("Fecha", "Tasa de positividad (IC)", "Positivos", "Pruebas", 
-               "Positivos/Pruebas",  "Casos", "Promedio de 7 días",
-               "Muertes", "ICU", "Hospitalizaciones", "dateorder"))
+    setNames(c("Fecha", "Tasa de positividad (IC)",  "Casos únicos", "Promedio de 7 días",
+               "Muertes", "ICU", "Hospitali- zaciones", "Positivos", "Pruebas", 
+               "Positivos/ Pruebas", "dateorder"))
   
-      ret <- DT::datatable(ret, class = 'white-space: nowrap',
+      ret <- DT::datatable(ret, #class = 'white-space: nowrap',
                     caption = paste("Positivos y casos son de pruebas", 
                                     ifelse(type=="Molecular", "moleculares.", "serológicas."), 
-                                    "La columna con fechas contiene el día en que se hizo la prueba. Tasa de positividad es un estimado basado en la tendencia usando un método estadístico, llamado regresión por splines, parecido a tomar el promedio de los siete días alrededor de cada fecha. IC = Intervalo de confianza del ", (1-alpha)*100,"%. Tengan en cuanta que los fines de semana se hacen menos preubas y por lo tanto se reportan menos casos."),
+                                    "La columna con fechas contiene el día en que se hizo la prueba.", 
+                                    "La tasa de positividad se define como el número de personas con al menos una prueba positiva dividido por el número de personas que se han hecho la prueba.",
+                                    "El estimado para cada día está basado en las pruebas hecha durante la semana acabando en ese día.",
+                                    "IC = Intervalo de confianza del ", (1-alpha)*100,"%.",
+                                    "Los casos único son el número de personas con su primera prueba positiva en ese día.",
+                                    "El promedio de casos de 7 días está basado en la semana acabando ese día.",
+                                    "Los columna de positivos muestra el número de personas que tuvieron una prueba positiva ese día (no necesariamente son casos únicos).",
+                                    "La columna de pruebas es el número de personas que se hicieron una prueba ese día.",
+                                    "Tengan en cuante que los fines de semana se hacen menos pruebas y por lo tanto se reportan menos casos.",
+                                    "Las muertes, casos en el ICU y hospitalizaciones vienen del informe oficial del Departamento de Salud."),
       rownames = FALSE,
       options = list(dom = 't', pageLength = -1,
                      columnDefs = list(
                        list(targets = 0, orderData = 10),
                        list(targets = 10, visible = FALSE),
-                       list(className = 'dt-right', targets = 2:9)))) 
+                       list(className = 'dt-right', targets = 2:9)))) %>%
+        DT::formatStyle(1:2,"white-space"="nowrap")
       return(ret)
 }
 
@@ -340,7 +355,7 @@ make_municipio_table <- function(test_by_strata,
                                  type = "Molecular"){
   
     tmp <- tests_by_strata %>%
-      filter(date >= first_day &  date <= last_day & testType == type) %>%
+      filter(date >= start_date &  date <= end_date & testType == type) %>%
       mutate(patientCity = as.character(patientCity))
  
     children <- tmp %>%
@@ -366,12 +381,14 @@ make_municipio_table <- function(test_by_strata,
       mutate(rate = paste0(format(round(100*rate,1), nsmall=1),"% ", "(",
                            format(round(100*lower, 1), nsmall=1),"%", ", ",
                            format(round(100*upper, 1), nsmall=1),"%", ")"),
-             poblacion = prettyNum(poblacion, big.mark=",")) %>%
-      select(patientCity, rate, positives, tests, ppc, poblacion, `0 to 9`, `10 to 19`) %>%
-      setNames(c("Municipio", "Tasa de positividad (IC)", "Positivos", "Pruebas",  "Positivos por\n100,000 por día", "Población", "Positiovs 0 a 9 años", "Positivos 10 a 19 años"))
+             poblacion_text = prettyNum(poblacion, big.mark=",")) %>%
+      select(patientCity, rate, positives, tests, ppc, poblacion_text, `0 to 9`, `10 to 19`, poblacion) %>%
+      setNames(c("Municipio", "Tasa de positividad (IC)", "Positivos", "Pruebas",  
+                 "Positivos por\n100,000 por día", "Población", "Positiovs 0 a 9 años", "Positivos 10 a 19 años", "dummy"))
  
-    ret <- DT::datatable(ret, class = 'white-space: nowrap',
-                         caption = paste0("Tasa de positividad es un estimado basado en periodo ",
+    ret <- DT::datatable(ret, #class = 'white-space: nowrap',
+                         caption = paste0("Por razones de privacidad, estos estimados de positividad están basado en datos sin remover duplicados.",
+                                          " Tasa de positividad es un estimado basado en periodo ",
                                           format(start_date, "%B %d"),
                                           " a ",
                                           format(end_date, "%B %d"),
@@ -379,7 +396,10 @@ make_municipio_table <- function(test_by_strata,
                          rownames = FALSE,
                          options = list(dom = 't', pageLength = -1,
                                         columnDefs = list(
-                                          list(className = 'dt-right', targets = 2:7))))
+                                          list(targets = 5, orderData = 8),
+                                          list(targets = 8, visible = FALSE),
+                                          list(className = 'dt-right', targets = 2:7)))) %>%
+      DT::formatStyle(1:2,"white-space"="nowrap")
  
     return(ret)
 }
@@ -416,19 +436,20 @@ plot_agedist <- function(tests_by_strata,
   return(ret)
 }
 
-compute_summary <- function(tests, hosp_mort, cases, beds = icu_beds){
+compute_summary <- function(tests, hosp_mort, cases){
   
-  make_pct <- function(x) paste0(round(100*x), "%")
+  make_pct <- function(x) paste0(round(100 * x), "%")
   delta <- function(x){
-    paste0(ifelse(x[2]-x[1]>0, "+", ""),
-           paste0(round(100*(x[2] - x[1])/x[1]), "%"))
+    paste0(ifelse(x[2] - x[1]>0, "+", ""),
+           paste0(round(100*(x[2] - x[1]) / x[1]), "%"))
   }
 
   tmp1 <- filter(tests, testType == "Molecular" & date %in% c(last_day, last_day - weeks(1))) %>%
     arrange(date)
   
-  tmp2 <- hosp_mort %>% select(date, CamasICU) %>% 
+  tmp2 <- hosp_mort %>% select(date, CamasICU, CamasICU_disp) %>% 
     filter(!is.na(CamasICU)) %>%
+    mutate(camasICU = CamasICU / (CamasICU + CamasICU_disp)) %>%
     filter(date %in% c(max(date), max(date) - weeks(1))) %>%
     arrange(date)
   
@@ -436,9 +457,9 @@ compute_summary <- function(tests, hosp_mort, cases, beds = icu_beds){
     arrange(date)
   
   
-  ret <- tibble(metrica = c("Tasa de positividad", "Uso de camas ICU", "Casos por día", "Pruebas por día"),
+  ret <- tibble(metrica = c("Tasa de positividad", "Uso de camas ICU", "Casos nuevos por día", "Pruebas por día"),
                 meta = c("Menos de 3%", "Menos de 50%", "Menos de 30", ""),
-                valor =  c(make_pct(tmp1$fit[2]), make_pct(tmp2$CamasICU[2]/beds), round(tmp3$moving_avg[2]), prettyNum(round(tmp1$tests_week_avg[2]), big.mark = ",")),
+                valor =  c(make_pct(tmp1$fit[2]), make_pct(tmp2$camasICU[2]), round(tmp3$moving_avg[2]), prettyNum(round(tmp1$tests_week_avg[2]), big.mark = ",")),
                 cambio = c(delta(tmp1$fit), delta(tmp2$CamasICU), delta(tmp3$moving_avg), delta(tmp1$tests_week_avg)))
 
   colnames(ret) <- c("Métrica", "Meta", "Nivel actual", "Tendencia")
@@ -454,5 +475,23 @@ compute_summary <- function(tests, hosp_mort, cases, beds = icu_beds){
   ret
   return(ret)
   
+}
+
+plot_rezago <- function(rezago,
+                        start_date = first_day, 
+                        end_date = last_day, 
+                        type = "Molecular"){
+  
+  rezago %>%
+    filter(date >= start_date &  date <= end_date & testType == type) %>%
+    filter(diff<20 & diff>=0) %>%
+    ggplot(aes(x=diff, color = Resultado)) +
+    stat_ecdf() + 
+    xlab("Días") + 
+    ylab("Porciento de pruebas") +
+    ggtitle("Rezago entre toma de muestra y día en que se reporta") +
+    scale_y_continuous(labels=scales::percent) +
+    xlim(0,20) +
+    theme_bw()
 }
   
