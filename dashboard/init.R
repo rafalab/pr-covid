@@ -7,8 +7,7 @@ library(sf)
 source("functions.R")
 
 ## if on the server get the latest data
-#if(Sys.info()["nodename"] == "fermat.dfci.harvard.edu"){
-if(FALSE){
+if(Sys.info()["nodename"] == "fermat.dfci.harvard.edu"){
   rda_path <- "/homes10/rafa/dashboard/rdas"
 } else{
   rda_path <- "rdas"

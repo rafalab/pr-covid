@@ -1,5 +1,6 @@
 # -- Set up
 source("init.R")
+
 library(shiny)
 library(shinythemes)
 
@@ -65,6 +66,7 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                   
                   # Show a plot of the generated distribution
                   mainPanel(
+                    
                     tabsetPanel(
                       
                       tabPanel("Resumen",
@@ -73,8 +75,8 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                h5(paste0("Estimados de la tasa de positividad y casos por día se calculan para ",
                                          format(last_day, "%B %d."), " Noten que los datos de las pruebas toman 6 días en estar aproximadamente completos.")),
                                h5("La tasa de positividad se define como el número de personas con prueba positiva divido entre el total de personas que se han hecho pruebas."),
-                               h5("Ambos casos y pruebas están basados en un promedio de siete días para contrarrestar el efecto que tiene el día de la semana en los totales."),
-                               h5("Las pruebas están basados en todas las reportadas, incluyendo duplicados."),
+                               h5("Casos y pruebas están basados en un promedio de siete días para contrarrestar el efecto que tiene el día de la semana en los totales."),
+                               h5("Las pruebas están basadas en todas las reportadas, incluyendo duplicados."),
                                h5("El uso de camas ICU es el porcentaje de camas disponibles, no usadas por otras causas, usadas por pacientes de COVID-19."),
                                h5("La tendencia es el cambio porcentual cuando comparamos estos estimados a los de la semana anterior. Si dividimos la tendencia para casos por 100 y añadimos uno, nos da un estimado del Número de Transmisión."),
                                h5("Noten que todos estos son estimados con desviaciones estándar. Los gráficos nos dan una idea de esta variabilidad."),

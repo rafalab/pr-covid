@@ -254,10 +254,13 @@ if(FALSE){
 }
 
 # Compute time it takes tests to come in ----------------------------------
+
 rezago <- all_tests_with_id  %>% 
-  filter(result %in% c("positive", "negative")) %>%
+  filter(result %in% c("positive", "negative") &
+           createdAt >= reportedDate) %>% ## based on @midnucas suggestion: can't be added before it's reported
   group_by(testType) %>%
-  mutate(diff =  as.numeric(as_date(createdAt) - collectedDate), 
+  mutate(createdAt = as_date(createdAt)) %>% 
+  mutate(diff = as.numeric(createdAt - collectedDate), 
          Resultado = factor(result, labels = c("Negativos", "Positivos"))) %>%
   ungroup %>%
   select(testType, date, Resultado, diff) %>%

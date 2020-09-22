@@ -441,12 +441,10 @@ plot_rezago <- function(rezago,
     stat_ecdf() + 
     xlab("Días") + 
     ylab("Porciento de pruebas") +
-    ggtitle(paste("Rezago entre toma de muestra y día en que se reporta prueba",  ifelse(type=="Molecular", "moleculares", "serológicas"), "durante",
-                  format(start_date, "%B %d"),
-                  "a",
-                  format(end_date, "%B %d."))) +
+    labs(title = paste("Rezago entre toma de muestra y día en que se reporta prueba",  ifelse(type=="Molecular", "moleculares", "serológicas")),
+         subtitle = paste("Fechas:", format(start_date, "%B %d"), "a", format(end_date, "%B %d."))) +
     scale_y_continuous(labels=scales::percent) +
-    xlim(0,20) +
+    xlim(0, 21) +
     theme_bw()
 }
   
