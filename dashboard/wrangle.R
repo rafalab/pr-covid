@@ -135,7 +135,7 @@ if(FALSE){
     geom_smooth(method = "loess", formula = "y~x", span = 0.2, method.args = list(degree = 1, weight = tests$tests), color = "red", lty =2, fill = "pink") 
 }
 
-tests$tests_week_avg <- with(tests, ma7(date, all_tests))
+tests$tests_week_avg <- with(tests, ma7(date, all_tests))$moving_avg
 
 if(FALSE){
   plot_test(tests, first_day, today())
