@@ -205,7 +205,7 @@ plot_test <- function(tests,
   }    
 }
 
-plot_map <- function(test_by_strata,
+plot_map <- function(tests_by_strata,
                      start_date = first_day, 
                      end_date = last_day, 
                      type = "Molecular",
@@ -246,7 +246,7 @@ plot_map <- function(test_by_strata,
   return(ret)
 }
 
-make_table <- function(test, cases, hosp_mort, 
+make_table <- function(tests, cases, hosp_mort, 
                        start_date = first_day, 
                        end_date = last_day, 
                        type = "Molecular"){
@@ -301,7 +301,7 @@ make_table <- function(test, cases, hosp_mort,
 }
 
 
-make_municipio_table <- function(test_by_strata, 
+make_municipio_table <- function(tests_by_strata, 
                                  start_date = first_day, 
                                  end_date = last_day, 
                                  type = "Molecular"){
