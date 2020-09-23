@@ -283,6 +283,7 @@ save(first_day, last_day, alpha, the_stamp,
      file = file.path(rda_path, "data.rda"))
 save(rezago, file = file.path(rda_path, "rezago.rda"))
 
-## Because API added an ID to one of the tables, we will remove download option
-## saveRDS(all_tests, file = file.path(rda_path, "all_tests.rds"), compress = "xz")
+## For backward compatibility
+all_tests <- all_tests %>%  filter(testType == "Molecular")
+saveRDS(all_tests, file = file.path(rda_path, "all_tests.rds"), compress = "xz")
 

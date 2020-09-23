@@ -55,12 +55,13 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                  choices = list("Preescogido" = TRUE,
                                                 "Determinado por datos" = FALSE),
                                  selected = TRUE),
-                    #    br(),
-                    #  div("Datos depurados:"),
-                    #  downloadButton("downloadData", "Download",
-                    #                 style = button_style),
+                    div("Datos depurados:"),
+                    downloadButton("downloadData", "Download",
+                                   style = button_style),
                     
                     br(), 
+                    br(), 
+                    
                     uiOutput("stamp"),
                     width = 3),
                   
@@ -125,6 +126,8 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
 )
 
 server <- function(input, output, session) {
+  
+  load(file.path(rda_path,"data.rda"))
   
   # -- This sets range to last two weeks
   observeEvent(input$weeks, {
@@ -252,21 +255,21 @@ server <- function(input, output, session) {
                  end_date =input$range[2], 
                  type = input$testType)
   })
-  #   # -- This allows users to download data
-  #   output$downloadData <- downloadHandler(
-  #     filename = function() {
-  #       load(file.path(rda_path,"data.rda"))
-  #       paste0("pruebas-",format(the_stamp, "%Y-%m-%d_%H:%M:%S"),".csv")
-  #     },
-  #     content = function(file) {
-  #       load(file.path(rda_path,"data.rda"))
-  #       write.csv(tests_by_strata, file = file, row.names = FALSE)
-  #     },
-  #     contentType = "txt/csv"
-  #   )
-  # })
-  #
+  # -- This allows users to download data
+  output$downloadData <- downloadHandler(
+    filename = function() {
+      load(file.path(rda_path,"data.rda"))
+      paste0("pruebas-",format(the_stamp, "%Y-%m-%d_%H:%M:%S"),".csv")
+    },
+    content = function(file) {
+      all_tests <- readRDS(file.path(rda_path,"all_tests.rds"))
+      write.csv(all_tests, file = file, row.names = FALSE)  
+    },
+    contentType = "txt/csv"
+  )
 }
+
+
 
 shinyApp(ui = ui, server = server)
 

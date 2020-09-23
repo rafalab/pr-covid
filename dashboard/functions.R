@@ -286,7 +286,7 @@ make_table <- function(test, cases, hosp_mort,
                                     "IC = Intervalo de confianza del ", (1-alpha)*100,"%.",
                                     "Los casos único son el número de personas con su primera prueba positiva en ese día.",
                                     "El promedio de casos de 7 días está basado en la semana acabando ese día.",
-                                    "Los columna de positivos muestra el número de personas que tuvieron una prueba positiva ese día (no necesariamente son casos únicos).",
+                                    "La columna de positivos muestra el número de personas que tuvieron una prueba positiva ese día (no necesariamente son casos únicos).",
                                     "La columna de pruebas es el número de personas que se hicieron una prueba ese día.",
                                     "Tengan en cuante que los fines de semana se hacen menos pruebas y por lo tanto se reportan menos casos.",
                                     "Las muertes, casos en el ICU y hospitalizaciones vienen del informe oficial del Departamento de Salud."),
@@ -410,7 +410,7 @@ compute_summary <- function(tests, hosp_mort, cases){
   
   
   ret <- tibble(metrica = c("Tasa de positividad", "Uso de camas ICU", "Casos nuevos por día", "Pruebas por día"),
-                meta = c("Menos de 3%", "Menos de 50%", "Menos de 30", ""),
+                meta = c("Menos de 3%", "Menos de 50%", "Menos de 30", "Más de 4,500"),
                 valor =  c(make_pct(tmp1$fit[2]), make_pct(tmp2$camasICU[2]), round(tmp3$moving_avg[2]), prettyNum(round(tmp1$tests_week_avg[2]), big.mark = ",")),
                 cambio = c(delta(tmp1$fit), delta(tmp2$CamasICU), delta(tmp3$moving_avg), delta(tmp1$tests_week_avg)))
 
