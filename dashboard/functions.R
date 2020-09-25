@@ -408,24 +408,19 @@ compute_summary <- function(tests, hosp_mort, cases){
   tmp3 <- filter(cases, testType == "Molecular" & date %in% c(last_day, last_day - weeks(1)))  %>%
     arrange(date)
   
+  riesgo <- case_when(tmp2$camasICU[2] > .7 ~ 4,
+                      tmp2$camasICU[2] < .5 & tmp1$fit[2] < .03 & tmp3$moving_avg[2] < 1 ~ 1,
+                      tmp2$camasICU[2] < .5 & tmp1$fit[2] < .03 & tmp3$moving_avg[2] < 30 ~ 2,
+                      TRUE ~ 3)
   
-  ret <- tibble(metrica = c("Tasa de positividad", "Uso de camas ICU", "Casos nuevos por día", "Pruebas por día"),
+  tab <- tibble(metrica = c("Tasa de positividad", "Uso de camas ICU", "Casos nuevos por día", "Pruebas por día"),
                 meta = c("Menos de 3%", "Menos de 50%", "Menos de 30", "Más de 4,500"),
                 valor =  c(make_pct(tmp1$fit[2]), make_pct(tmp2$camasICU[2]), round(tmp3$moving_avg[2]), prettyNum(round(tmp1$tests_week_avg[2]), big.mark = ",")),
                 cambio = c(delta(tmp1$fit), delta(tmp2$CamasICU), delta(tmp3$moving_avg), delta(tmp1$tests_week_avg)))
 
-  colnames(ret) <- c("Métrica", "Meta", "Nivel actual", "Tendencia")
+  colnames(tab) <- c("Métrica", "Meta", "Nivel actual", "Tendencia")
   
-  ret <- DT::datatable(ret, class = 'white-space: nowrap',
-                       rownames = FALSE,
-                       options = list(dom = 't', ordering = FALSE, pageLength = -1, 
-                                      columnDefs = list(
-                                        list(className = 'dt-center', targets = 0:3)))) %>%
-    DT::formatStyle(columns = 1:4, fontSize = '125%')
-  
-  
-  ret
-  return(ret)
+  return(list(tab = tab, riesgo = riesgo))
   
 }
 
