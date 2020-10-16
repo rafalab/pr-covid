@@ -194,7 +194,7 @@ plot_test <- function(tests,
       filter(testType == type & date >= start_date & date <= end_date) %>%
       ggplot(aes(date, all_tests)) +
       geom_bar(stat = "identity", width = 0.75, fill = "#D1D1E8") +
-      geom_step(aes(y = tests_week_avg), color = "#31347A", size = 1.25) +
+      geom_line(aes(y = tests_week_avg), color = "#31347A", size = 1.25) +
       ylab("Pruebas") +
       xlab("Fecha") +
       labs(title = paste("Pruebas", ifelse(type=="Molecular", "moleculares", "serológicas"), "por día"),
