@@ -1,8 +1,10 @@
 ## APIs públicos del Departamento de Salud de Puerto Rico
 
-URL BASE: https://bioportal.salud.gov.pr/api
-Método: HTTP GET
-Formato: application/json
+* URL BASE: https://bioportal.salud.gov.pr/api
+
+* Método: HTTP GET
+
+* Formato: application/json
 
 ## Endpoints
 * Cantidades totales de pruebas reportadas
