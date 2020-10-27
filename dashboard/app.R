@@ -78,7 +78,7 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                           format(last_day, "%B %d</b>."), " Noten que los datos de las pruebas toman 6 días en estar aproximadamente completos. ",
                                           "La <b>tasa de positividad</b> se define como el número de personas con prueba positiva divido entre el total de personas que se han hecho pruebas. ",
                                           "<b>Casos</b> y <b>pruebas</b> están basados en un <b>promedio de siete días</b> para contrarrestar el efecto que tiene el día de la semana en los totales. ",
-                                          "El <b>uso de camas ICU</b> es el porcentaje de camas disponibles, no usadas por otras causas, usadas por pacientes de COVID-19. Hay alrededor de 700 camas ICU en Puerto Rico. Típicamente, sin COVID, hay alrededor de 275 displonibles.",
+                                          "El <b>uso de camas ICU</b> es el porcentaje de camas disponibles, no usadas por otras causas, usadas por pacientes de COVID-19. Hay alrededor de 700 camas ICU en Puerto Rico. Típicamente, sin COVID, hay alrededor de 275 displonibles. ",
                                           "La <b>tendencia</b> es el cambio porcentual cuando comparamos estos estimados a los de la semana anterior. Si dividimos la tendencia para casos por 100 y añadimos uno, nos da un estimado del <b>Número de Transmisión Rt</b>. ",
                                           "<b>Noten que todos estos son estimados con variabilidad estadística</b>. Los gráficos nos dan una idea de esta variabilidad.</h5>")),
                                HTML(paste0("<h5> Los niveles de riesgo los dividimos como crítico, alto, medio, y bajo. ",
@@ -105,7 +105,11 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                plotOutput("muertes")),
                       
                       tabPanel("Pruebas",
-                               plotOutput("numero_pruebas")),
+                               plotOutput("numero_pruebas"),
+                               hr(),
+                               plotOutput("positividad_por_lab"),
+                               hr(),
+                               plotOutput("numero_pruebas_por_lab")),
                       
                       tabPanel("Casos",
                                plotOutput("casos")),
@@ -241,6 +245,24 @@ server <- function(input, output, session) {
               type = input$testType, 
               cumm = input$acumulativo)
   )
+  
+  # -- This creates positivity plot by lab
+  output$positividad_por_lab <- renderPlot(
+    plot_positivity_by_lab(labs, 
+              start_date =input$range[1], 
+              end_date =input$range[2], 
+              type = input$testType, 
+              yscale = input$yscale)
+  )
+  
+  # -- This creates proportion of tests per labs
+  output$numero_pruebas_por_lab <- renderPlot(
+    plot_tests_by_lab(labs, 
+                      start_date =input$range[1], 
+                      end_date =input$range[2], 
+                      type = input$testType)
+  )
+  
   # -- This creates the daily number of tests figure
   output$casos <- renderPlot(
     plot_cases(cases, 

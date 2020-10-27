@@ -256,7 +256,8 @@ if(FALSE){
 # Compute time it takes tests to come in ----------------------------------
 
 rezago <- all_tests_with_id  %>% 
-  filter(result %in% c("positive", "negative") &
+  filter(result %in% c("positive", "negative") & 
+           testType %in% c("Molecular", "Serological") &
            createdAt >= reportedDate) %>% ## based on @midnucas suggestion: can't be added before it's reported
   group_by(testType) %>%
   mutate(createdAt = as_date(createdAt)) %>% 
@@ -265,6 +266,96 @@ rezago <- all_tests_with_id  %>%
   ungroup %>%
   select(testType, date, Resultado, diff) %>%
   filter(!is.na(diff))
+
+
+# Computing positivity rate by lab ----------------------------------------
+
+url <- "https://bioportal.salud.gov.pr/api/administration/reports/tests-by-collected-date-and-entity"
+
+all_labs_data <- jsonlite::fromJSON(url)
+
+labs <- all_labs_data %>%
+  select(-molecular, -serological, -antigens) %>%
+  rename(Laboratorio = entityName,
+         date = collectedDate) %>%
+  mutate(date = as_date(date),
+         Laboratorio = str_remove(tolower(Laboratorio), "\t"))
+
+##check the most common labs
+if(FALSE){
+  freqs <- bind_cols(labs, all_labs_data$molecular) %>% 
+    filter(date > make_date(2020, 10, 1)) %>%
+    group_by(Laboratorio) %>%
+    summarize(freq = sum(total), .groups = "drop") %>% 
+    ungroup()
+  freqs %>% View()
+}
+
+labs <- labs %>%
+  mutate(Laboratorio = case_when(str_detect(Laboratorio, "toledo") ~ "Toledo",
+                                 str_detect(Laboratorio, "bcel") ~ "BCEL",
+                                 str_detect(Laboratorio, "nichols") ~ "Quest USA",
+                                 str_detect(Laboratorio, "quest") ~ "Quest",
+                                 str_detect(Laboratorio, "borinquen") ~ "Borinquen",
+                                 str_detect(Laboratorio, "immuno reference lab") ~ "Immuno Reference",
+                                 str_detect(Laboratorio, "coreplus") ~ "CorePlus",
+                                 str_detect(Laboratorio, "martin\\s") ~ "Marin",
+                                 str_detect(Laboratorio, "noy") ~ "Noy",
+                                 str_detect(Laboratorio, "hato rey pathology|hrp") ~ "HRP",
+                                 str_detect(Laboratorio, "inno") ~ "Inno Diagnostics",
+                                 #str_detect(Laboratorio, "southern pathology services") ~ "Southern Pathology",
+                                 #str_detect(Laboratorio, "cmt") ~ "CMT",
+                                 TRUE ~ "Otros"))
+
+molecular <- all_labs_data$molecular %>% 
+  mutate(testType = "Molecular",
+         positives = positives + presumptivePositives,
+         negatives = negatives,
+         tests = positives + negatives) %>%
+  select(testType, positives, tests)
+molecular <- bind_cols(labs, molecular) 
+
+serological <-  all_labs_data$serological %>%
+  mutate(testType = "Serological",
+         positives = positives,
+         negatives = negatives,
+         tests = positives + negatives) %>%
+  select(testType, positives, tests)
+serological <- bind_cols(labs, serological) 
+
+labs <- bind_rows(molecular, serological) %>%
+  filter(date >= first_day & date <= today()) %>%
+  group_by(testType, date, Laboratorio) %>%
+  summarize(positives = sum(positives),
+            tests = sum(tests),
+            missing_city = sum(totalMissingCity),
+            missing_phone = sum(totalMissingPhoneNumber),
+            .groups = "drop")
+
+
+lab_positivity <- function(dat){
+  day_seq <- seq(first_day + weeks(1), max(labs$date), by = "day")
+  map_df(day_seq, function(the_day){
+    ret <- dat %>% 
+      filter(date > the_day - weeks(1) & date <= the_day) %>%
+      summarize(date = the_day, 
+                n = sum(tests),
+                tests_week_avg  = n / 7, 
+                fit = ifelse(n==0, 0, sum(positives) / n),
+                lower = qbinom(0.025, n, fit) / n,
+                upper = qbinom(0.975, n, fit) / n) %>%
+      select(date, fit, lower, upper, tests_week_avg)
+  })
+}
+
+fits <- labs %>% 
+  nest_by(testType, Laboratorio) %>%
+  summarize(lab_positivity(data), .groups = "drop") %>%
+  group_by(testType, date) %>%
+  mutate(prop = tests_week_avg / sum(tests_week_avg)) 
+
+labs <- left_join(fits, labs, by = c("testType", "date", "Laboratorio"))
+
 
 # -- Save data
 ## if on server, save with full path
@@ -279,7 +370,7 @@ if(Sys.info()["nodename"] == "fermat.dfci.harvard.edu"){
 the_stamp <- now()
 save(first_day, last_day, alpha, the_stamp, 
      tests, tests_by_strata, cases,
-     hosp_mort, 
+     hosp_mort, labs,
      file = file.path(rda_path, "data.rda"))
 save(rezago, file = file.path(rda_path, "rezago.rda"))
 

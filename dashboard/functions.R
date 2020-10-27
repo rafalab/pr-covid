@@ -22,7 +22,7 @@ plot_positivity <- function(tests,
     ylab("Tasa de positividad") +
     xlab("Fecha") +
     scale_y_continuous(labels = scales::percent) +
-    scale_x_date(date_labels = "%B %d")  +
+    scale_x_date(date_labels = "%b", breaks = breaks_width("1 month"))  +
     labs(title = paste("Tasa de Positividad basada en pruebas" , 
                        ifelse(type=="Molecular", "moleculares", "serológicas"))) +
     theme_bw() +
@@ -71,7 +71,7 @@ plot_icu <- function(hosp_mort,
     ylab("Porciento") +
     labs(title = "Camas ICU disponibles usadas por pacientes COVID-19",
          caption = "Algunas pacientes en el ICU están ahí por otras causas.\nLa gráfica muestra el porcentaje de las camas restantes ocupadas por pacientes COVID-19.") +
-    scale_x_date(date_labels = "%B %d") +
+    scale_x_date(date_labels = "%b", breaks = breaks_width("1 month"))  +
     scale_y_continuous(limits = lim, labels = scales::percent) +
     theme_bw() 
   
@@ -95,7 +95,7 @@ plot_deaths <- function(hosp_mort,
       ylab("Muertes acumuladas") +
       xlab("Fecha") +
       ggtitle("Muertes acumuladas por COVID-19") +
-      scale_x_date(date_labels = "%B %d") +
+      scale_x_date(date_labels = "%b", breaks = breaks_width("1 month"))  +
       theme_bw()
   } else{
     hosp_mort %>%
@@ -106,7 +106,7 @@ plot_deaths <- function(hosp_mort,
       ylab("Muertes") +
       xlab("Fecha") +
       ggtitle("Muertes por COVID-19") +
-      scale_x_date(date_labels = "%B %d") +
+      scale_x_date(date_labels = "%b", breaks = breaks_width("1 month"))  +
       scale_y_continuous(breaks = seq(0, 15, 1)) +
       theme_bw()
   }
@@ -128,7 +128,7 @@ plot_hosp <- function(hosp_mort,
     xlab("Fecha") +
     ylab("Pacientes") +
     ggtitle("Hospitalizaciones y ICU") +
-    scale_x_date(date_labels = "%B %d") +
+    scale_x_date(date_labels = "%b", breaks = breaks_width("1 month"))  +
     theme_bw() 
     
   return(ret)
@@ -152,7 +152,7 @@ plot_cases <- function(cases,
       ylab("Casos") +
       xlab("Fecha") +
       scale_y_continuous(labels = scales::comma) +
-      scale_x_date(date_labels = "%B %d") +
+      scale_x_date(date_labels = "%b", breaks = breaks_width("1 month"))  +
       theme_bw()
   } else{
     cases %>%
@@ -165,7 +165,7 @@ plot_cases <- function(cases,
       ggtitle(paste0("Casos únicos basado en pruebas ", 
                     ifelse(type=="Molecular", "moleculares", "serológicas"))) +
       
-      scale_x_date(date_labels = "%B %d") +
+      scale_x_date(date_labels = "%b", breaks = breaks_width("1 month"))  +
       theme_bw()
   }
 }
@@ -186,7 +186,7 @@ plot_test <- function(tests,
       xlab("Fecha") +
       labs(title = paste("Total de pruebas", ifelse(type == "Molecular", "moleculares", "serológicas")),
            caption = "Incluye pruebas duplicadas.") + 
-      scale_x_date(date_labels = "%B %d") +
+      scale_x_date(date_labels = "%b", breaks = breaks_width("1 month"))  +
       scale_y_continuous(labels = scales::comma) +
       theme_bw() 
   } else{
@@ -199,10 +199,65 @@ plot_test <- function(tests,
       xlab("Fecha") +
       labs(title = paste("Pruebas", ifelse(type=="Molecular", "moleculares", "serológicas"), "por día"),
            caption = "Incluye pruebas duplicadas.") + 
-      scale_x_date(date_labels = "%B %d") +
+      scale_x_date(date_labels = "%b", breaks = breaks_width("1 month"))  +
       scale_y_continuous(labels = scales::comma) +
       theme_bw()
   }    
+}
+
+plot_positivity_by_lab <- function(labs, 
+                            start_date = first_day, 
+                            end_date = last_day, 
+                            type = "Molecular", 
+                            yscale = FALSE){
+  
+  levels <- labs %>% filter(date == end_date & testType =="Molecular") %>%
+    mutate(o = ifelse(Laboratorio == "Otros", -Inf, tests_week_avg)) %>%
+    arrange(desc(o)) %>% 
+    pull(Laboratorio) 
+  
+  ret <- labs %>% 
+    filter(testType == type & date >= start_date & date <= end_date & tests > 0) %>%
+    mutate(Laboratorio = factor(Laboratorio, levels = levels)) %>%
+    ggplot(aes(date, fit)) + 
+    geom_point(aes(y = positives/tests), alpha = 0.25) +
+    geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.35) +
+    geom_line(col = "blue") +
+    scale_x_date(date_labels = "%b", breaks = scales::breaks_width("1 month"))  +
+    xlab("Fecha") +
+    ylab("Tasa de positividad") +
+    theme_bw() +
+    facet_wrap(~Laboratorio) +
+    labs(title = paste("Tasa de Positividad por laboratorio basada en pruebas" , 
+                       ifelse(type=="Molecular", "moleculares", "serológicas")))
+  
+  if(yscale){
+    ret <- ret + coord_cartesian(ylim = c(0, 0.5))
+  } 
+  return(ret)
+}
+
+plot_tests_by_lab <- function(labs, 
+                                   start_date = first_day, 
+                                   end_date = last_day, 
+                                   type = "Molecular"){
+  levels <- labs %>% filter(date == end_date & testType =="Molecular") %>%
+    mutate(o = ifelse(Laboratorio == "Otros", -Inf, tests_week_avg)) %>%
+    arrange(o) %>% 
+    pull(Laboratorio) 
+  
+  labs %>% 
+    filter(testType == type & date >= start_date & date <= end_date) %>%
+    mutate(Laboratorio = factor(Laboratorio, levels = levels)) %>%
+    ggplot(aes(date, prop, fill = Laboratorio)) + 
+    geom_area() + 
+    scale_x_date(date_labels = "%b", breaks = scales::breaks_width("1 month"))  +
+    xlab("Fecha") +
+    ylab("Proporción de pruebas") +
+    theme_bw() +
+    labs(title = paste("Proporcion de pruebas", ifelse(type=="Molecular", "moleculares", "serológicas"),
+                       "por laboratorio (basado en promedio de 7 días)"))
+                       
 }
 
 plot_map <- function(tests_by_strata,
@@ -308,7 +363,8 @@ make_municipio_table <- function(tests_by_strata,
   
     tmp <- tests_by_strata %>%
       filter(date >= start_date &  date <= end_date & testType == type) %>%
-      mutate(patientCity = as.character(patientCity))
+      mutate(patientCity = as.character(patientCity)) %>%
+      filter(patientCity %in% c("No reportado",poblacion_municipios$patientCity))
  
     children <- tmp %>%
       filter(as.numeric(ageRange) <= 2) %>%
