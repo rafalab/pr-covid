@@ -58,7 +58,7 @@ icu_beds <- 229 #if available beds is missing change to this
 
 first_day <- make_date(2020, 3, 12)
 
-last_day <- today() - days(6)
+last_day <- today() - days(5)
 
 age_levels <-  c("0 to 9", "10 to 19", "20 to 29", "30 to 39", "40 to 49", "50 to 59", "60 to 69", 
                  "70 to 79", "80 to 89", "90 to 99", "100 to 109", "110 to 119", "120 to 129")

@@ -464,9 +464,9 @@ compute_summary <- function(tests, hosp_mort, cases){
   tmp3 <- filter(cases, testType == "Molecular" & date %in% c(last_day, last_day - weeks(1)))  %>%
     arrange(date)
   
-  riesgo <- case_when(tmp2$camasICU[2] > .7 ~ 4,
-                      tmp2$camasICU[2] < .5 & tmp1$fit[2] < .03 & tmp3$moving_avg[2] < 1 ~ 1,
-                      tmp2$camasICU[2] < .5 & tmp1$fit[2] < .03 & tmp3$moving_avg[2] < 30 ~ 2,
+  riesgo <- case_when(tmp2$camasICU[2] > .7 | tmp1$fit[2] >= 0.20 ~ 4,
+                      tmp2$camasICU[2] < .5 & tmp1$fit[2] < 0.03 & tmp3$moving_avg[2] < 1 ~ 1,
+                      tmp2$camasICU[2] < .5 & tmp1$fit[2] < 0.03 & tmp3$moving_avg[2] < 30 ~ 2,
                       TRUE ~ 3)
   
   tab <- tibble(metrica = c("Tasa de positividad", "Uso de camas ICU", "Casos nuevos por día", "Pruebas por día"),
