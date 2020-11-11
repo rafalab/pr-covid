@@ -27,7 +27,7 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                 sidebarLayout(
                   sidebarPanel(
                     dateRangeInput("range", "Periodo", 
-                                   start = make_date(2020, 3, 21), 
+                                   start = last_day - days(90), #make_date(2020, 3, 21), 
                                    end = last_day,
                                    min = first_day,
                                    format = "M-dd",
@@ -42,6 +42,7 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                     radioButtons("testType", 
                                  label = "Tipo de prueba",
                                  choices = list("Molecular" = "Molecular",
+                                                "Antígeno" = "Antigens",
                                                 "Serológica" = "Serological"),
                                  selected = "Molecular"),
                     radioButtons("acumulativo", 
@@ -315,8 +316,6 @@ server <- function(input, output, session) {
     contentType = "txt/csv"
   )
 }
-
-
 
 shinyApp(ui = ui, server = server)
 

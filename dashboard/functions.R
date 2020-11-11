@@ -24,7 +24,9 @@ plot_positivity <- function(tests,
     scale_y_continuous(labels = scales::percent) +
     scale_x_date(date_labels = "%b", breaks = breaks_width("1 month"))  +
     labs(title = paste("Tasa de Positividad basada en pruebas" , 
-                       ifelse(type=="Molecular", "moleculares", "serológicas"))) +
+                       case_when(type == "Molecular" ~ "moleculares", 
+                                 type == "Serological" ~ "serológicas",
+                                 type == "Antigens" ~ "de antígenos"))) +
     theme_bw() +
     theme(plot.caption=element_text(hjust = 0))
   
@@ -148,7 +150,9 @@ plot_cases <- function(cases,
       ggplot(aes(date, cases)) +
       geom_bar(stat = "identity", fill = "#FBBCB2", width= 0.75) +
       ggtitle(paste0("Casos acumulados basado en pruebas ", 
-                     ifelse(type=="Molecular", "moleculares", "serológicas"))) +
+                     case_when(type == "Molecular" ~ "moleculares", 
+                               type == "Serological" ~ "serológicas",
+                               type == "Antigens" ~ "de antígenos"))) +
       ylab("Casos") +
       xlab("Fecha") +
       scale_y_continuous(labels = scales::comma) +
@@ -163,7 +167,9 @@ plot_cases <- function(cases,
       ylab("Casos únicos") +
       xlab("Fecha") +
       ggtitle(paste0("Casos únicos basado en pruebas ", 
-                    ifelse(type=="Molecular", "moleculares", "serológicas"))) +
+                     case_when(type == "Molecular" ~ "moleculares", 
+                               type == "Serological" ~ "serológicas",
+                               type == "Antigens" ~ "de antígenos"))) +
       
       scale_x_date(date_labels = "%b", breaks = breaks_width("1 month"))  +
       theme_bw()
@@ -184,7 +190,10 @@ plot_test <- function(tests,
       geom_bar(stat = "identity", width = 0.75, fill = "#D1D1E8") +
       ylab("Pruebas acumuladas") +
       xlab("Fecha") +
-      labs(title = paste("Total de pruebas", ifelse(type == "Molecular", "moleculares", "serológicas")),
+      labs(title = paste("Total de pruebas", 
+                         case_when(type == "Molecular" ~ "moleculares", 
+                                   type == "Serological" ~ "serológicas",
+                                   type == "Antigens" ~ "de antígenos")),
            caption = "Incluye pruebas duplicadas.") + 
       scale_x_date(date_labels = "%b", breaks = breaks_width("1 month"))  +
       scale_y_continuous(labels = scales::comma) +
@@ -197,7 +206,10 @@ plot_test <- function(tests,
       geom_line(aes(y = tests_week_avg), color = "#31347A", size = 1.25) +
       ylab("Pruebas") +
       xlab("Fecha") +
-      labs(title = paste("Pruebas", ifelse(type=="Molecular", "moleculares", "serológicas"), "por día"),
+      labs(title = paste("Pruebas", 
+                         case_when(type == "Molecular" ~ "moleculares", 
+                                   type == "Serological" ~ "serológicas",
+                                   type == "Antigens" ~ "de antígenos"), "por día"),
            caption = "Incluye pruebas duplicadas.") + 
       scale_x_date(date_labels = "%b", breaks = breaks_width("1 month"))  +
       scale_y_continuous(labels = scales::comma) +
@@ -229,8 +241,9 @@ plot_positivity_by_lab <- function(labs,
     theme_bw() +
     facet_wrap(~Laboratorio) +
     labs(title = paste("Tasa de Positividad por laboratorio basada en pruebas" , 
-                       ifelse(type=="Molecular", "moleculares", "serológicas")))
-  
+                       case_when(type == "Molecular" ~ "moleculares", 
+                                 type == "Serological" ~ "serológicas",
+                                 type == "Antigens" ~ "de antígenos")))
   if(yscale){
     ret <- ret + coord_cartesian(ylim = c(0, 0.5))
   } 
@@ -255,9 +268,11 @@ plot_tests_by_lab <- function(labs,
     xlab("Fecha") +
     ylab("Proporción de pruebas") +
     theme_bw() +
-    labs(title = paste("Proporcion de pruebas", ifelse(type=="Molecular", "moleculares", "serológicas"),
+    labs(title = paste("Proporcion de pruebas", 
+                       case_when(type == "Molecular" ~ "moleculares", 
+                                 type == "Serological" ~ "serológicas",
+                                 type == "Antigens" ~ "de antígenos"),
                        "por laboratorio (basado en promedio de 7 días)"))
-                       
 }
 
 plot_map <- function(tests_by_strata,
@@ -296,8 +311,10 @@ plot_map <- function(tests_by_strata,
                     format(start_date, "%B %d"),
                     "a",
                     format(end_date, "%B %d."), "\n",
-                    paste("Pruebs",  ifelse(type=="Molecular", "moleculares", "serológicas"))))
-                
+                    paste("Pruebas", 
+                          case_when(type == "Molecular" ~ "moleculares", 
+                                    type == "Serological" ~ "serológicas",
+                                    type == "Antigens" ~ "de antígenos"))))
   return(ret)
 }
 
@@ -334,7 +351,9 @@ make_table <- function(tests, cases, hosp_mort,
   
       ret <- DT::datatable(ret, #class = 'white-space: nowrap',
                     caption = paste("Positivos y casos son de pruebas", 
-                                    ifelse(type=="Molecular", "moleculares.", "serológicas."), 
+                                    case_when(type == "Molecular" ~ "moleculares.", 
+                                              type == "Serological" ~ "serológicas.",
+                                              type == "Antigens" ~ "de antígenos."),
                                     "La columna con fechas contiene el día en que se hizo la prueba.", 
                                     "La tasa de positividad se define como el número de personas con al menos una prueba positiva dividido por el número de personas que se han hecho la prueba.",
                                     "El estimado para cada día está basado en las pruebas hecha durante la semana acabando en ese día.",
@@ -433,7 +452,11 @@ plot_agedist <- function(tests_by_strata,
     scale_y_continuous(labels = scales::percent) +
     xlab("Edad") +
     ylab("Porciento") +
-    ggtitle(paste("Distribución de pruebas",  ifelse(type=="Molecular", "moleculares", "serológicas"), "positivas por edad",
+    ggtitle(paste("Distribución de pruebas",  
+                  case_when(type == "Molecular" ~ "moleculares", 
+                            type == "Serological" ~ "serológicas",
+                            type == "Antigens" ~ "de antígenos"),
+                  "positivas por edad",
                   format(start_date, "%B %d"),
                   "a",
                   format(end_date, "%B %d."))) +
@@ -492,7 +515,10 @@ plot_rezago <- function(rezago,
     stat_ecdf() + 
     xlab("Días") + 
     ylab("Porciento de pruebas") +
-    labs(title = paste("Rezago entre toma de muestra y día en que se reporta prueba",  ifelse(type=="Molecular", "moleculares", "serológicas")),
+    labs(title = paste("Rezago entre toma de muestra y día en que se reporta prueba",  
+                       case_when(type == "Molecular" ~ "moleculares", 
+                                 type == "Serological" ~ "serológicas",
+                                 type == "Antigens" ~ "de antígenos")),
          subtitle = paste("Fechas:", format(start_date, "%B %d"), "a", format(end_date, "%B %d."))) +
     scale_y_continuous(labels=scales::percent) +
     xlim(0, 21) +

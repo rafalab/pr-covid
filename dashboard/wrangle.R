@@ -146,7 +146,7 @@ if(FALSE){
 
 # -- Computing observed positivity rate
 tests <- all_tests_with_id %>%
-  filter(date >= first_day & testType %in% c("Molecular", "Serological") & 
+  filter(date >= first_day & testType %in% c("Molecular", "Serological", "Antigens") & 
            result %in% c("positive", "negative")) %>%
   group_by(testType, date) %>%
   summarize(positives = n_distinct(patientId[result == "positive"]),
@@ -172,7 +172,7 @@ positivity <- function(dat){
 }
 
 fits <- all_tests_with_id %>% 
-  filter(date >= first_day & testType %in% c("Molecular", "Serological") & 
+  filter(date >= first_day & testType %in% c("Molecular", "Serological", "Antigens") & 
            result %in% c("positive", "negative")) %>%
   nest_by(testType) %>%
   summarize(positivity(data), .groups = "drop")
@@ -181,6 +181,8 @@ tests <- left_join(tests, fits, by = c("testType", "date"))
 
 
 if(FALSE){
+  library(scales)
+  soruce("functions.R")
   plot_positivity(tests, first_day, today()) +
     geom_smooth(method = "loess", formula = "y~x", span = 0.2, method.args = list(degree = 1, weight = tests$tests), color = "red", lty =2, fill = "pink") 
 }
@@ -190,12 +192,13 @@ tests$tests_week_avg <- with(tests, ma7(date, all_tests))$moving_avg
 if(FALSE){
   plot_test(tests, first_day, today())
   plot_test(tests, first_day, today(), type  = "Serological")
+  plot_test(tests, first_day, today(), type  = "Antigens")
 }
 
 # unique cases ------------------------------------------------------------
 all_cases <- all_tests_with_id %>%      
   filter(date>=first_day & result == "positive" &
-           testType %in% c("Molecular", "Serological")) %>%
+           testType %in% c("Molecular", "Serological", "Antigens")) %>%
   group_by(testType, patientId) %>%
   mutate(n=n()) %>%
   arrange(date) %>%
@@ -212,7 +215,7 @@ cases <- all_cases %>%
   summarize(cases = n(), .groups = "drop")
 
 # Make sure all dates are included
-cases <-  left_join(select(tests, testType, date), cases, by = c("testType","date")) %>%
+cases <-  left_join(select(tests, testType, date), cases, by = c("testType", "date")) %>%
   replace_na(list(cases = 0))
 
 fits <- cases %>% 
@@ -257,7 +260,7 @@ if(FALSE){
 
 rezago <- all_tests_with_id  %>% 
   filter(result %in% c("positive", "negative") & 
-           testType %in% c("Molecular", "Serological") &
+           testType %in% c("Molecular", "Serological", "Antigens") &
            createdAt >= reportedDate) %>% ## based on @midnucas suggestion: can't be added before it's reported
   group_by(testType) %>%
   mutate(createdAt = as_date(createdAt)) %>% 
@@ -323,7 +326,15 @@ serological <-  all_labs_data$serological %>%
   select(testType, positives, tests)
 serological <- bind_cols(labs, serological) 
 
-labs <- bind_rows(molecular, serological) %>%
+antigens <-  all_labs_data$antigens %>%
+  mutate(testType = "Antigens",
+         positives = positives,
+         negatives = negatives,
+         tests = positives + negatives) %>%
+  select(testType, positives, tests)
+antigens <- bind_cols(labs, antigens) 
+
+labs <- bind_rows(molecular, serological, antigens) %>%
   filter(date >= first_day & date <= today()) %>%
   group_by(testType, date, Laboratorio) %>%
   summarize(positives = sum(positives),
