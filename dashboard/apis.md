@@ -13,6 +13,9 @@
 * Pruebas únicas con información mínima:
 ```/administration/reports/minimal-info-unique-tests```
 
+* Pruebas únicas con información mínima incluyend fecha de entrade al Bioportal:
+```/administration/reports/orders/basic```
+
 * Pruebas por fecha de colección:
 ```/administration/reports/tests-by-collected-date```
 

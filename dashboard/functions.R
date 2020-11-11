@@ -512,7 +512,7 @@ plot_rezago <- function(rezago,
     filter(date >= start_date &  date <= end_date & testType == type) %>%
     filter(diff<20 & diff>=0) %>%
     ggplot(aes(x=diff, color = Resultado)) +
-    stat_ecdf() + 
+    stat_ecdf(alpha = 0.75) + 
     xlab("Días") + 
     ylab("Porciento de pruebas") +
     labs(title = paste("Rezago entre toma de muestra y día en que se reporta prueba",  

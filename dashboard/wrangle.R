@@ -60,12 +60,14 @@ first_day <- make_date(2020, 3, 12)
 
 last_day <- today() - days(5)
 
+the_years <- seq(2020, year(today()))
+
 age_levels <-  c("0 to 9", "10 to 19", "20 to 29", "30 to 39", "40 to 49", "50 to 59", "60 to 69", 
                  "70 to 79", "80 to 89", "90 to 99", "100 to 109", "110 to 119", "120 to 129")
 
 test_url <- "https://bioportal.salud.gov.pr/api/administration/reports/minimal-info-unique-tests"
 
-cases_url <- "https://bioportal.salud.gov.pr/api/administration/reports/orders/minimal-info"
+cases_url <- "https://bioportal.salud.gov.pr/api/administration/reports/orders/basic"
 
 imputation_delay  <- 2
 
@@ -97,14 +99,14 @@ all_tests <- all_tests %>%
 if(FALSE){
   ## remove bad dates
   all_tests <- all_tests %>% 
-  filter(!is.na(collectedDate) & year(collectedDate) == 2020 & collectedDate <= today()) %>%
+  filter(!is.na(collectedDate) & year(collectedDate) %in% the_years & collectedDate <= today()) %>%
   mutate(date = collectedDate) 
 } else{
   ## Impute missing dates and remove inconsistent dates
   all_tests <- all_tests %>% 
     mutate(date = if_else(is.na(collectedDate), reportedDate - days(imputation_delay),  collectedDate)) %>%
-    mutate(date = if_else(year(date) != 2020 | date > today(), reportedDate - days(imputation_delay),  date)) %>%
-    filter(year(date) == 2020 & date <= today()) %>%
+    mutate(date = if_else(!year(date) %in% the_years | date > today(), reportedDate - days(imputation_delay),  date)) %>%
+    filter(year(date) %in% the_years & date <= today()) %>%
     arrange(date, reportedDate)
 }
 
@@ -115,9 +117,10 @@ all_tests_with_id <- jsonlite::fromJSON(cases_url)
 
 all_tests_with_id <- all_tests_with_id %>%  
   as_tibble() %>%
-  mutate(collectedDate  = mdy(collectedDate),
-         reportedDate   = mdy(reportedDate),
-         createdAt      = mdy_hm(createdAt),
+  mutate(collectedDate  = ymd_hms(collectedDate, tz = "America/Puerto_Rico"),
+         reportedDate   = ymd_hms(reportedDate, tz = "America/Puerto_Rico"),
+         orderCreatedAt = ymd_hms(orderCreatedAt, tz = "America/Puerto_Rico"),
+         resultCreatedAt = ymd_hms(resultCreatedAt, tz = "America/Puerto_Rico"),
          ageRange       = na_if(ageRange, "N/A"),
          ageRange       = factor(ageRange, levels = age_levels),
          region         = ifelse(region == "Bayamon", "Bayamón", region),
@@ -134,13 +137,15 @@ all_tests_with_id <- all_tests_with_id %>%
 if(FALSE){
   ## remove bad dates
   all_tests_with_id <- all_tests_with_id %>% 
-    filter(!is.na(collectedDate) & year(collectedDate) == 2020 & collectedDate <= today()) %>%
-    mutate(date = collectedDate) 
+    filter(!is.na(collectedDate) & year(collectedDate) %in% the_years & collectedDate <= today()) %>%
+    mutate(date = as_date(collectedDate))
 } else{
   ## Impute missing dates
-  all_tests_with_id <- all_tests_with_id %>% mutate(date = if_else(is.na(collectedDate), reportedDate - days(imputation_delay),  collectedDate)) %>%
-    mutate(date = if_else(year(date) != 2020 | date > today(), reportedDate - days(imputation_delay),  date)) %>%
-    filter(year(date) == 2020 & date <= today()) %>%
+  all_tests_with_id <- all_tests_with_id %>% 
+    mutate(date = if_else(is.na(collectedDate), reportedDate - days(imputation_delay),  collectedDate)) %>%
+    mutate(date = if_else(!year(date) %in% the_years | date > today(), reportedDate - days(imputation_delay),  date)) %>%
+    mutate(date = as_date(date)) %>%
+    filter(year(date) %in% the_years & date <= today()) %>%
     arrange(date, reportedDate)
 }
 
@@ -182,7 +187,7 @@ tests <- left_join(tests, fits, by = c("testType", "date"))
 
 if(FALSE){
   library(scales)
-  soruce("functions.R")
+  source("functions.R")
   plot_positivity(tests, first_day, today()) +
     geom_smooth(method = "loess", formula = "y~x", span = 0.2, method.args = list(degree = 1, weight = tests$tests), color = "red", lty =2, fill = "pink") 
 }
@@ -261,11 +266,10 @@ if(FALSE){
 rezago <- all_tests_with_id  %>% 
   filter(result %in% c("positive", "negative") & 
            testType %in% c("Molecular", "Serological", "Antigens") &
-           createdAt >= reportedDate) %>% ## based on @midnucas suggestion: can't be added before it's reported
+           resultCreatedAt >= collectedDate) %>% ## based on @midnucas suggestion: can't be added before it's reported
   group_by(testType) %>%
-  mutate(createdAt = as_date(createdAt)) %>% 
-  mutate(diff = as.numeric(createdAt - collectedDate), 
-         Resultado = factor(result, labels = c("Negativos", "Positivos"))) %>%
+  mutate(diff = (as.numeric(resultCreatedAt) - as.numeric(collectedDate)) / (60 * 60 * 24),
+          Resultado = factor(result, labels = c("Negativos", "Positivos"))) %>%
   ungroup %>%
   select(testType, date, Resultado, diff) %>%
   filter(!is.na(diff))
