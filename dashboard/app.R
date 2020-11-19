@@ -191,9 +191,9 @@ server <- function(input, output, session) {
     p3 <-  plot_cases(cases, 
                       start_date = input$range[1], end_date = input$range[2], 
                       type =  input$testType, cumm = input$acumulativo)
-    p4 <- plot_test(tests, 
-                    start_date = input$range[1], end_date = input$range[2], 
-                    type =  input$testType, cumm = input$acumulativo)
+    p4 <-  plot_hosp(hosp_mort, 
+                     start_date = input$range[1], end_date = input$range[2])
+                     
     p <- gridExtra::grid.arrange(p1, p2, p3, p4, ncol = 2)
     return(p)
   })    

@@ -104,7 +104,7 @@ plot_deaths <- function(hosp_mort,
       filter(date >= start_date & date <= end_date) %>%
       ggplot(aes(date)) +
       geom_bar(aes(y = IncMueSalud), stat = "identity", width = 0.75, alpha = 0.65) +
-      geom_line(aes(y = fit), color="black", size = 1.25) +
+      geom_line(aes(y = mort_week_avg), color="black", size = 1.25) +
       ylab("Muertes") +
       xlab("Fecha") +
       ggtitle("Muertes por COVID-19") +
@@ -121,12 +121,14 @@ plot_hosp <- function(hosp_mort,
   tmp <- hosp_mort %>% 
     filter(!is.na(HospitCOV19) & 
              date >= start_date & date <= end_date) %>% 
-    select(date, HospitCOV19, CamasICU) 
+    select(date, HospitCOV19, hosp_week_avg, CamasICU, icu_week_avg) 
   
   ret <- tmp %>% 
     ggplot(aes(x = date)) +
     geom_bar(mapping = aes(y = HospitCOV19), stat = "identity", width = 0.75, fill = "#8CC8F4") +
+    geom_line(aes(y = hosp_week_avg), color="#8CC8F4", size = 1.25) +
     geom_bar(mapping = aes(y = CamasICU), stat = "identity", width = 0.75, fill = "darkblue") +
+    geom_line(aes(y = icu_week_avg), color="darkblue", size = 1.25) +
     xlab("Fecha") +
     ylab("Pacientes") +
     ggtitle("Hospitalizaciones y ICU") +
@@ -503,23 +505,40 @@ compute_summary <- function(tests, hosp_mort, cases){
                    date %in% c(last_day, last_day - weeks(1))) %>%
     arrange(date)
   
+  ## Hosp
+  tmp5 <- hosp_mort %>% select(date, HospitCOV19, hosp_week_avg) %>% 
+    filter(!is.na(HospitCOV19)) %>%
+    filter(date %in% c(max(date), max(date) - weeks(1))) %>%
+    arrange(date)
+  
   
   riesgo <- case_when(tmp2$camasICU[2] > .7 | tmp1$fit[2] >= 0.20 ~ 4,
                       tmp2$camasICU[2] < .5 & tmp1$fit[2] < 0.03 & tmp3$moving_avg[2] < 1 ~ 1,
                       tmp2$camasICU[2] < .5 & tmp1$fit[2] < 0.03 & tmp3$moving_avg[2] < 30 ~ 2,
                       TRUE ~ 3)
   
-  tab <- tibble(metrica = c("Tasa de positividad", "Uso de camas ICU", "Casos nuevos por día", "Pruebas por día"),
-                meta = c("Menos de 3%", "Menos de 50%", "Menos de 30", "Más de 4,500"),
+  tab <- tibble(metrica = c("Tasa de positividad", 
+                            "Uso de camas ICU",  
+                            "Casos nuevos por día", 
+                            "Pruebas por día", 
+                            "Hospitalizaciones"),
+                meta = c("Menos de 3%", 
+                         "Menos de 50%", 
+                         "Menos de 30", 
+                         "Más de 4,500", 
+                         ""),
                 valor =  c(make_pct(tmp1$fit[2]), 
                            make_pct(tmp2$camasICU[2]), 
                            round(tmp3$moving_avg[2]), 
                            prettyNum(round(tmp4$tests_week_avg[2]), 
+                                     big.mark = ","),
+                           prettyNum(round(tmp5$HospitCOV19[2]), 
                                      big.mark = ",")),
                 cambio = c(delta(tmp1$fit), 
                            delta(tmp2$CamasICU), 
                            delta(tmp3$moving_avg), 
-                           delta(tmp4$tests_week_avg)))
+                           delta(tmp4$tests_week_avg),
+                           delta(tmp5$hosp_week_avg)))
 
   colnames(tab) <- c("Métrica", "Meta", "Nivel actual", "Tendencia")
   

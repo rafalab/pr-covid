@@ -250,10 +250,19 @@ hosp_mort <- read_csv("https://raw.githubusercontent.com/rafalab/pr-covid/master
 hosp_mort <- hosp_mort %>% 
   replace_na(list(CamasICU_disp = icu_beds))
 
-# -- model to deaths. Here there is no weekend effect
+
+# -- seven day averages 
 fits <- with(hosp_mort, 
              ma7(d = date, y = IncMueSalud))
-hosp_mort$fit <- fits$moving_avg
+hosp_mort$mort_week_avg <- fits$moving_avg
+
+fits <- with(hosp_mort, 
+             ma7(d = date, y = HospitCOV19))
+hosp_mort$hosp_week_avg <- fits$moving_avg
+
+fits <- with(hosp_mort, 
+             ma7(d = date, y = CamasICU))
+hosp_mort$icu_week_avg <- fits$moving_avg
 
 if(FALSE){
   plot_deaths(hosp_mort)
