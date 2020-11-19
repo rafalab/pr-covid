@@ -2,7 +2,7 @@
 
 plot_positivity <- function(tests, 
                             start_date = first_day, 
-                            end_date = last_day, 
+                            end_date = today(), 
                             type = "Molecular", 
                             yscale = FALSE){
   ret <- tests %>%
@@ -40,7 +40,7 @@ plot_positivity <- function(tests,
 # ICU usage ---------------------------------------------------------------
 plot_icu <- function(hosp_mort,  
                       start_date = first_day, 
-                      end_date = last_day, 
+                      end_date = today(), 
                       yscale = FALSE){
   
   tmp <- hosp_mort %>% 
@@ -85,7 +85,7 @@ plot_icu <- function(hosp_mort,
 
 plot_deaths <- function(hosp_mort,  
                         start_date = first_day, 
-                        end_date = last_day, 
+                        end_date = today(), 
                         cumm = FALSE){
   if(cumm){
     hosp_mort %>%
@@ -116,7 +116,7 @@ plot_deaths <- function(hosp_mort,
   
 plot_hosp <- function(hosp_mort,  
                       start_date = first_day, 
-                      end_date = last_day){
+                      end_date = today()){
   
   tmp <- hosp_mort %>% 
     filter(!is.na(HospitCOV19) & 
@@ -139,7 +139,7 @@ plot_hosp <- function(hosp_mort,
 
 plot_cases <- function(cases, 
                        start_date = first_day, 
-                       end_date = last_day, 
+                       end_date = today(), 
                        type = "Molecular", 
                        cumm = FALSE){
   if(cumm){
@@ -159,6 +159,9 @@ plot_cases <- function(cases,
       scale_x_date(date_labels = "%b", breaks = breaks_width("1 month"))  +
       theme_bw()
   } else{
+    
+    cases$moving_avg[cases$date > last_day] <- NA
+    
     cases %>%
       filter(testType == type & date >= start_date & date <= end_date) %>%
       ggplot(aes(date, cases)) +
@@ -178,7 +181,7 @@ plot_cases <- function(cases,
 
 plot_test <- function(tests, 
                       start_date = first_day, 
-                      end_date = last_day, 
+                      end_date = today(), 
                       type = "Molecular", 
                       cumm = FALSE){
   if(cumm){
@@ -199,6 +202,9 @@ plot_test <- function(tests,
       scale_y_continuous(labels = scales::comma) +
       theme_bw() 
   } else{
+    
+    tests$tests_week_avg[tests$date > last_day] <- NA
+    
     tests %>%
       filter(testType == type & date >= start_date & date <= end_date) %>%
       ggplot(aes(date, all_tests)) +
@@ -219,7 +225,7 @@ plot_test <- function(tests,
 
 plot_positivity_by_lab <- function(labs, 
                             start_date = first_day, 
-                            end_date = last_day, 
+                            end_date = today(), 
                             type = "Molecular", 
                             yscale = FALSE){
   
@@ -252,7 +258,7 @@ plot_positivity_by_lab <- function(labs,
 
 plot_tests_by_lab <- function(labs, 
                                    start_date = first_day, 
-                                   end_date = last_day, 
+                                   end_date = today(), 
                                    type = "Molecular"){
   levels <- labs %>% filter(date == end_date & testType =="Molecular") %>%
     mutate(o = ifelse(Laboratorio == "Otros", -Inf, tests_week_avg)) %>%
@@ -277,7 +283,7 @@ plot_tests_by_lab <- function(labs,
 
 plot_map <- function(tests_by_strata,
                      start_date = first_day, 
-                     end_date = last_day, 
+                     end_date = today(), 
                      type = "Molecular",
                      max_rate = 0.25){
     
@@ -320,14 +326,14 @@ plot_map <- function(tests_by_strata,
 
 make_table <- function(tests, cases, hosp_mort, 
                        start_date = first_day, 
-                       end_date = last_day, 
+                       end_date = today(), 
                        type = "Molecular"){
   
   tmp <- select(hosp_mort, date, HospitCOV19, IncMueSalud, CamasICU)
 
   cases <- filter(cases, testType == type)
   
-  #cases$moving_avg[cases$date > last_day] <- NA
+  cases$moving_avg[cases$date > last_day] <- NA
 
   ret <- tests %>%
     filter(testType == type) %>%
@@ -359,11 +365,11 @@ make_table <- function(tests, cases, hosp_mort,
                                     "El estimado para cada día está basado en las pruebas hecha durante la semana acabando en ese día.",
                                     "IC = Intervalo de confianza del ", (1-alpha)*100,"%.",
                                     "Los casos único son el número de personas con su primera prueba positiva en ese día.",
-                                    "El promedio de casos de 7 días está basado en la semana acabando ese día.",
+                                    "El promedio de casos de 7 días está basado en la semana acabando ese día. Los datos de las pruebas toman ", lag_to_complete, " días en estar aproximadamente completos, por tanto, calculamos los casos por día hasta ", format(last_day, "%B %d. "),
                                     "La columna de positivos muestra el número de personas que tuvieron una prueba positiva ese día (no necesariamente son casos únicos).",
                                     "La columna de pruebas es el número de personas que se hicieron una prueba ese día.",
                                     "Tengan en cuante que los fines de semana se hacen menos pruebas y por lo tanto se reportan menos casos.",
-                                    "Las muertes, casos en el ICU y hospitalizaciones vienen del informe oficial del Departamento de Salud."),
+                                    "Las muertes, casos en el ICU y hospitalizaciones vienen del informe oficial del Departamento de Salud y toman un día en ser reportados."),
       rownames = FALSE,
       options = list(dom = 't', pageLength = -1,
                      columnDefs = list(
@@ -377,7 +383,7 @@ make_table <- function(tests, cases, hosp_mort,
 
 make_municipio_table <- function(tests_by_strata, 
                                  start_date = first_day, 
-                                 end_date = last_day, 
+                                 end_date = today(), 
                                  type = "Molecular"){
   
     tmp <- tests_by_strata %>%
@@ -433,7 +439,7 @@ make_municipio_table <- function(tests_by_strata,
 
 plot_agedist <- function(tests_by_strata,
                          start_date = first_day, 
-                         end_date = last_day, 
+                         end_date = today(), 
                          type = "Molecular",
                          yscale = FALSE){
   
@@ -475,17 +481,28 @@ compute_summary <- function(tests, hosp_mort, cases){
            paste0(round(100*(x[2] - x[1]) / x[1]), "%"))
   }
 
-  tmp1 <- filter(tests, testType == "Molecular" & date %in% c(last_day, last_day - weeks(1))) %>%
+  #@ positivity
+  tmp1 <- filter(tests, testType == "Molecular" & 
+                   date %in% c(today() - 1, today() - 1 - weeks(1))) %>%
     arrange(date)
   
+  ## ICU
   tmp2 <- hosp_mort %>% select(date, CamasICU, CamasICU_disp) %>% 
     filter(!is.na(CamasICU)) %>%
     mutate(camasICU = CamasICU / (CamasICU + CamasICU_disp)) %>%
     filter(date %in% c(max(date), max(date) - weeks(1))) %>%
     arrange(date)
   
-  tmp3 <- filter(cases, testType == "Molecular" & date %in% c(last_day, last_day - weeks(1)))  %>%
+  ## cases 
+  tmp3 <- filter(cases, testType == "Molecular" & 
+                   date %in% c(last_day, last_day - weeks(1)))  %>%
     arrange(date)
+  
+  ## tests
+  tmp4 <- filter(tests, testType == "Molecular" & 
+                   date %in% c(last_day, last_day - weeks(1))) %>%
+    arrange(date)
+  
   
   riesgo <- case_when(tmp2$camasICU[2] > .7 | tmp1$fit[2] >= 0.20 ~ 4,
                       tmp2$camasICU[2] < .5 & tmp1$fit[2] < 0.03 & tmp3$moving_avg[2] < 1 ~ 1,
@@ -494,8 +511,15 @@ compute_summary <- function(tests, hosp_mort, cases){
   
   tab <- tibble(metrica = c("Tasa de positividad", "Uso de camas ICU", "Casos nuevos por día", "Pruebas por día"),
                 meta = c("Menos de 3%", "Menos de 50%", "Menos de 30", "Más de 4,500"),
-                valor =  c(make_pct(tmp1$fit[2]), make_pct(tmp2$camasICU[2]), round(tmp3$moving_avg[2]), prettyNum(round(tmp1$tests_week_avg[2]), big.mark = ",")),
-                cambio = c(delta(tmp1$fit), delta(tmp2$CamasICU), delta(tmp3$moving_avg), delta(tmp1$tests_week_avg)))
+                valor =  c(make_pct(tmp1$fit[2]), 
+                           make_pct(tmp2$camasICU[2]), 
+                           round(tmp3$moving_avg[2]), 
+                           prettyNum(round(tmp4$tests_week_avg[2]), 
+                                     big.mark = ",")),
+                cambio = c(delta(tmp1$fit), 
+                           delta(tmp2$CamasICU), 
+                           delta(tmp3$moving_avg), 
+                           delta(tmp4$tests_week_avg)))
 
   colnames(tab) <- c("Métrica", "Meta", "Nivel actual", "Tendencia")
   
@@ -505,7 +529,7 @@ compute_summary <- function(tests, hosp_mort, cases){
 
 plot_rezago <- function(rezago,
                         start_date = first_day, 
-                        end_date = last_day, 
+                        end_date = today(), 
                         type = "Molecular"){
   
   rezago %>%

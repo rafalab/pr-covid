@@ -27,8 +27,8 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                 sidebarLayout(
                   sidebarPanel(
                     dateRangeInput("range", "Periodo", 
-                                   start = last_day - days(90), #make_date(2020, 3, 21), 
-                                   end = last_day,
+                                   start = today() - days(90), #make_date(2020, 3, 21), 
+                                   end = today(),
                                    min = first_day,
                                    format = "M-dd",
                                    max = today()),
@@ -75,13 +75,13 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                htmlOutput("riesgo"),
                                h3("Estimados actuales"),
                                DT::dataTableOutput("resumen_table"),
-                               HTML(paste0("<h5>Estimados de la tasa de positividad y casos por día se calculan para <b>",
-                                          format(last_day, "%B %d</b>."), " Noten que los datos de las pruebas toman 5 días en estar aproximadamente completos. ",
-                                          "La <b>tasa de positividad</b> se define como el número de personas con prueba positiva divido entre el total de personas que se han hecho pruebas. ",
+                               HTML(paste0("<h5>La <b>tasa de positividad</b> se define como el número de personas con prueba positiva divido entre el total de personas que se han hecho pruebas. ",
                                           "<b>Casos</b> y <b>pruebas</b> están basados en un <b>promedio de siete días</b> para contrarrestar el efecto que tiene el día de la semana en los totales. ",
                                           "El <b>uso de camas ICU</b> es el porcentaje de camas disponibles, no usadas por otras causas, usadas por pacientes de COVID-19. Hay alrededor de 700 camas ICU en Puerto Rico. Típicamente, sin COVID, hay alrededor de 275 displonibles. ",
-                                          "La <b>tendencia</b> es el cambio porcentual cuando comparamos estos estimados a los de la semana anterior. Si dividimos la tendencia para casos por 100 y añadimos uno, nos da un estimado del <b>Número de Transmisión Rt</b>. ",
-                                          "<b>Noten que todos estos son estimados con variabilidad estadística</b>. Los gráficos nos dan una idea de esta variabilidad.</h5>")),
+                                          "La <b>tendencia</b> es el cambio porcentual cuando comparamos estos estimados a los de la semana anterior. Si dividimos la tendencia de los casos por 100 y añadimos uno, nos da un estimado del <b>Número de Transmisión Rt</b>. ",
+                                          "Noten que los datos de las pruebas toman ", lag_to_complete, " días en estar aproximadamente completos, ",
+                                          "por tanto, calculamos los casos y pruebas para <b>", format(last_day, "%B %d</b>. "), 
+                                           "<b>Noten que todos estos son estimados con variabilidad estadística</b>. Los gráficos nos dan una idea de esta variabilidad.</h5>")),
                                HTML(paste0("<h5> Los niveles de riesgo los dividimos como crítico, alto, medio, y bajo. ",
                                           "Entramos en <b>nivel crítico</b> cuando la tasa de positividad sobrepasa 20% o el uso de camas ICU sobrepasa 70%, lo cual indica que los hospitales pronto no podrán recibir más pacientes en condiciones críticas. ",
                                           "Entramos en <b>nivel alto</b> si la tasa de positividad o casos por días sobrepasan los niveles metas, lo cual indica que la situación no mejorará sin intervenciones o cambio de comportamiento. ",
@@ -141,8 +141,8 @@ server <- function(input, output, session) {
   # -- This sets range to last two weeks
   observeEvent(input$weeks, {
     updateDateRangeInput(session, "range",
-                         start = last_day - weeks(1),
-                         end   = last_day)
+                         start = today() - weeks(1),
+                         end   = today() - 1)
   })
   
   # -- This sets range to last two weeks
@@ -177,7 +177,7 @@ server <- function(input, output, session) {
                     options = list(dom = 't', ordering = FALSE, pageLength = -1, 
                                    columnDefs = list(
                                      list(className = 'dt-center', targets = 0:3)))) %>%
-      DT::formatStyle(columns = 1:4, fontSize = '125%')
+      DT::formatStyle(columns = 1:4, fontSize = '110%')
   }, server = FALSE)
   
   

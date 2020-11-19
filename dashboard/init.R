@@ -6,6 +6,9 @@ library(scales)
 library(sf)
 source("functions.R")
 
+lag_to_complete <- 7
+last_day <- today() - days(lag_to_complete)
+
 ## if on the server get the latest data
 if(Sys.info()["nodename"] == "fermat.dfci.harvard.edu"){
   rda_path <- "/homes10/rafa/dashboard/rdas"

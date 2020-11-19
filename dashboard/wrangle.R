@@ -58,8 +58,6 @@ icu_beds <- 229 #if available beds is missing change to this
 
 first_day <- make_date(2020, 3, 12)
 
-last_day <- today() - days(5)
-
 the_years <- seq(2020, year(today()))
 
 age_levels <-  c("0 to 9", "10 to 19", "20 to 29", "30 to 39", "40 to 49", "50 to 59", "60 to 69", 
@@ -383,7 +381,7 @@ if(Sys.info()["nodename"] == "fermat.dfci.harvard.edu"){
 
 ## define date and time of latest download
 the_stamp <- now()
-save(first_day, last_day, alpha, the_stamp, 
+save(first_day, alpha, the_stamp, 
      tests, tests_by_strata, cases,
      hosp_mort, labs,
      file = file.path(rda_path, "data.rda"))
