@@ -56,7 +56,17 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                  choices = list("Preescogido" = TRUE,
                                                 "Determinado por datos" = FALSE),
                                  selected = TRUE),
-                    div("Datos depurados:"),
+                    
+                    selectInput("dataset", "Datos depurados:",
+                                choices = c("Todas las pruebas" = "pruebas",
+                                            "Casos por día" = "casos", 
+                                            "Muertes y hospitalizaciones" = "hosp-mort",
+                                            "Positivos por día" = "positivos",
+                                            "Positivos por municipio por día" = "municipios",
+                                            "Positivos por edad por día" = "edad",
+                                            "Positivos por municipio/edad por día" = "municipios-edad",
+                                            "Rezago" = "rezago")),
+                    
                     downloadButton("downloadData", "Download",
                                    style = button_style),
                     
@@ -304,14 +314,56 @@ server <- function(input, output, session) {
                  type = input$testType)
   })
   # -- This allows users to download data
+  datasetInput <- reactive({
+    switch(input$dataset,
+           "pruebas" = {
+             load(file.path(rda_path,"data.rda"))
+             all_tests
+           },
+           "casos" = cases,
+           "hosp-mort" = hosp_mort,
+           "positivos" = select(tests, -old_rate),
+           "municipios" = {
+             tests_by_strata %>%
+               filter(testType %in% c("Antigens", "Molecular", "Serological")) %>%
+               mutate(patientCity = as.character(patientCity)) %>%
+               filter(patientCity %in% c("No reportado", poblacion_municipios$patientCity)) %>%
+               group_by(testType, patientCity, date) %>%
+               summarize(positives = sum(positives), tests = sum(tests),
+                         rate =  positives/tests, .groups = "drop") %>%
+               ungroup() %>%
+               left_join(poblacion_municipios, by = "patientCity") 
+           },
+           "edad" = {
+             tests_by_strata %>%
+               filter(ageRange != "No reportado") %>%
+               filter(testType %in% c("Antigens", "Molecular", "Serological")) %>%
+               group_by(testType, ageRange, date) %>%
+               summarize(positives = sum(positives), .groups = "drop") %>%
+               ungroup() %>%
+               mutate(percent = positives/sum(positives))
+           },
+           "municipios-edad" = {
+             tests_by_strata %>%
+               filter(ageRange != "No reportado") %>%
+               filter(testType %in% c("Antigens", "Molecular", "Serological")) %>%
+               mutate(patientCity = as.character(patientCity)) %>%
+               filter(patientCity %in% c("No reportado", poblacion_municipios$patientCity)) 
+           },
+           "rezago" = {
+             load(file.path(rda_path, "rezago.rda"))
+             rezago
+           }
+    )
+  })
+  
   output$downloadData <- downloadHandler(
     filename = function() {
-      load(file.path(rda_path,"data.rda"))
-      paste0("pruebas-",format(the_stamp, "%Y-%m-%d_%H:%M:%S"),".csv")
+      paste0(input$dataset, "-", format(the_stamp, "%Y-%m-%d_%H:%M:%S"),".csv")
     },
     content = function(file) {
-      all_tests <- readRDS(file.path(rda_path,"all_tests.rds"))
-      write.csv(all_tests, file = file, row.names = FALSE)  
+      #all_tests <- readRDS(file.path(rda_path,"all_tests.rds"))
+      write.csv(datasetInput(), file = file, row.names = FALSE)  
     },
     contentType = "txt/csv"
   )

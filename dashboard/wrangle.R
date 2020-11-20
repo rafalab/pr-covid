@@ -78,7 +78,9 @@ all_tests <- jsonlite::fromJSON(test_url)
 all_tests <- all_tests %>%  
   rename(patientCity = city) %>%
   as_tibble() %>%
-  mutate(collectedDate  = mdy(collectedDate),
+  mutate(testType = str_to_title(testType),
+         testType = ifelse(testType == "Antigeno", "Antigens", testType),
+         collectedDate  = mdy(collectedDate),
          reportedDate   = mdy(reportedDate),
          createdAt      = mdy_hm(createdAt),
          ageRange       = na_if(ageRange, "N/A"),
@@ -115,7 +117,9 @@ all_tests_with_id <- jsonlite::fromJSON(cases_url)
 
 all_tests_with_id <- all_tests_with_id %>%  
   as_tibble() %>%
-  mutate(collectedDate  = ymd_hms(collectedDate, tz = "America/Puerto_Rico"),
+  mutate(testType = str_to_title(testType),
+         testType = ifelse(testType == "Antigeno", "Antigens", testType),
+         collectedDate  = ymd_hms(collectedDate, tz = "America/Puerto_Rico"),
          reportedDate   = ymd_hms(reportedDate, tz = "America/Puerto_Rico"),
          orderCreatedAt = ymd_hms(orderCreatedAt, tz = "America/Puerto_Rico"),
          resultCreatedAt = ymd_hms(resultCreatedAt, tz = "America/Puerto_Rico"),
