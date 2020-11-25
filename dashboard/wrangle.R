@@ -152,8 +152,15 @@ if(FALSE){
 }
 
 # -- Computing observed positivity rate
+## adding a new test type that combines molecular and antigens
+mol_anti <-  all_tests_with_id %>%
+  filter(date >= first_day & testType %in% c("Molecular", "Antigens") & 
+           result %in% c("positive", "negative")) %>%
+  mutate(testType = "Molecular+Antigens") 
+
 tests <- all_tests_with_id %>%
-  filter(date >= first_day & testType %in% c("Molecular", "Serological", "Antigens") & 
+  bind_rows(mol_anti) %>%
+  filter(date >= first_day & testType %in% c("Molecular", "Serological", "Antigens", "Molecular+Antigens") & 
            result %in% c("positive", "negative")) %>%
   group_by(testType, date) %>%
   summarize(positives = n_distinct(patientId[result == "positive"]),
@@ -163,6 +170,7 @@ tests <- all_tests_with_id %>%
             .groups = "drop") %>%
   mutate(rate = positives / tests,
          old_rate = all_positives / all_tests)
+
 
 positivity <- function(dat){
   day_seq <- seq(first_day + weeks(1), max(dat$date), by = "day")
@@ -179,7 +187,8 @@ positivity <- function(dat){
 }
 
 fits <- all_tests_with_id %>% 
-  filter(date >= first_day & testType %in% c("Molecular", "Serological", "Antigens") & 
+  bind_rows(mol_anti) %>%
+  filter(date >= first_day & testType %in% c("Molecular", "Serological", "Antigens", "Molecular+Antigens") & 
            result %in% c("positive", "negative")) %>%
   nest_by(testType) %>%
   summarize(positivity(data), .groups = "drop")
@@ -190,22 +199,29 @@ tests <- left_join(tests, fits, by = c("testType", "date"))
 if(FALSE){
   library(scales)
   source("functions.R")
-  plot_positivity(tests, first_day, today()) +
+  plot_positivity(tests, first_day, today(), type = "Molecular") +
     geom_smooth(method = "loess", formula = "y~x", span = 0.2, method.args = list(degree = 1, weight = tests$tests), color = "red", lty =2, fill = "pink") 
 }
 
-tests$tests_week_avg <- with(tests, ma7(date, all_tests))$moving_avg
+tests_fits <- tests %>% 
+  group_by(testType) %>%
+  do(ma7(d = .$date, y = .$all_tests)) %>%
+  rename(tests_week_avg = moving_avg)
+
+tests <- left_join(tests, tests_fits, by = c("testType", "date"))
 
 if(FALSE){
   plot_test(tests, first_day, today())
   plot_test(tests, first_day, today(), type  = "Serological")
   plot_test(tests, first_day, today(), type  = "Antigens")
+  plot_test(tests, first_day, today(), type  = "Molecular+Antigens")
 }
 
 # unique cases ------------------------------------------------------------
-all_cases <- all_tests_with_id %>%      
+all_cases <- all_tests_with_id %>%  
+  bind_rows(mol_anti) %>%
   filter(date>=first_day & result == "positive" &
-           testType %in% c("Molecular", "Serological", "Antigens")) %>%
+           testType %in% c("Molecular", "Serological", "Antigens",  "Molecular+Antigens")) %>%
   group_by(testType, patientId) %>%
   mutate(n=n()) %>%
   arrange(date) %>%
@@ -233,12 +249,24 @@ cases <- left_join(cases, fits, by = c("testType", "date"))
 
 if(FALSE){
   plot_cases(cases)
+  plot_cases(cases, first_day, today(), type  = "Serological")
+  plot_cases(cases, first_day, today(), type  = "Antigens")
+  plot_cases(cases, first_day, today(), type  = "Molecular+Antigens")
+  
 }
 
 # -- summaries stratified by age group and patientID
+mol_anti <-  all_tests %>%
+  filter(date >= first_day & testType %in% c("Molecular", "Antigens") & 
+           result %in% c("positive", "negative")) %>%
+  mutate(testType = "Molecular+Antigens") 
+
+
 tests_by_strata <- all_tests %>%  
+  bind_rows(mol_anti) %>%
+  filter(date >= first_day & testType %in% c("Molecular", "Serological", "Antigens", "Molecular+Antigens") & 
+           result %in% c("positive", "negative")) %>%
   filter(date>=first_day) %>%
-  filter(result %in% c("positive", "negative")) %>%
   mutate(patientCity = fct_explicit_na(patientCity, "No reportado")) %>%
   mutate(ageRange = fct_explicit_na(ageRange, "No reportado")) %>%
   group_by(testType, date, patientCity, ageRange, .drop = FALSE) %>%

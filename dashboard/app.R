@@ -42,6 +42,7 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                     radioButtons("testType", 
                                  label = "Tipo de prueba",
                                  choices = list("Molecular" = "Molecular",
+                                                "Molecular + Antígeno" = "Molecular+Antigens",
                                                 "Antígeno" = "Antigens",
                                                 "Serológica" = "Serological"),
                                  selected = "Molecular"),
@@ -84,7 +85,7 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                       
                       tabPanel("Resumen",
                                htmlOutput("riesgo"),
-                               h3("Estimados actuales"),
+                               htmlOutput("table_title"),
                                DT::dataTableOutput("resumen_table"),
                                HTML(paste0("<h5>La <b>tasa de positividad</b> se define como el número de personas con prueba positiva divido entre el total de personas que se han hecho pruebas. ",
                                           "<b>Casos</b> y <b>pruebas</b> están basados en un <b>promedio de siete días</b> para contrarrestar el efecto que tiene el día de la semana en los totales. ",
@@ -169,20 +170,31 @@ server <- function(input, output, session) {
   })
   
 
-# Nivel de riesgo ---------------------------------------------------------
+  # Nivel de riesgo ---------------------------------------------------------
 
   output$riesgo <-  renderText({
-    riesgo <- compute_summary(tests, hosp_mort, cases)$riesgo
+    riesgo <- compute_summary(tests, hosp_mort, cases, type = input$testType)$riesgo
     paste0("<h3> Nivel de riesgo: ", c("Bajo","Medio", "Alto", "Crítico")[riesgo],
            "&nbsp<div style = \"height: 25px; width: 25px; background-color: ",
           c("#01D474", "#FFC900", "#FF9600", "#FF0034")[riesgo],
           "; border-radius: 50%; display: inline-block; position:absolute\"></div></h3>") 
           
   })
-  
+
+  # Summary table title -----------------------------------------------------
+
+  output$table_title <- renderText({
+    paste0("<h4>Estimados actuales basados en pruebas ",
+           case_when(input$testType == "Molecular" ~ "moleculares", 
+                     input$testType == "Serological" ~ "serológicas",
+                     input$testType == "Antigens" ~ "de antígenos",
+                     input$testType == "Molecular+Antigens" ~ "moleculares y de antígenos"),
+           "</h4>")
+  })
+        
   # -- This shows a summary
   output$resumen_table <- DT::renderDataTable({
-    compute_summary(tests, hosp_mort, cases)$tab %>%
+    compute_summary(tests, hosp_mort, cases, type = input$testType)$tab %>%
       DT::datatable(class = 'white-space: nowrap',
                     rownames = FALSE,
                     options = list(dom = 't', ordering = FALSE, pageLength = -1, 
