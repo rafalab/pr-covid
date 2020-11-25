@@ -512,7 +512,7 @@ compute_summary <- function(tests, hosp_mort, cases){
     arrange(date)
   
   
-  riesgo <- case_when(tmp2$camasICU[2] > .7 | tmp1$fit[2] >= 0.20 ~ 4,
+  riesgo <- case_when(tmp2$camasICU[2] > .7 | tmp1$fit[2] >= 0.20 | tmp3$moving_avg[2] >= 800 ~4,
                       tmp2$camasICU[2] < .5 & tmp1$fit[2] < 0.03 & tmp3$moving_avg[2] < 1 ~ 1,
                       tmp2$camasICU[2] < .5 & tmp1$fit[2] < 0.03 & tmp3$moving_avg[2] < 30 ~ 2,
                       TRUE ~ 3)

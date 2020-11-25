@@ -65,6 +65,7 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                             "Positivos por municipio por día" = "municipios",
                                             "Positivos por edad por día" = "edad",
                                             "Positivos por municipio/edad por día" = "municipios-edad",
+                                            "Positivos por laboratorio" = "labs",
                                             "Rezago" = "rezago")),
                     
                     downloadButton("downloadData", "Download",
@@ -93,7 +94,7 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                           "por tanto, calculamos los casos y pruebas para <b>", format(last_day, "%B %d</b>. "), 
                                            "<b>Noten que todos estos son estimados con variabilidad estadística</b>. Los gráficos nos dan una idea de esta variabilidad.</h5>")),
                                HTML(paste0("<h5> Los niveles de riesgo los dividimos como crítico, alto, medio, y bajo. ",
-                                          "Entramos en <b>nivel crítico</b> cuando la tasa de positividad sobrepasa 20% o el uso de camas ICU sobrepasa 70%, lo cual indica que los hospitales pronto no podrán recibir más pacientes en condiciones críticas. ",
+                                          "Entramos en <b>nivel crítico</b> cuando la tasa de positividad sobrepasa 20%, los casos nuevos por día sobrepasan 800,  o el uso de camas ICU sobrepasa 70%, lo cual indica que los hospitales pronto no podrán recibir más pacientes en condiciones críticas. ",
                                           "Entramos en <b>nivel alto</b> si la tasa de positividad o casos por días sobrepasan los niveles metas, lo cual indica que la situación no mejorará sin intervenciones o cambio de comportamiento. ",
                                           "Si se alcanzan estas metas, entramo en <b>nivel medio</b> lo cual indica poco riesgo actual pero, como todavía hay casos, continuamos monitoreando. ",
                                           "Entramos en <b>nivel bajo</b> cuando prácticamente desaparece la enfermedad. Estás definiciones pueden cambiar mientras sigamos aprendiendo.")),
@@ -316,10 +317,7 @@ server <- function(input, output, session) {
   # -- This allows users to download data
   datasetInput <- reactive({
     switch(input$dataset,
-           "pruebas" = {
-             load(file.path(rda_path,"data.rda"))
-             all_tests
-           },
+           "pruebas" = readRDS(file.path(rda_path, "all_tests.rds")),
            "casos" = cases,
            "hosp-mort" = hosp_mort,
            "positivos" = select(tests, -old_rate),
@@ -350,6 +348,7 @@ server <- function(input, output, session) {
                mutate(patientCity = as.character(patientCity)) %>%
                filter(patientCity %in% c("No reportado", poblacion_municipios$patientCity)) 
            },
+           "labs" = labs,
            "rezago" = {
              load(file.path(rda_path, "rezago.rda"))
              rezago
