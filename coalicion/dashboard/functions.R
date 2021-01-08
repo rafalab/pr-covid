@@ -6,6 +6,7 @@ compute_summary <- function(tests, hosp_mort, cases, type = "Molecular", day = t
   
   ## dates that we will put in the table
   ## they are 4 entries, 1 week apart
+  ## lag_to_complete is a global var
   the_dates <- day - days(lag_to_complete) - weeks(0:3)
   
   ## positivity
@@ -76,8 +77,8 @@ compute_summary <- function(tests, hosp_mort, cases, type = "Molecular", day = t
     filter(date <= day) %>%
     filter(date %in% the_dates | date == max(date))  %>%
     arrange(desc(date))
-  
-  phi <- hosp_mort %>% filter(date >= make_date(2020, 7, 1) & date <= last_day) %>%
+
+   phi <- hosp_mort %>% filter(date >= make_date(2020, 7, 1) & date <= last_day) %>%
     filter(!is.na(HospitCOV19)) %>%
     mutate(wd = factor(wday(date))) %>%
     glm(HospitCOV19 ~ wd, offset = log(hosp_week_avg), data = ., family = quasipoisson) %>%
@@ -143,7 +144,7 @@ compute_summary <- function(tests, hosp_mort, cases, type = "Molecular", day = t
   pos <- pos[-1,]
   change_pos <- change_pos[-1]
   
-  hosp <- paste(prettyNum(hos$HospitCOV19[1], big.mark = ","), arrows[change_hos[1]+1])
+  hosp <- paste(prettyNum(hos$HospitCOV19[1], big.mark = ","), arrows[change_hos[1]+2])
   hos <- hos[-1,]
   change_hos <- change_hos[-1]
   
