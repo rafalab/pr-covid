@@ -31,7 +31,10 @@ ui <- fixedPage(
     
     uiOutput("stamp"),
     
-    HTML("<p>Ver datos completos <a href=\"https://rconnect.dfci.harvard.edu/covidpr/\"> aquí</a></p>"),
+    br(),
+    
+    HTML("<p>Pueden ver datos completos <a href=\"https://rconnect.dfci.harvard.edu/covidpr/\" style=\"color:darkblue;\">aquí</a> y el código 
+<a href=\"https://github.com/rafalab/pr-covid/tree/master/coalicion/dashboard\" style=\"color:darkblue;\">aquí</a>.</p>"),
     
     dateInput(
         "the_day",
@@ -88,8 +91,9 @@ server <- function(input, output, session) {
                           options = list(dom = 't',
                                          ordering = FALSE,
                                          columnDefs = list(
-                                             list(className = 'dt-center', targets = c(1,3,4,5)),
-                                             list(className = 'dt-left', targets = c(0,2))
+                                             list(className = 'dt-left', targets = c(0,2)),
+                                             #list(className = 'dt-center', targets = c(1)),
+                                             list(className = 'dt-right', targets = c(1,3,4))
                                          )
                           )
             )

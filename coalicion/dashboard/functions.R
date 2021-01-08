@@ -1,7 +1,7 @@
 compute_summary <- function(tests, hosp_mort, cases, type = "Molecular", day = today() - days(1)){
   
   ## function to turn proportions into pretty percentages
-  make_pct <- function(x, digits = 0) paste0(format(round(100 * x, digits = digits), nsmall = digits), "%")
+  make_pct <- function(x, digits = 1) paste0(format(round(100 * x, digits = digits), nsmall = digits), "%")
   
   
   ## dates that we will put in the table
@@ -108,15 +108,20 @@ compute_summary <- function(tests, hosp_mort, cases, type = "Molecular", day = t
   })
   
   
-  ## here we decide what recommendation to make
-  riesgo <- case_when(pos$fit[1] >= 0.20 | cas$moving_avg[1] >= 800 | hos$HospitCOV19[1] > 1000 ~ 4,
-                      pos$fit[1] < 0.03 & cas$moving_avg[1] < 30 & hos$HospitCOV19[1] < 300 &
-                        change_pos[1] <= 0 & change_pos[2] <= 0  ~ 1,
-                      change_pos[1] > 0  | 
-                        ((change_pos[1] >= 0 | change_pos[2] >= 0 | change_pos[3] >= 0) & 
-                           pos$fit[1] > 0.05) ~ 3,
-                      TRUE ~ 2)
+  tendencia <- case_when(change_pos[1] == 1 ~ 1,
+                         change_pos[1] == -1 & change_pos[2] == -1 & change_pos[3] == -1 ~ -1,
+                         TRUE ~ 0)
   
+  nivel <- case_when(pos$fit[1] >= 0.20 | cas$moving_avg[1] >= 800 | hos$HospitCOV19[1] > 1000 ~ 4,
+                     pos$fit[1] < 0.03 & cas$moving_avg[1] < 30 & hos$HospitCOV19[1] < 300 ~ 1,
+                     pos$fit[2] >= 0.05 ~ 3,
+                     TRUE ~ 2)
+                     
+  ## here we decide what recommendation to make
+  riesgo <- case_when(nivel == 4 ~ 4,
+                      nivel == 1 & tendencia == -1 ~ 1,
+                      tendencia == 1 | (nivel == 3 & tendencia == 0) ~ 3,
+                      TRUE ~ 2)
   
   ## this is the htlm to make colored arrows:  down is green, sideways is yelloww, up is red (bad)
   arrows <- c( "<span style=\"color:#01D474;font-weight: bold;\">&#8595;</span>",
@@ -138,9 +143,19 @@ compute_summary <- function(tests, hosp_mort, cases, type = "Molecular", day = t
       arrows[change_mor[i]+2])
   }
   
+  make_values <- function(i){
+    c(make_pct(pos$fit[i]), 
+      round(cas$moving_avg[i]), 
+      prettyNum(round(tes$tests_week_avg[i]), 
+                big.mark = ","),
+      prettyNum(round(hos$HospitCOV19[i]), 
+                big.mark = ","),
+      round(mor$mort_week_avg[i]))
+  }
+  
   ## These are the positivity and hospitalizations for today
   ## we remove the first row to have them match the others
-  positividad <- paste(make_pct(pos$fit[1], 1),  arrows[change_pos[1] + 2])
+  positividad <- paste(make_pct(pos$fit[1]),  arrows[change_pos[1] + 2])
   pos <- pos[-1,]
   change_pos <- change_pos[-1]
   
@@ -155,25 +170,19 @@ compute_summary <- function(tests, hosp_mort, cases, type = "Molecular", day = t
                             "Hospitalizaciones",
                             "Muertes por día"),
                 
-                valor =  c(make_pct(pos$fit[1]), 
-                           round(cas$moving_avg[1]), 
-                           prettyNum(round(tes$tests_week_avg[1]), 
-                                     big.mark = ","),
-                           prettyNum(round(hos$HospitCOV19[1]), 
-                                     big.mark = ","),
-                           round(mor$mort_week_avg[1])),
-                meta = c("< 3%", 
+                valor =  paste(make_values(1), make_arrow(1)),
+                meta = c("< 3.0%", 
                          "< 30", 
                          "> 4,500", 
                          "< 300",
                          "< 1"),
-                cambio_1 = make_arrow(1),
-                cambio_2 = make_arrow(2),
-                cambio_3 = make_arrow(3)
+                cambio_1 = paste(make_values(2), make_arrow(2)),
+                cambio_2 = paste(make_values(3), make_arrow(3)),
   )
   
-  colnames(tab) <- c("Métrica", "Nivel",  "Meta", "Cambio en 7 días", "Cambio anterio", "Cambio hace 14 días")
+  colnames(tab) <- c("Métrica", "Nivel",  "Meta", "7 días antes",  "14 días antes")
   
-  return(list(tab = tab, riesgo = riesgo, positividad = positividad, hosp = hosp))
+  return(list(tab = tab, riesgo = riesgo, nivel = nivel, tendencia = tendencia, 
+              positividad = positividad, hosp = hosp))
   
 }

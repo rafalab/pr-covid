@@ -15,6 +15,7 @@ if(Sys.info()["nodename"] == "fermat.dfci.harvard.edu"){
 # -- Set locale
 Sys.setlocale("LC_TIME", "es_ES")
 
+## Code to create data.rda is here: https://github.com/rafalab/pr-covid/tree/master/dashboard
 load(file.path(rda_path,"data.rda"))
 
 
