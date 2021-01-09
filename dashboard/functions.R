@@ -8,7 +8,7 @@ plot_positivity <- function(tests,
   ret <- tests %>%
     filter(testType == type &
            date >= start_date & date <= end_date) %>%
-    ggplot(aes(date, rate)) +
+    ggplot(aes(date, rate, lty = date > last_day)) +
     geom_hline(yintercept = 0.03, lty=2, color = "gray") +
     geom_hline(yintercept = 0.10, lty=2, color = "gray") +
     geom_hline(yintercept = 0.20, lty=2, color = "gray") +
@@ -16,9 +16,9 @@ plot_positivity <- function(tests,
     annotate("text", end_date + days(2), 0.065, label = "Medio") + #, color = "#FFC900") +
     annotate("text", end_date + days(2), 0.15, label = "Alto") + #, color = "#FF9600") +
     annotate("text", end_date + days(2), 0.225, label = "Crítico") + #, color = "#FF0034") +
-    geom_point(aes(date, rate), size=2, alpha = 0.65) +
-    geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.35) +
-    geom_line(aes(y = fit), color="blue2", size = 0.80) +
+    geom_point(aes(date, rate), size=2, alpha = 0.65, show.legend = FALSE) +
+    geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.35, show.legend = FALSE) +
+    geom_line(aes(y = fit), color="blue2", size = 0.80, show.legend = FALSE) +
     ylab("Tasa de positividad") +
     xlab("Fecha") +
     scale_y_continuous(labels = scales::percent) +
@@ -101,6 +101,9 @@ plot_deaths <- function(hosp_mort,
       scale_x_date(date_labels = "%b", breaks = breaks_width("1 month"))  +
       theme_bw()
   } else{
+    
+    hosp_mort$mort_week_avg[hosp_mort$date > last_day] <- NA
+    
     hosp_mort %>%
       filter(date >= start_date & date <= end_date) %>%
       ggplot(aes(date)) +
@@ -232,11 +235,11 @@ plot_test <- function(tests,
 
 plot_positivity_by_lab <- function(labs, 
                             start_date = first_day, 
-                            end_date = today(), 
+                            end_date = today()-1, 
                             type = "Molecular", 
                             yscale = FALSE){
   if(type == "Molecular+Antigens") return(NULL) else{
-    levels <- labs %>% filter(date == end_date & testType =="Molecular") %>%
+    levels <- labs %>% filter(date == pmin(end_date, max(labs$date)) & testType =="Molecular") %>%
       mutate(o = ifelse(Laboratorio == "Otros", -Inf, tests_week_avg)) %>%
       arrange(desc(o)) %>% 
       pull(Laboratorio) 
@@ -266,11 +269,11 @@ plot_positivity_by_lab <- function(labs,
 
 plot_tests_by_lab <- function(labs, 
                                    start_date = first_day, 
-                                   end_date = today(), 
+                                   end_date = today()-1, 
                                    type = "Molecular"){
   
   if(type == "Molecular+Antigens") return(NULL) else{
-    levels <- labs %>% filter(date == end_date & testType =="Molecular") %>%
+    levels <- labs %>% filter(date == pmin(end_date, max(labs$date)) & testType =="Molecular") %>%
       mutate(o = ifelse(Laboratorio == "Otros", -Inf, tests_week_avg)) %>%
       arrange(o) %>% 
       pull(Laboratorio) 
@@ -346,7 +349,7 @@ make_table <- function(tests, cases, hosp_mort,
   cases <- filter(cases, testType == type)
   
   ## last_day is a global variable 
-  cases$moving_avg[cases$date > last_day] <- NA
+  #cases$moving_avg[cases$date > last_day] <- NA
 
   ret <- tests %>%
     filter(testType == type) %>%
@@ -378,6 +381,7 @@ make_table <- function(tests, cases, hosp_mort,
                                     "La tasa de positividad se define como el número de personas con al menos una prueba positiva dividido por el número de personas que se han hecho la prueba.",
                                     "El estimado para cada día está basado en las pruebas hecha durante la semana acabando en ese día.",
                                     "IC = Intervalo de confianza del ", (1-alpha)*100,"%.",
+                                    "El estimado de tasa de positividad para última semana esta ajustado tomando en cuenta que pruebas positivas entran antes que las negativas. ",
                                     "Los casos único son el número de personas con su primera prueba positiva en ese día.",
                                     "El promedio de casos de 7 días está basado en la semana acabando ese día. Los datos de las pruebas toman ", lag_to_complete, " días en estar aproximadamente completos, por tanto, calculamos los casos por día hasta ", format(last_day, "%B %d. "),
                                     "La columna de positivos muestra el número de personas que tuvieron una prueba positiva ese día (no necesariamente son casos únicos).",
@@ -490,72 +494,170 @@ plot_agedist <- function(tests_by_strata,
 
 compute_summary <- function(tests, hosp_mort, cases, type = "Molecular"){
   
-  make_pct <- function(x) paste0(round(100 * x), "%")
-  delta <- function(x){
-    paste0(ifelse(x[2] - x[1]>0, "+", ""),
-           paste0(round(100*(x[2] - x[1]) / x[1]), "%"))
-  }
-
-  #@ positivity
-  tmp1 <- filter(tests, testType == type & 
-                   date %in% c(today() - 1, today() - 1 - weeks(1))) %>%
-    arrange(date)
+  ## function to turn proportions into pretty percentages
+  make_pct <- function(x, digits = 1) paste0(format(round(100 * x, digits = digits), nsmall = digits), "%")
   
-  ## ICU
-  tmp2 <- hosp_mort %>% select(date, CamasICU, CamasICU_disp) %>% 
-    filter(!is.na(CamasICU)) %>%
-    mutate(camasICU = CamasICU / (CamasICU + CamasICU_disp)) %>%
-    filter(date %in% c(max(date), max(date) - weeks(1))) %>%
-    arrange(date)
+  
+  ## dates that we will put in the table
+  ## they are 4 entries, 1 week apart
+  ## lag_to_complete is a global var
+  the_dates <- last_day - weeks(0:3)
+  
+  ## positivity
+  ## we include the latest day because we have a usable value
+  ## we take it out later to keep the table dimensions the same
+  pos <- filter(tests, testType == type & 
+                  date %in% the_dates) %>%
+    arrange(desc(date))
+  
+  ## this computes the difference in positivity between weeks
+  ##determines if they are significant
+  ## and returns -1 (decrease), 0 (no change), 1 (increase)
+  change_pos <- sapply(1:(nrow(pos)-1), function(i){
+    x <- c(pos$lower[i], pos$upper[i])
+    y <- c(pos$lower[i+1], pos$upper[i+1])
+    
+    signif <- !any(c(between(x, y[1], y[2])), 
+                   c(between(y, x[1], x[2])))
+    
+    sign(pos$fit[i] - pos$fit[i+1]) * signif 
+  })
   
   ## cases 
-  tmp3 <- filter(cases, testType == type & 
-                   date %in% c(last_day, last_day - weeks(1)))  %>%
-    arrange(date)
+  ## same a pos but for cases
+  cas <- filter(cases, testType == type & 
+                  date %in% the_dates)  %>%
+    arrange(desc(date))
+  
+  ## get overdisepersion, last day is a global variable defined in init
+  ## we assume cases are Possion with the precalculated trend an offset.
+  phi <- cases %>% filter(date >= make_date(2020, 7, 1) & 
+                            date <= make_date(2020, 11, 2) & ## avoid election thanksgiving and xmas
+                            date <= last_day &
+                            testType == type) %>%
+    mutate(wd = factor(wday(date)), week = factor(round_date(date, "week"))) %>%
+    glm(cases ~ wd + week, data = ., family = quasipoisson) %>%
+    summary()  %>%
+    .$dispersion
+  
+  change_cas <- sapply(1:(nrow(cas)-1), function(i){
+    d <- cas$moving_avg[i] - cas$moving_avg[i+1]
+    se <- sqrt((phi*cas$moving_avg[i] + phi*cas$moving_avg[i+1])/7)
+    signif <- abs(d/se) > qnorm(0.975)
+    sign(d) * signif 
+  })
   
   ## tests
-  tmp4 <- filter(tests, testType == type & 
-                   date %in% c(last_day, last_day - weeks(1))) %>%
-    arrange(date)
+  ##as pos but for nnumber of tests
+  tes <- filter(tests, testType == type & 
+                  date %in% the_dates) %>%
+    arrange(desc(date))
+  
+  phi <- tests %>% filter(date >= make_date(2020, 7, 1) & 
+                            date <= make_date(2020, 11, 2) & ## avoid elections, thanksgiving and xmas
+                            date <= last_day &
+                            testType == type) %>%
+    mutate(wd = factor(wday(date)), week = factor(round_date(date, "week"))) %>%
+    glm(all_tests ~ wd + week, data = ., family = quasipoisson) %>%
+    summary()  %>%
+    .$dispersion
+  
+  change_tes <- sapply(1:(nrow(tes)-1), function(i){
+    d <- tes$tests_week_avg[i] - tes$tests_week_avg[i+1]
+    se <- sqrt((phi*tes$tests_week_avg[i] + phi*tes$tests_week_avg[i+1])/7)
+    signif <- abs(d/se) > qnorm(0.975)
+    sign(d) * signif 
+  })
   
   ## Hosp
-  tmp5 <- hosp_mort %>% select(date, HospitCOV19, hosp_week_avg) %>% 
+  ## as pos but for hospitalizations
+  hos <- hosp_mort %>% select(date, HospitCOV19, hosp_week_avg) %>% 
     filter(!is.na(HospitCOV19)) %>%
-    filter(date %in% c(max(date), max(date) - weeks(1))) %>%
-    arrange(date)
+    filter(date %in% the_dates)  %>%
+    arrange(desc(date))
+  
+  phi <- hosp_mort %>% filter(date >= make_date(2020, 7, 1) & date <= last_day) %>%
+    filter(!is.na(HospitCOV19)) %>%
+    mutate(wd = factor(wday(date))) %>%
+    glm(HospitCOV19 ~ wd, offset = log(hosp_week_avg), data = ., family = quasipoisson) %>%
+    summary()  %>%
+    .$dispersion
+  
+  change_hos <- sapply(1:(nrow(hos)-1), function(i){
+    d <- hos$hosp_week_avg[i] - hos$hosp_week_avg[i+1]
+    se <- sqrt((phi*hos$hosp_week_avg[i] + phi*hos$hosp_week_avg[i+1])/7)
+    signif <- abs(d/se) > qnorm(0.975)
+    sign(d) * signif 
+  })
+  
+  ## Muertes
+  ## as pos but for deaths
+  mor <- hosp_mort %>% select(date, mort_week_avg) %>% 
+    filter(!is.na(mort_week_avg)) %>%
+    filter(date %in% the_dates) %>%
+    arrange(desc(date))
+  
+  ## no overdispersion for deaths. Straight poisson:
+  change_mor <- sapply(1:(nrow(mor)-1), function(i){
+    d <- mor$mort_week_avg[i] - mor$mort_week_avg[i+1]
+    se <- sqrt((mor$mort_week_avg[i] + mor$mort_week_avg[i+1])/7)
+    signif <- abs(d/se) > qnorm(0.975)
+    sign(d) * signif 
+  })
   
   
-  riesgo <- case_when(tmp2$camasICU[2] > .7 | tmp1$fit[2] >= 0.20 | tmp3$moving_avg[2] >= 800 ~4,
-                      tmp2$camasICU[2] < .5 & tmp1$fit[2] < 0.03 & tmp3$moving_avg[2] < 1 ~ 1,
-                      tmp2$camasICU[2] < .5 & tmp1$fit[2] < 0.03 & tmp3$moving_avg[2] < 30 ~ 2,
-                      TRUE ~ 3)
   
+  ## this is the htlm to make colored arrows:  down is green, sideways is yelloww, up is red (bad)
+  arrows <- c( "<span style=\"color:#01D474;font-weight: bold;\">&#8595;</span>",
+               "<span style=\"color:#FFC900;font-weight: bold;\">&#8596;</span>", 
+               "<span style=\"color:#FF0034;font-weight: bold;\">&#8593;</span>")
+  
+  ## for test since up is good
+  arrows_2 <- c("<span style=\"color:#FF0034;font-weight: bold;\">&#8595;</span>",
+                "<span style=\"color:#FFC900;font-weight: bold;\">&#8596;</span>",
+                "<span style=\"color:#01D474;font-weight: bold;\">&#8593;</span>")
+  
+  
+  ## make arrow based on change values. +2 because turne -1,0,1 to 1,2,3
+  make_arrow <- function(i){
+    c(arrows[change_pos[i]+2], 
+      arrows[change_cas[i]+2],
+      arrows_2[change_tes[i]+2],
+      arrows[change_hos[i]+2],
+      arrows[change_mor[i]+2])
+  }
+  
+  make_values <- function(i){
+    c(make_pct(pos$fit[i]), 
+      round(cas$moving_avg[i]), 
+      prettyNum(round(tes$tests_week_avg[i]), 
+                big.mark = ","),
+      prettyNum(round(hos$HospitCOV19[i]), 
+                big.mark = ","),
+      round(mor$mort_week_avg[i]))
+  }
+  
+  
+  ## make the table
   tab <- tibble(metrica = c("Tasa de positividad", 
-                            "Uso de camas ICU",  
                             "Casos nuevos por día", 
                             "Pruebas por día", 
-                            "Hospitalizaciones"),
-                meta = c("Menos de 3%", 
-                         "Menos de 50%", 
-                         "Menos de 30", 
-                         "Más de 4,500", 
-                         ""),
-                valor =  c(make_pct(tmp1$fit[2]), 
-                           make_pct(tmp2$camasICU[2]), 
-                           round(tmp3$moving_avg[2]), 
-                           prettyNum(round(tmp4$tests_week_avg[2]), 
-                                     big.mark = ","),
-                           prettyNum(round(tmp5$HospitCOV19[2]), 
-                                     big.mark = ",")),
-                cambio = c(delta(tmp1$fit), 
-                           delta(tmp2$CamasICU), 
-                           delta(tmp3$moving_avg), 
-                           delta(tmp4$tests_week_avg),
-                           delta(tmp5$hosp_week_avg)))
-
-  colnames(tab) <- c("Métrica", "Meta", "Nivel actual", "Tendencia")
+                            "Hospitalizaciones",
+                            "Muertes por día"),
+                
+                valor =  paste(make_values(1), make_arrow(1)),
+                meta = c("< 3.0%", 
+                         "< 30", 
+                         "> 4,500", 
+                         "< 300",
+                         "< 1"),
+                cambio_1 = paste(make_values(2), make_arrow(2)),
+                cambio_2 = paste(make_values(3), make_arrow(3)),
+  )
   
-  return(list(tab = tab, riesgo = riesgo))
+  colnames(tab) <- c("Métrica", "Nivel",  "Meta", "7 días antes",  "14 días antes")
+  
+  return(list(tab = tab))
   
 }
 

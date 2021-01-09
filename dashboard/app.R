@@ -84,24 +84,23 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                     tabsetPanel(
                       
                       tabPanel("Resumen",
-                               htmlOutput("riesgo"),
+                               #htmlOutput("riesgo"),
                                htmlOutput("table_title"),
                                DT::dataTableOutput("resumen_table"),
-                               HTML(paste0("<h5>La <b>tasa de positividad</b> se define como el número de personas con prueba positiva divido entre el total de personas que se han hecho pruebas. ",
-                                          "<b>Casos</b> y <b>pruebas</b> están basados en un <b>promedio de siete días</b> para contrarrestar el efecto que tiene el día de la semana en los totales. ",
-                                          "El <b>uso de camas ICU</b> es el porcentaje de camas disponibles, no usadas por otras causas, usadas por pacientes de COVID-19. Hay alrededor de 700 camas ICU en Puerto Rico. Típicamente, sin COVID, hay alrededor de 275 displonibles. ",
-                                          "La <b>tendencia</b> es el cambio porcentual cuando comparamos estos estimados a los de la semana anterior. Si dividimos la tendencia de los casos por 100 y añadimos uno, nos da un estimado del <b>Número de Transmisión Rt</b>. ",
-                                          "Noten que los datos de las pruebas toman ", lag_to_complete, " días en estar aproximadamente completos, ",
-                                          "por tanto, calculamos los casos y pruebas para <b>", format(last_day, "%B %d</b>. "), 
-                                           "<b>Noten que todos estos son estimados con variabilidad estadística</b>. Los gráficos nos dan una idea de esta variabilidad.</h5>")),
-                               HTML(paste0("<h5> Los niveles de riesgo los dividimos como crítico, alto, medio, y bajo. ",
-                                          "Entramos en <b>nivel crítico</b> cuando la tasa de positividad sobrepasa 20%, los casos nuevos por día sobrepasan 800,  o el uso de camas ICU sobrepasa 70%, lo cual indica que los hospitales pronto no podrán recibir más pacientes en condiciones críticas. ",
-                                          "Entramos en <b>nivel alto</b> si la tasa de positividad o casos por días sobrepasan los niveles metas, lo cual indica que la situación no mejorará sin intervenciones o cambio de comportamiento. ",
-                                          "Si se alcanzan estas metas, entramo en <b>nivel medio</b> lo cual indica poco riesgo actual pero, como todavía hay casos, continuamos monitoreando. ",
-                                          "Entramos en <b>nivel bajo</b> cuando prácticamente desaparece la enfermedad. Estás definiciones pueden cambiar mientras sigamos aprendiendo.")),
-                               h3("Resumen gráfico"),
+                                  # HTML(paste0("<h5> Los datos se usan para hacer cuatro posibles recomendaciones: apertura, flexibilización, más restricciones o \"lockdown\". ",
+                               #            "Se recomienda <b>\"lockdown\"</b> cuando la tasa de positividad sobrepasa 20%, los casos nuevos por día sobrepasan 800,  el uso de camas ICU sobrepasa 70%, o las hospitalizaciones pasan las 1,000, lo cual indica que los hospitales pronto no podrán recibir más pacientes en condiciones críticas. ",
+                               #            "Se recomiendan  <b>más restricciones</b> si la tasa de positividad o casos por días sobrepasan los niveles metas, lo cual indica que la situación no mejorará sin intervenciones o cambio de comportamiento. ",
+                               #            "Si se alcanzan estas metas, recomendamos <b>flexibilizaciones</b> lo cual indica poco riesgo actual pero, como todavía hay casos, continuamos monitoreando. ",
+                               #            "Recomendamos <b>apertura</b> cuando prácticamente desaparece la enfermedad. Estos umbrales pueden cambiar mientras sigamos aprendiendo.")),
+                                HTML(paste0("<h5>La <b>tasa de positividad</b> se define como el número de personas con prueba positiva divido entre el total de personas que se han hecho pruebas.",
+                                           "<b>Casos</b> y <b>pruebas</b> están basados en un <b>promedio de siete días</b> para contrarrestar el efecto que tiene el día de la semana en los totales. ",
+                                           "La flechas de colors no dicen si hubo cambio estadísticamente singificative cuando comparamos a la semana anterio. ",
+                                           "Noten que los datos de las pruebas toman ", lag_to_complete, " días en estar aproximadamente completos, ",
+                                           "por tanto, calculamos los casos y pruebas para <b>", format(last_day, "%B %d</b>. "))),
+                               h4("Resumen gráfico"),
                                plotOutput("resumen_plots")),
-                      
+                    
+                
                       tabPanel("Datos diarios",
                                DT::dataTableOutput("tabla")),
                       
@@ -150,6 +149,13 @@ server <- function(input, output, session) {
   
   load(file.path(rda_path,"data.rda"))
   
+  ## adjust last week of positivity rate
+  
+  tests <- tests %>%
+    mutate(fit = ifelse(date <= last_day, fit, estimate),
+           lower = ifelse(date <= last_day, lower, estimate_lower),
+           upper = ifelse(date <= last_day, upper, estimate_upper))
+           
   # -- This sets range to last two weeks
   observeEvent(input$weeks, {
     updateDateRangeInput(session, "range",
@@ -172,31 +178,34 @@ server <- function(input, output, session) {
 
   # Nivel de riesgo ---------------------------------------------------------
 
-  output$riesgo <-  renderText({
-    riesgo <- compute_summary(tests, hosp_mort, cases, type = input$testType)$riesgo
-    paste0("<h3> Nivel de riesgo: ", c("Bajo","Medio", "Alto", "Crítico")[riesgo],
-           "&nbsp<div style = \"height: 25px; width: 25px; background-color: ",
-          c("#01D474", "#FFC900", "#FF9600", "#FF0034")[riesgo],
-          "; border-radius: 50%; display: inline-block; position:absolute\"></div></h3>") 
-          
-  })
+#   output$riesgo <-  renderText({
+#     riesgo <- compute_summary(tests, hosp_mort, cases, type = input$testType)$riesgo
+#     paste0("<h3> Recomendación: ", c("Apertura","Flexibilización", "Más restricciones", "Lockdown")[riesgo],
+#            "&nbsp<div style = \"height: 25px; width: 25px; background-color: ",
+#            c("#01D474", "#FFC900", "#FF9600", "#FF0034")[riesgo],
+#            "; border-radius: 50%; display: inline-block; position:absolute\"></div>", 
+# "</h3>") 
+#   })
 
   # Summary table title -----------------------------------------------------
 
   output$table_title <- renderText({
-    paste0("<h4>Estimados actuales basados en pruebas ",
-           case_when(input$testType == "Molecular" ~ "moleculares", 
-                     input$testType == "Serological" ~ "serológicas",
-                     input$testType == "Antigens" ~ "de antígenos",
-                     input$testType == "Molecular+Antigens" ~ "moleculares y de antígenos"),
-           "</h4>")
+      paste0("<h4>Resumen basado en datos de pruebas ",
+             case_when(input$testType == "Molecular" ~ "moleculares", 
+                       input$testType == "Serological" ~ "serológicas",
+                       input$testType == "Antigens" ~ "de antígenos",
+                       input$testType == "Molecular+Antigens" ~ "moleculares y de antígenos"),
+                       " hasta ", 
+             format(last_day, "%B %d:"), 
+             "</h4>")
   })
-        
+    
   # -- This shows a summary
   output$resumen_table <- DT::renderDataTable({
     compute_summary(tests, hosp_mort, cases, type = input$testType)$tab %>%
       DT::datatable(class = 'white-space: nowrap',
                     rownames = FALSE,
+                    escape = FALSE, 
                     options = list(dom = 't', ordering = FALSE, pageLength = -1, 
                                    columnDefs = list(
                                      list(className = 'dt-center', targets = 0:3)))) %>%
@@ -208,9 +217,9 @@ server <- function(input, output, session) {
     p1 <- plot_positivity(tests, 
                           start_date = input$range[1],  end_date = input$range[2], 
                           type = input$testType, yscale = input$yscale)
-    p2 <- plot_icu(hosp_mort, 
+    p2 <- plot_deaths(hosp_mort, 
                     start_date = input$range[1], end_date = input$range[2],
-                    yscale = input$yscale)
+                    cumm = input$acumulativo)
     p3 <-  plot_cases(cases, 
                       start_date = input$range[1], end_date = input$range[2], 
                       type =  input$testType, cumm = input$acumulativo)

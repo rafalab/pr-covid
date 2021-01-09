@@ -171,34 +171,60 @@ tests <- all_tests_with_id %>%
   mutate(rate = positives / tests,
          old_rate = all_positives / all_tests)
 
-
 positivity <- function(dat){
   day_seq <- seq(first_day + weeks(1), max(dat$date), by = "day")
   map_df(day_seq, function(the_day){
-  dat %>% filter(date > the_day - weeks(1) & date <= the_day) %>%
-    summarize(date = the_day, 
-              positives = n_distinct(patientId[result == "positive"]),
-              tests = n_distinct(patientId),
-              fit = positives / tests,
-              lower = qbinom(0.025, tests, fit) / tests,
-              upper = qbinom(0.975, tests, fit) / tests) %>%
-      select(date, fit, lower, upper)
+    dat %>% filter(date > the_day - weeks(1) & date <= the_day) %>%
+      mutate(obs = entry_date <= the_day) %>%
+      summarize(date = the_day, 
+                positives = n_distinct(patientId[result == "positive"]),
+                tests = n_distinct(patientId),
+                fit = positives / tests,
+                lower = qbinom(0.025, tests, fit) / tests,
+                upper = qbinom(0.975, tests, fit) / tests,
+                obs_positives = n_distinct(patientId[result == "positive" & obs]),
+                obs_tests = n_distinct(patientId[obs]),
+                obs_fit = obs_positives / obs_tests,
+                obs_lower = qbinom(0.025, obs_tests, obs_fit) / obs_tests,
+                obs_upper = qbinom(0.975, obs_tests, obs_fit) / obs_tests) %>%
+      rename(y = positives, n = tests) %>%
+      select(date, fit, lower, upper, obs_fit, obs_lower, obs_upper, y, n) ##k and n are for the adjustment
   })
 }
 
 fits <- all_tests_with_id %>% 
   bind_rows(mol_anti) %>%
+  mutate(entry_date = as_date(orderCreatedAt)) %>%
   filter(date >= first_day & testType %in% c("Molecular", "Serological", "Antigens", "Molecular+Antigens") & 
            result %in% c("positive", "negative")) %>%
   nest_by(testType) %>%
   summarize(positivity(data), .groups = "drop")
   
-tests <- left_join(tests, fits, by = c("testType", "date"))
+tests <- left_join(tests, fits, by = c("testType", "date")) %>%
+  mutate(wd = wday(date))
 
+## adjust 
+adjust_fit <- tests %>%
+  filter(date >= make_date(2020, 7, 1) & date < today() - weeks(4) & n >= 250) %>%
+  mutate(x = obs_fit*n) %>%
+  group_by(testType, wd) %>%
+  do(broom::tidy(glm(y ~ x - 1, data = ., family = quasipoisson(link="identity")))) %>%
+  select(testType, wd, estimate) %>%
+  rename(adj = estimate)
+
+tests <- tests %>% 
+  left_join(adjust_fit, by = c("testType","wd")) %>%
+  mutate(estimate_upper = obs_upper * adj,
+         estimate_lower = obs_lower * adj,
+         estimate = obs_fit * adj) %>%
+  select(testType, date, positives, tests, all_positives, all_tests, rate, old_rate, 
+         fit, lower, upper, 
+         estimate, estimate_lower, estimate_upper)
 
 if(FALSE){
   library(scales)
   source("functions.R")
+  lag_to_complete <- 27
   plot_positivity(tests, first_day, today(), type = "Molecular") +
     geom_smooth(method = "loess", formula = "y~x", span = 0.2, method.args = list(degree = 1, weight = tests$tests), color = "red", lty =2, fill = "pink") 
 }
@@ -211,6 +237,9 @@ tests_fits <- tests %>%
 tests <- left_join(tests, tests_fits, by = c("testType", "date"))
 
 if(FALSE){
+  lag_to_complete <- 7
+  last_day <- today() - days(lag_to_complete)
+  
   plot_test(tests, first_day, today())
   plot_test(tests, first_day, today(), type  = "Serological")
   plot_test(tests, first_day, today(), type  = "Antigens")
@@ -330,7 +359,7 @@ labs <- all_labs_data %>%
 ##check the most common labs
 if(FALSE){
   freqs <- bind_cols(labs, all_labs_data$molecular) %>% 
-    filter(date > make_date(2020, 10, 1)) %>%
+    filter(date > make_date(2021, 1, 1)) %>%
     group_by(Laboratorio) %>%
     summarize(freq = sum(total), .groups = "drop") %>% 
     ungroup()
@@ -340,17 +369,21 @@ if(FALSE){
 labs <- labs %>%
   mutate(Laboratorio = case_when(str_detect(Laboratorio, "toledo") ~ "Toledo",
                                  str_detect(Laboratorio, "bcel") ~ "BCEL",
-                                 str_detect(Laboratorio, "nichols") ~ "Quest USA",
+                                 str_detect(Laboratorio, "landr") ~ "Landrón",
+                                 str_detect(Laboratorio, "cmt") ~ "CMT",
+                                 str_detect(Laboratorio, "villa ana") ~ "Villa Ana",
+                                 str_detect(Laboratorio, "labcorp") ~ "LabCorp",
                                  str_detect(Laboratorio, "quest") ~ "Quest",
                                  str_detect(Laboratorio, "borinquen") ~ "Borinquen",
-                                 str_detect(Laboratorio, "immuno reference lab") ~ "Immuno Reference",
                                  str_detect(Laboratorio, "coreplus") ~ "CorePlus",
                                  str_detect(Laboratorio, "martin\\s") ~ "Marin",
                                  str_detect(Laboratorio, "noy") ~ "Noy",
                                  str_detect(Laboratorio, "hato rey pathology|hrp") ~ "HRP",
                                  str_detect(Laboratorio, "inno") ~ "Inno Diagnostics",
+                                 str_detect(Laboratorio, "immuno reference lab") ~ "Immuno Reference",
+                                 str_detect(Laboratorio, "forense") ~ "Ciencias Forense",
+                                 #str_detect(Laboratorio, "nichols") ~ "Quest USA",
                                  #str_detect(Laboratorio, "southern pathology services") ~ "Southern Pathology",
-                                 #str_detect(Laboratorio, "cmt") ~ "CMT",
                                  TRUE ~ "Otros"))
 
 molecular <- all_labs_data$molecular %>% 
