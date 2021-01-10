@@ -205,8 +205,8 @@ tests <- left_join(tests, fits, by = c("testType", "date")) %>%
 
 ## adjust 
 adjust_fit <- tests %>%
-  filter(date >= make_date(2020, 7, 1) & date < today() - weeks(4) & n >= 250) %>%
-  mutate(x = obs_fit*n) %>%
+  filter(date >= today() - months(3) & date < today() - weeks(2) & n >= 250) %>%
+  mutate(x = obs_fit * n) %>%
   group_by(testType, wd) %>%
   do(broom::tidy(glm(y ~ x - 1, data = ., family = quasipoisson(link="identity")))) %>%
   select(testType, wd, estimate) %>%

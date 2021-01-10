@@ -113,7 +113,7 @@ plot_deaths <- function(hosp_mort,
       xlab("Fecha") +
       ggtitle("Muertes por COVID-19") +
       scale_x_date(date_labels = "%b", breaks = breaks_width("1 month"))  +
-      scale_y_continuous(breaks = seq(0, 15, 1)) +
+      scale_y_continuous(breaks = seq(0, max(hosp_mort$IncMueSalud, na.rm=TRUE), 1)) +
       theme_bw()
   }
 }
@@ -381,7 +381,7 @@ make_table <- function(tests, cases, hosp_mort,
                                     "La tasa de positividad se define como el número de personas con al menos una prueba positiva dividido por el número de personas que se han hecho la prueba.",
                                     "El estimado para cada día está basado en las pruebas hecha durante la semana acabando en ese día.",
                                     "IC = Intervalo de confianza del ", (1-alpha)*100,"%.",
-                                    "El estimado de tasa de positividad para última semana esta ajustado tomando en cuenta que pruebas positivas entran antes que las negativas. ",
+                                 #   "El estimado de tasa de positividad para última semana esta ajustado tomando en cuenta que pruebas positivas entran antes que las negativas. ",
                                     "Los casos único son el número de personas con su primera prueba positiva en ese día.",
                                     "El promedio de casos de 7 días está basado en la semana acabando ese día. Los datos de las pruebas toman ", lag_to_complete, " días en estar aproximadamente completos, por tanto, calculamos los casos por día hasta ", format(last_day, "%B %d. "),
                                     "La columna de positivos muestra el número de personas que tuvieron una prueba positiva ese día (no necesariamente son casos únicos).",
@@ -617,14 +617,17 @@ compute_summary <- function(tests, hosp_mort, cases, type = "Molecular"){
                 "<span style=\"color:#FFC900;font-weight: bold;\">&#8596;</span>",
                 "<span style=\"color:#01D474;font-weight: bold;\">&#8593;</span>")
   
+  no_arrow <- "<span style=\"color:#ffffff00;font-weight: bold;\">&#8596;</span>"
   
   ## make arrow based on change values. +2 because turne -1,0,1 to 1,2,3
   make_arrow <- function(i){
-    c(arrows[change_pos[i]+2], 
-      arrows[change_cas[i]+2],
-      arrows_2[change_tes[i]+2],
-      arrows[change_hos[i]+2],
-      arrows[change_mor[i]+2])
+    replace_na(
+      c(arrows[change_pos[i]+2], 
+        arrows[change_cas[i]+2],
+        arrows_2[change_tes[i]+2],
+        arrows[change_hos[i]+2],
+        arrows[change_mor[i]+2]),
+      no_arrow)
   }
   
   make_values <- function(i){

@@ -97,7 +97,8 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                            "La flechas de colors no dicen si hubo cambio estadísticamente singificative cuando comparamos a la semana anterio. ",
                                            "Noten que los datos de las pruebas toman ", lag_to_complete, " días en estar aproximadamente completos, ",
                                            "por tanto, calculamos los casos y pruebas para <b>", format(last_day, "%B %d</b>. "))),
-                               h4("Resumen gráfico"),
+                               hr(),
+                               h4("Resumen gráfico:"),
                                plotOutput("resumen_plots")),
                     
                 
@@ -150,12 +151,12 @@ server <- function(input, output, session) {
   load(file.path(rda_path,"data.rda"))
   
   ## adjust last week of positivity rate
-  
-  tests <- tests %>%
-    mutate(fit = ifelse(date <= last_day, fit, estimate),
-           lower = ifelse(date <= last_day, lower, estimate_lower),
-           upper = ifelse(date <= last_day, upper, estimate_upper))
-           
+  ## Right now it is not necessary to adjust as + are coming at the same time as - 
+  # tests <- tests %>%
+  #   mutate(fit = ifelse(date <= last_day, fit, estimate),
+  #          lower = ifelse(date <= last_day, lower, estimate_lower),
+  #          upper = ifelse(date <= last_day, upper, estimate_upper))
+  #          
   # -- This sets range to last two weeks
   observeEvent(input$weeks, {
     updateDateRangeInput(session, "range",
