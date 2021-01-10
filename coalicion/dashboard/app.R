@@ -29,12 +29,13 @@ ui <- fixedPage(
     
     br(),
     
+    HTML(paste("<p> Este informe es generado automaticamente usando los datos más recientes.",
+               "Pueden ver el código <a href=\"https://github.com/rafalab/pr-covid/tree/master/coalicion/dashboard\" style=\"color:darkblue;\">aquí</a> y ",
+               "datos completos <a href=\"https://rconnect.dfci.harvard.edu/covidpr/\" style=\"color:darkblue;\">aquí</a>.</p>")),
+    
     uiOutput("stamp"),
     
     br(),
-    
-    HTML("<p>Pueden ver datos completos <a href=\"https://rconnect.dfci.harvard.edu/covidpr/\" style=\"color:darkblue;\">aquí</a> y el código 
-<a href=\"https://github.com/rafalab/pr-covid/tree/master/coalicion/dashboard\" style=\"color:darkblue;\">aquí</a>.</p>"),
     
     dateInput(
         "the_day",
@@ -56,11 +57,12 @@ server <- function(input, output, session) {
     load(file.path(rda_path,"data.rda"))
     
     ## adjust last week of positivity rate
-    tests <- tests %>%
-        mutate(fit = ifelse(date <= last_day, fit, estimate),
-               lower = ifelse(date <= last_day, lower, estimate_lower),
-               upper = ifelse(date <= last_day, upper, estimate_upper))
-    
+    ## currently not needed. need to monitor.
+    # tests <- tests %>%
+    #     mutate(fit = ifelse(date <= last_day, fit, estimate),
+    #            lower = ifelse(date <= last_day, lower, estimate_lower),
+    #            upper = ifelse(date <= last_day, upper, estimate_upper))
+    # 
     
     output$fecha <- renderText({
         paste0("<h5> Fecha: ", format(input$the_day, "%Y, %B, %e"), "</h5>")
@@ -69,9 +71,15 @@ server <- function(input, output, session) {
     res <- reactive(compute_summary(tests, hosp_mort, cases, day = input$the_day))
     
     output$rec <- renderText({
-        riesgo <- res()$riesgo
         paste0("<h5> Recomendación: <b>", 
-               c("Apertura", "Mantener restricciones", "Más restricciones", "Lockdown")[riesgo], 
+               c("Apertura", "Mantener restricciones", "Más restricciones", "Lockdown")[res()$riesgo], 
+               "</b></h5>",
+               "<h5> Razón: Nivel de casos <b>", c("bajo", "medio", "alto", "crítico")[res()$nivel],"</b>",
+               ifelse(res()$riesgo == 4, 
+                      ".",
+                      ifelse(res()$nivel == 1,
+                             c(" y están bajando.", " pero no están bajando.", " pero están subiendo.")[res()$tendencia+2],
+                             c(" y están bajando.", " y no están bajando.", " y están subiendo.")[res()$tendencia+2])),
                "</b></h5>")
     })
     

@@ -22,7 +22,10 @@ compute_summary <- function(tests, hosp_mort, cases, type = "Molecular", day = t
   change_pos <- sapply(1:(nrow(pos)-1), function(i){
     x <- c(pos$lower[i], pos$upper[i])
     y <- c(pos$lower[i+1], pos$upper[i+1])
-    signif <- !any(c(between(x, y[1], y[2])),c(between(y, x[1], x[2])))
+    
+    signif <- !any(c(between(x, y[1], y[2])), 
+                   c(between(y, x[1], x[2])))
+    
     sign(pos$fit[i] - pos$fit[i+1]) * signif 
   })
   
@@ -34,12 +37,12 @@ compute_summary <- function(tests, hosp_mort, cases, type = "Molecular", day = t
   
   ## get overdisepersion, last day is a global variable defined in init
   ## we assume cases are Possion with the precalculated trend an offset.
-  ## it will be a bit inflated due to the fact that moving average is lagged not centered
   phi <- cases %>% filter(date >= make_date(2020, 7, 1) & 
+                            date <= make_date(2020, 11, 2) & ## avoid election thanksgiving and xmas
                             date <= last_day &
                             testType == type) %>%
-    mutate(wd = factor(wday(date))) %>%
-    glm(cases ~ wd, offset = log(moving_avg), data = ., family = quasipoisson) %>%
+    mutate(wd = factor(wday(date)), week = factor(round_date(date, "week"))) %>%
+    glm(cases ~ wd + week, data = ., family = quasipoisson) %>%
     summary()  %>%
     .$dispersion
   
@@ -56,10 +59,12 @@ compute_summary <- function(tests, hosp_mort, cases, type = "Molecular", day = t
                    date %in% the_dates) %>%
     arrange(desc(date))
   
-  phi <- tests %>% filter(date >= make_date(2020, 7, 1) & date <= last_day &
+  phi <- tests %>% filter(date >= make_date(2020, 7, 1) & 
+                            date <= make_date(2020, 11, 2) & ## avoid elections, thanksgiving and xmas
+                            date <= last_day &
                             testType == type) %>%
-    mutate(wd = factor(wday(date))) %>%
-    glm(all_tests ~ wd, offset = log(tests_week_avg), data = ., family = quasipoisson) %>%
+    mutate(wd = factor(wday(date)), week = factor(round_date(date, "week"))) %>%
+    glm(all_tests ~ wd + week, data = ., family = quasipoisson) %>%
     summary()  %>%
     .$dispersion
   
@@ -133,14 +138,17 @@ compute_summary <- function(tests, hosp_mort, cases, type = "Molecular", day = t
               "<span style=\"color:#FFC900;font-weight: bold;\">&#8596;</span>",
               "<span style=\"color:#01D474;font-weight: bold;\">&#8593;</span>")
   
+  no_arrow <- "<span style=\"color:#ffffff00;font-weight: bold;\">&#8596;</span>"
   
   ## make arrow based on change values. +2 because turne -1,0,1 to 1,2,3
   make_arrow <- function(i){
-    c(arrows[change_pos[i]+2], 
-      arrows[change_cas[i]+2],
-      arrows_2[change_tes[i]+2],
-      arrows[change_hos[i]+2],
-      arrows[change_mor[i]+2])
+    replace_na(
+      c(arrows[change_pos[i]+2], 
+        arrows[change_cas[i]+2],
+        arrows_2[change_tes[i]+2],
+        arrows[change_hos[i]+2],
+        arrows[change_mor[i]+2]),
+     no_arrow)
   }
   
   make_values <- function(i){
