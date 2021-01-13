@@ -3,6 +3,9 @@ library(shiny)
 
 ui <- fixedPage(
     theme = "bootstrap.css",
+    
+    titlePanel("", windowTitle = "Informe Diario Sobre COVID19 de la Coalición Científica de Puerto Rico"),
+    
     fixedRow(
         column(2, img(src = "coalicion.png", width = 75)),
         column(10, h4("Coalición Científica de Puerto Rico"), 
@@ -13,7 +16,7 @@ ui <- fixedPage(
     
     htmlOutput("fecha"),
     
-    htmlOutput("rec"),
+    #htmlOutput("rec"),
     
     br(),
     
