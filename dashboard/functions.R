@@ -29,11 +29,16 @@ plot_positivity <- function(tests,
                                  type == "Antigens" ~ "de antígenos",
                                  type == "Molecular+Antigens" ~ "moleculares y de antígenos"))) +
     theme_bw() +
-    theme(plot.caption=element_text(hjust = 0))
+    theme(plot.caption=element_text(hjust = 0)) 
   
   if(yscale){
     ret <- ret + coord_cartesian(ylim = c(0, 0.25))
-  } 
+  } else{
+    the_ylim <- tests %>%
+      filter(testType == type & date >= start_date & date <= end_date) %>%
+      summarize(lower = min(lower, na.rm = TRUE), upper = max(upper, na.rm = TRUE))
+    ret <- ret + ylim(c(the_ylim$lower, the_ylim$upper))
+  }
   return(ret)
 }
 
@@ -87,9 +92,10 @@ plot_icu <- function(hosp_mort,
 plot_deaths <- function(hosp_mort,  
                         start_date = first_day, 
                         end_date = today(), 
-                        cumm = FALSE){
+                        cumm = FALSE,
+                        yscale = FALSE){
   if(cumm){
-    hosp_mort %>%
+    ret <- hosp_mort %>%
       replace_na(list(IncMueSalud = 0)) %>%
       mutate(IncMueSalud = cumsum(IncMueSalud)) %>%
       filter(date >= start_date & date <= end_date) %>%
@@ -97,59 +103,78 @@ plot_deaths <- function(hosp_mort,
       geom_bar(aes(y = IncMueSalud), stat = "identity", width = 0.75, alpha = 0.65) +
       ylab("Muertes acumuladas") +
       xlab("Fecha") +
-      ggtitle("Muertes acumuladas por COVID-19") +
+      ggtitle("Muertes acumuladas") +
       scale_x_date(date_labels = "%b", breaks = breaks_width("1 month"))  +
       theme_bw()
   } else{
     
     hosp_mort$mort_week_avg[hosp_mort$date > last_day] <- NA
     
-    hosp_mort %>%
+    ret <- hosp_mort %>%
       filter(date >= start_date & date <= end_date) %>%
       ggplot(aes(date)) +
-      geom_bar(aes(y = IncMueSalud), stat = "identity", width = 0.75, alpha = 0.65) +
-      geom_line(aes(y = mort_week_avg), color="black", size = 1.25) +
       ylab("Muertes") +
       xlab("Fecha") +
-      ggtitle("Muertes por COVID-19") +
+      ggtitle("Muertes") +
       scale_x_date(date_labels = "%b", breaks = breaks_width("1 month"))  +
       scale_y_continuous(breaks = seq(0, max(hosp_mort$IncMueSalud, na.rm=TRUE), 1)) +
       theme_bw()
+    if(yscale){
+      ret <- ret +  
+        geom_bar(aes(y = IncMueSalud), stat = "identity", width = 0.75, alpha = 0.65) +
+        geom_line(aes(y = mort_week_avg), color="black", size = 1.25)
+    } else{
+      ret <- ret +  
+        geom_point(aes(y = IncMueSalud),width = 0.75, alpha = 0.65) +
+        geom_line(aes(y = mort_week_avg), color="black", size = 1.25)
+    }
+    return(ret)
   }
 }
   
 plot_hosp <- function(hosp_mort,  
                       start_date = first_day, 
-                      end_date = today()){
+                      end_date = today(),
+                      yscale = FALSE){
   
   tmp <- hosp_mort %>% 
     filter(!is.na(HospitCOV19) & 
              date >= start_date & date <= end_date) %>% 
     select(date, HospitCOV19, hosp_week_avg, CamasICU, icu_week_avg) 
   
-  ret <- tmp %>% 
-    ggplot(aes(x = date)) +
-    geom_bar(mapping = aes(y = HospitCOV19), stat = "identity", width = 0.75, fill = "#8CC8F4") +
-    geom_line(aes(y = hosp_week_avg), color="#8CC8F4", size = 1.25) +
-    geom_bar(mapping = aes(y = CamasICU), stat = "identity", width = 0.75, fill = "darkblue") +
-    geom_line(aes(y = icu_week_avg), color="darkblue", size = 1.25) +
+  if(yscale){
+    ret <- tmp %>% 
+      ggplot(aes(x = date)) +
+      geom_bar(mapping = aes(y = HospitCOV19), stat = "identity", width = 0.75, fill = "#8CC8F4") +
+      geom_line(aes(y = hosp_week_avg), color="#8CC8F4", size = 1.25) +
+      geom_bar(mapping = aes(y = CamasICU), stat = "identity", width = 0.75, fill = "darkblue") +
+      geom_line(aes(y = icu_week_avg), color="darkblue", size = 1.25) +
+      ggtitle("Hospitalizaciones y ICU")
+  } else{
+    ret <- tmp %>% 
+      ggplot(aes(x = date)) +
+      geom_point(mapping = aes(y = HospitCOV19), width = 0.75, color = "#8CC8F4") +
+      geom_line(aes(y = hosp_week_avg), color="#8CC8F4", size = 1.25) +
+      ggtitle("Hospitalizaciones") 
+  }
+  
+  ret <- ret +  
     xlab("Fecha") +
     ylab("Pacientes") +
-    ggtitle("Hospitalizaciones y ICU") +
     scale_x_date(date_labels = "%b", breaks = breaks_width("1 month"))  +
     theme_bw() 
-    
-  return(ret)
   
+  return(ret)
 }
 
 plot_cases <- function(cases, 
                        start_date = first_day, 
                        end_date = today(), 
                        type = "Molecular", 
-                       cumm = FALSE){
+                       cumm = FALSE,
+                       yscale = FALSE){
   if(cumm){
-    cases %>% 
+    ret <- cases %>% 
       filter(testType == type) %>%
       mutate(cases = cumsum(cases)) %>%
       filter(date >= start_date & date <= end_date) %>%
@@ -169,11 +194,9 @@ plot_cases <- function(cases,
     
     cases$moving_avg[cases$date > last_day] <- NA
     
-    cases %>%
+    ret <- cases %>%
       filter(testType == type & date >= start_date & date <= end_date) %>%
       ggplot(aes(date, cases)) +
-      geom_bar(stat = "identity", fill = "#FBBCB2", width= 0.75) +
-      geom_line(aes(y = moving_avg), color = "#CC523A", size = 1.25) +
       ylab("Casos únicos") +
       xlab("Fecha") +
       ggtitle(paste0("Casos únicos basado en pruebas ", 
@@ -184,7 +207,16 @@ plot_cases <- function(cases,
       
       scale_x_date(date_labels = "%b", breaks = breaks_width("1 month"))  +
       theme_bw()
+    
+    if(yscale){
+      ret <- ret + geom_bar(stat = "identity", fill = "#FBBCB2", width= 0.75) +
+        geom_line(aes(y = moving_avg), color = "#CC523A", size = 1.25) 
+    } else{
+      ret <- ret + 
+        geom_line(aes(y = moving_avg), color = "#CC523A", size = 1.25) 
+    }
   }
+  return(ret)
 }
 
 plot_test <- function(tests, 
@@ -342,11 +374,12 @@ plot_map <- function(tests_by_strata,
 make_table <- function(tests, cases, hosp_mort, 
                        start_date = first_day, 
                        end_date = today(), 
-                       type = "Molecular"){
+                       type = "Molecular",
+                       cumm = FALSE){
   
   tmp <- select(hosp_mort, date, HospitCOV19, IncMueSalud, CamasICU)
 
-  cases <- filter(cases, testType == type)
+  cases <- filter(cases, testType == type) %>% select(-testType)
   
   ## last_day is a global variable 
   #cases$moving_avg[cases$date > last_day] <- NA
@@ -355,7 +388,20 @@ make_table <- function(tests, cases, hosp_mort,
     filter(testType == type) %>%
     left_join(cases, by = "date") %>%
     left_join(tmp, by = "date") %>%
-    filter(date >= start_date & date <= end_date) %>%
+    filter(date >= start_date & date <= end_date)
+  
+  if(cumm){
+    ret <- ret %>% 
+      mutate(positives = cumsum(replace_na(positives, 0)),
+             tests = cumsum(replace_na(tests, 0)),
+             rate = positives/tests,
+             all_positives = cumsum(replace_na(all_positives, 0)),
+             all_tests = cumsum(replace_na(all_tests, 0)),
+             cases = cumsum(replace_na(cases, 0)),
+             IncMueSalud = cumsum(replace_na(IncMueSalud, 0))
+      )
+  }
+  ret <- ret  %>%
     mutate(rate = format(round(rate, 2), nsmall = 2),
            fit = ifelse(is.na(fit), "", 
                         paste0(format(round(100*fit, 1), nsmall = 1), "% ",
@@ -363,7 +409,13 @@ make_table <- function(tests, cases, hosp_mort,
                                format(round(100*upper, 1), nsmall=1),"%", ")")), 
            moving_avg = round(moving_avg),
            dummy = date) %>%
-    select(date, fit, cases, moving_avg, IncMueSalud, CamasICU, HospitCOV19, 
+    mutate(positives = prettyNum(replace_na(positives, " "), big.mark = ","),
+           tests = prettyNum(replace_na(tests, " "), big.mark = ","),
+           all_positives = prettyNum(replace_na(all_positives, " "), big.mark = ","),
+           all_tests = prettyNum(replace_na(all_tests, " "), big.mark = ","),
+           cases = prettyNum(replace_na(cases, " "), big.mark = ","),
+           IncMueSalud = prettyNum(replace_na(IncMueSalud, " "), big.mark = ",")) %>% 
+  select(date, fit, cases, moving_avg, IncMueSalud, CamasICU, HospitCOV19, 
            positives, tests, rate, dummy) %>%
     arrange(desc(date)) %>%
     mutate(date = format(date, "%B %d")) %>%

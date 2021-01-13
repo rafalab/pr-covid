@@ -31,7 +31,8 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                    end = today(),
                                    min = first_day,
                                    format = "M-dd",
-                                   max = today()),
+                                   max = today(),
+                                   language = "es"),
                     
                     actionButton("weeks", "Última Semana", 
                                  style = button_style),
@@ -137,7 +138,10 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                plotOutput("age")),
                       
                       tabPanel("Rezago",
-                              plotOutput("rezago"))
+                              plotOutput("rezago")),
+                      
+                      tabPanel("Labs",
+                               DT::dataTableOutput("labs"))
                       
                     )
                   )),
@@ -220,12 +224,14 @@ server <- function(input, output, session) {
                           type = input$testType, yscale = input$yscale)
     p2 <- plot_deaths(hosp_mort, 
                     start_date = input$range[1], end_date = input$range[2],
-                    cumm = input$acumulativo)
+                    cumm = input$acumulativo, yscale = input$yscale)
     p3 <-  plot_cases(cases, 
                       start_date = input$range[1], end_date = input$range[2], 
-                      type =  input$testType, cumm = input$acumulativo)
+                      type =  input$testType, cumm = input$acumulativo,
+                      yscale = input$yscale)
     p4 <-  plot_hosp(hosp_mort, 
-                     start_date = input$range[1], end_date = input$range[2])
+                     start_date = input$range[1], end_date = input$range[2], 
+                     yscale = input$yscale)
                      
     p <- gridExtra::grid.arrange(p1, p2, p3, p4, ncol = 2)
     return(p)
@@ -236,7 +242,8 @@ server <- function(input, output, session) {
     make_table(tests, cases, hosp_mort, 
                start_date = input$range[1], 
                end_date = input$range[2], 
-               type = input$testType)
+               type = input$testType,
+               cumm = input$acumulativo)
   }, server = FALSE)
   
   
@@ -252,7 +259,8 @@ server <- function(input, output, session) {
   output$hospitalizaciones <- renderPlot(
     plot_hosp(hosp_mort, 
               start_date = input$range[1],
-              end_date = input$range[2])
+              end_date = input$range[2],
+              yscale = input$yscale)
   )
   
   # -- This creates the ICU figure
@@ -268,7 +276,8 @@ server <- function(input, output, session) {
     plot_deaths(hosp_mort, 
                 start_date = input$range[1],
                 end_date = input$range[2],
-                cumm = input$acumulativo)
+                cumm = input$acumulativo,
+                yscale = input$yscale)
   )
   
   # -- This creates the daily number of tests figure
@@ -303,7 +312,8 @@ server <- function(input, output, session) {
                start_date = input$range[1], 
                end_date = input$range[2], 
                type =  input$testType,
-               cumm = input$acumulativo)
+               cumm = input$acumulativo, 
+               yscale = input$yscale)
   )
   
   # -- This creates a geographical table of positivity rate
@@ -336,6 +346,54 @@ server <- function(input, output, session) {
                  end_date =input$range[2], 
                  type = input$testType)
   })
+  
+  output$labs <- DT::renderDataTable({
+    
+    load(file.path(rda_path, "lab_tab.rda"))
+    
+    ret <- filter(lab_tab,  
+           date >= input$range[1], 
+           date <= input$range[2], 
+           testType == input$testType) %>%
+      arrange(desc(date)) %>%
+      select(-testType) 
+    
+    col_total <- ret %>% group_by(Laboratorio) %>% 
+      summarize(Total = sum(tests, na.rm = TRUE),  .groups= "drop")
+    row_total <- ret %>% group_by(date) %>% 
+      summarize(tests = sum(tests, na.rm = TRUE), .groups = "drop") %>%
+      arrange(desc(date)) 
+    
+    col_names <- as.character(row_total$date)
+    
+    row_total <- 
+      spread(row_total, date, tests, fill = 0) %>% mutate(Laboratorio = "Total") 
+    
+    ret <- left_join(col_total, by="Laboratorio", spread(ret, date, tests, fill = 0)) %>%
+      arrange(desc(Total)) 
+    
+    row_total <- mutate(row_total, Total = sum(ret$Total, na.rm = TRUE))
+    
+    ret <- bind_rows(ret, row_total) %>% 
+      select("Laboratorio",  "Total", all_of(col_names))
+
+   ret <- mutate_if(ret, is.numeric, function(x) prettyNum(x, big.mark=",")) %>%
+     rename(Entidad = Laboratorio) ## hay hospitales también
+   
+   
+   DT::datatable(ret,   
+                 caption =  paste0("Número de pruebas reportadas por los Laboratorios y Hospitales para los días: ",
+                                             format(input$range[1], "%Y %B %d"),
+                                             " a ",
+                                             format(input$range[2],  "%Y %B %d.")),
+                 rownames = FALSE,
+                 options = list(dom = 't', pageLength = -1,
+                                columnDefs = list(list(className = 'dt-right', targets = 1:(ncol(ret)-1))))) %>%
+     DT::formatStyle(1,"white-space"="nowrap")
+   
+  }, server = FALSE)
+  
+  
   # -- This allows users to download data
   datasetInput <- reactive({
     switch(input$dataset,

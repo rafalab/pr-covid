@@ -354,8 +354,9 @@ labs <- all_labs_data %>%
   rename(Laboratorio = entityName,
          date = collectedDate) %>%
   mutate(date = as_date(date),
-         Laboratorio = str_remove(tolower(Laboratorio), "\t"))
+         Laboratorio = str_trim(str_remove_all(tolower(Laboratorio), "\t|inc|\\.|\\,")))
 
+                           
 ##check the most common labs
 if(FALSE){
   freqs <- bind_cols(labs, all_labs_data$molecular) %>% 
@@ -444,6 +445,66 @@ fits <- labs %>%
 labs <- left_join(fits, labs, by = c("testType", "date", "Laboratorio"))
 
 
+## For Eddie
+lab_tab <- all_labs_data %>%
+  select(-molecular, -serological, -antigens) %>%
+  rename(Laboratorio = entityName,
+         date = collectedDate) %>%
+  mutate(date = as_date(date),
+         Laboratorio = str_trim(str_remove_all(tolower(Laboratorio), "\t|inc|\\.|\\,")))
+
+## wrange some of the names
+lab_tab <- lab_tab %>%
+  mutate(Laboratorio = case_when(str_detect(Laboratorio, "toledo") ~ "Toledo",
+                                 str_detect(Laboratorio, "bcel") ~ "BCEL",
+                                 str_detect(Laboratorio, "landr") ~ "Landrón",
+                                 str_detect(Laboratorio, "cmt") ~ "CMT",
+                                 str_detect(Laboratorio, "villa ana") ~ "Villa Ana",
+                                 str_detect(Laboratorio, "labcorp") ~ "LabCorp",
+                                 str_detect(Laboratorio, "quest") ~ "Quest",
+                                 str_detect(Laboratorio, "borinquen") ~ "Borinquen",
+                                 str_detect(Laboratorio, "coreplus") ~ "CorePlus",
+                                 str_detect(Laboratorio, "martin\\s") ~ "Marin",
+                                 str_detect(Laboratorio, "noy") ~ "Noy",
+                                 str_detect(Laboratorio, "hato rey pathology|hrp") ~ "HRP",
+                                 str_detect(Laboratorio, "inno") ~ "Inno Diagnostics",
+                                 str_detect(Laboratorio, "immuno reference lab") ~ "Immuno Reference",
+                                 str_detect(Laboratorio, "forense") ~ "Ciencias Forense",
+                                 str_detect(Laboratorio, "nichols") ~ "Quest USA",
+                                 str_detect(Laboratorio, "southern pathology services") ~ "Southern Pathology",
+                                 TRUE ~ str_replace(str_to_title(Laboratorio), "Ii", "II")))
+
+molecular <- all_labs_data$molecular %>% 
+  mutate(testType = "Molecular",
+         tests = positives + presumptivePositives + negatives) %>%
+  select(testType, tests)
+molecular <- bind_cols(lab_tab, molecular) 
+
+serological <-  all_labs_data$serological %>%
+  mutate(testType = "Serological",
+         tests = positives + negatives) %>%
+  select(testType, tests)
+serological <- bind_cols(lab_tab, serological) 
+
+antigens <-  all_labs_data$antigens %>%
+  mutate(testType = "Antigens",
+         tests = positives + negatives) %>%
+  select(testType, tests)
+antigens <- bind_cols(lab_tab, antigens) 
+
+lab_tab <- bind_rows(molecular, serological, antigens) %>%
+  filter(date >= first_day & date <= today()) %>%
+  group_by(testType, date, Laboratorio) %>%
+  summarize(tests = sum(tests),.groups = "drop")
+
+lab_tab  <- lab_tab %>% group_by(Laboratorio, testType) %>% 
+  mutate(total = sum(tests), .groups = "drop") %>% 
+  ungroup() %>%
+  group_by(testType) %>%
+  mutate(Laboratorio = ifelse(total < 100, "Otros", Laboratorio)) %>%
+  group_by(testType, date, Laboratorio) %>%
+  summarize(tests = sum(tests),.groups = "drop") 
+
 # -- Save data
 ## if on server, save with full path
 ## if not on server, save to home directory
@@ -457,8 +518,9 @@ if(Sys.info()["nodename"] == "fermat.dfci.harvard.edu"){
 the_stamp <- now()
 save(first_day, alpha, the_stamp, 
      tests, tests_by_strata, cases,
-     hosp_mort, labs,
+     hosp_mort, labs, 
      file = file.path(rda_path, "data.rda"))
+save(lab_tab, file = file.path(rda_path, "lab_tab.rda"))
 save(rezago, file = file.path(rda_path, "rezago.rda"))
 
 ## For backward compatibility
