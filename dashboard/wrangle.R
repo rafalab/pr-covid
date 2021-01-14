@@ -509,7 +509,7 @@ lab_tab  <- lab_tab %>% group_by(Laboratorio, testType) %>%
 ## if on server, save with full path
 ## if not on server, save to home directory
 if(Sys.info()["nodename"] == "fermat.dfci.harvard.edu"){
-  rda_path <- "/homes10/rafa/dashboard/pr-covid/dashboard"
+  rda_path <- "/homes10/rafa/dashboard/pr-covid/dashboard/rdas"
 } else{
   rda_path <- "rdas"
 }
