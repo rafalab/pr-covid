@@ -128,8 +128,8 @@ plot_deaths <- function(hosp_mort,
         geom_point(aes(y = IncMueSalud),width = 0.75, alpha = 0.65) +
         geom_line(aes(y = mort_week_avg), color="black", size = 1.25)
     }
-    return(ret)
   }
+  return(ret)
 }
   
 plot_hosp <- function(hosp_mort,  
