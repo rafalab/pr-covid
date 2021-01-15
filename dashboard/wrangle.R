@@ -204,6 +204,7 @@ tests <- left_join(tests, fits, by = c("testType", "date")) %>%
   mutate(wd = wday(date))
 
 ## adjust 
+## Currently not being used
 adjust_fit <- tests %>%
   filter(date >= today() - months(3) & date < today() - weeks(2) & n >= 250) %>%
   mutate(x = obs_fit * n) %>%
