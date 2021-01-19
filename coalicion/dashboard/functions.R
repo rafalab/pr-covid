@@ -1,4 +1,4 @@
-compute_summary <- function(tests, hosp_mort, cases, type = "Molecular", day = today() - days(1)){
+compute_summary <- function(tests, hosp_mort, type = "Molecular", day = today() - days(1)){
   
   ## function to turn proportions into pretty percentages
   make_pct <- function(x, digits = 1) paste0(format(round(100 * x, digits = digits), nsmall = digits), "%")
@@ -31,13 +31,13 @@ compute_summary <- function(tests, hosp_mort, cases, type = "Molecular", day = t
   
   ## cases 
   ## same a pos but for cases
-  cas <- filter(cases, testType == type & 
-                   date %in% the_dates)  %>%
+  cas <- filter(tests, testType == type & 
+                  date %in% the_dates)  %>%
     arrange(desc(date))
   
   ## get overdisepersion, last day is a global variable defined in init
   ## we assume cases are Possion with the precalculated trend an offset.
-  phi <- cases %>% filter(date >= make_date(2020, 7, 1) & 
+  phi <- tests %>% filter(date >= make_date(2020, 7, 1) & 
                             date <= make_date(2020, 11, 2) & ## avoid election thanksgiving and xmas
                             date <= last_day &
                             testType == type) %>%
@@ -47,16 +47,16 @@ compute_summary <- function(tests, hosp_mort, cases, type = "Molecular", day = t
     .$dispersion
   
   change_cas <- sapply(1:(nrow(cas)-1), function(i){
-    d <- cas$moving_avg[i] - cas$moving_avg[i+1]
-    se <- sqrt((phi*cas$moving_avg[i] + phi*cas$moving_avg[i+1])/7)
+    d <- cas$cases_week_avg[i] - cas$cases_week_avg[i+1]
+    se <- sqrt((phi*cas$cases_week_avg[i] + phi*cas$cases_week_avg[i+1])/7)
     signif <- abs(d/se) > qnorm(0.975)
     sign(d) * signif 
-    })
-        
+  })
+  
   ## tests
   ##as pos but for nnumber of tests
   tes <- filter(tests, testType == type & 
-                   date %in% the_dates) %>%
+                  date %in% the_dates) %>%
     arrange(desc(date))
   
   phi <- tests %>% filter(date >= make_date(2020, 7, 1) & 
@@ -64,13 +64,13 @@ compute_summary <- function(tests, hosp_mort, cases, type = "Molecular", day = t
                             date <= last_day &
                             testType == type) %>%
     mutate(wd = factor(wday(date)), week = factor(round_date(date, "week"))) %>%
-    glm(all_tests ~ wd + week, data = ., family = quasipoisson) %>%
+    glm(people_total_week ~ wd + week, data = ., family = quasipoisson) %>%
     summary()  %>%
     .$dispersion
   
   change_tes <- sapply(1:(nrow(tes)-1), function(i){
-    d <- tes$tests_week_avg[i] - tes$tests_week_avg[i+1]
-    se <- sqrt((phi*tes$tests_week_avg[i] + phi*tes$tests_week_avg[i+1])/7)
+    d <- (tes$people_total_week[i] - tes$people_total_week[i+1]) / 7
+    se <- sqrt((phi*tes$people_total_week[i] + phi*tes$people_total_week[i+1]))/7
     signif <- abs(d/se) > qnorm(0.975)
     sign(d) * signif 
   })
@@ -117,8 +117,8 @@ compute_summary <- function(tests, hosp_mort, cases, type = "Molecular", day = t
                          change_pos[1] == -1 & change_pos[2] == -1 & change_pos[3] == -1 ~ -1,
                          TRUE ~ 0)
   
-  nivel <- case_when(pos$fit[1] >= 0.20 | cas$moving_avg[1] >= 800 | hos$HospitCOV19[1] > 1000 ~ 4,
-                     pos$fit[1] < 0.03 & cas$moving_avg[1] < 30 & hos$HospitCOV19[1] < 300 ~ 1,
+  nivel <- case_when(pos$fit[1] >= 0.20 | cas$cases_week_avg[1] >= 800 | hos$HospitCOV19[1] > 1000 ~ 4,
+                     pos$fit[1] < 0.03 & cas$cases_week_avg[1] < 30 & hos$HospitCOV19[1] < 300 ~ 1,
                      pos$fit[2] >= 0.05 ~ 3,
                      TRUE ~ 2)
                      
@@ -153,8 +153,8 @@ compute_summary <- function(tests, hosp_mort, cases, type = "Molecular", day = t
   
   make_values <- function(i){
     c(make_pct(pos$fit[i]), 
-      round(cas$moving_avg[i]), 
-      prettyNum(round(tes$tests_week_avg[i]), 
+      round(cas$cases_week_avg[i]), 
+      prettyNum(round(tes$tests_total_week[i] / 7), 
                 big.mark = ","),
       prettyNum(round(hos$HospitCOV19[i]), 
                 big.mark = ","),
@@ -172,9 +172,9 @@ compute_summary <- function(tests, hosp_mort, cases, type = "Molecular", day = t
   change_hos <- change_hos[-1]
   
   ## make the table
-  tab <- tibble(metrica = c("Tasa de positividad", 
-                            "Casos nuevos por día", 
-                            "Pruebas por día", 
+  tab <- tibble(metrica = c("% de personas con prueba positiva", 
+                            "Casos únicos nuevos por día", 
+                            "Personas por día que se hicieron pruebas", 
                             "Hospitalizaciones",
                             "Muertes por día"),
                 

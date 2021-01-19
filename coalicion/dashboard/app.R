@@ -71,7 +71,7 @@ server <- function(input, output, session) {
         paste0("<h5> Fecha: ", format(input$the_day, "%Y, %B, %e"), "</h5>")
     })
     
-    res <- reactive(compute_summary(tests, hosp_mort, cases, day = input$the_day))
+    res <- reactive(compute_summary(tests, hosp_mort, day = input$the_day))
     
     output$rec <- renderText({
         paste0("<h5> Recomendación: <b>", 
@@ -87,7 +87,7 @@ server <- function(input, output, session) {
     })
     
     output$positividad <-  renderText({
-        paste0("Tasa de Positividad: ", res()$positividad, "&emsp;", "Hospitalizaciones: ", res()$hosp, "\n")
+        paste0("% de personas con prueba positiva: ", res()$positividad, "&emsp;", "Hospitalizaciones: ", res()$hosp, "\n")
     })
     
     output$tab_title <- renderText({
