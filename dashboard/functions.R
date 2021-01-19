@@ -47,12 +47,13 @@ plot_positivity <- function(tests,
       theme(plot.caption=element_text(hjust = 0), legend.position="bottom") +
       scale_linetype(guide = "none") +
       scale_color_manual(values = c("#619CCF","#F8766D","#00BA38")) +
-      guides(color=guide_legend(title="Definiciones (todas por semana):", nrow = 2)) +
+      guides(color=guide_legend(title="Definiciones (todas por semana):", nrow = 3)) +
       labs(title = paste("Tasa de Positividad basada en pruebas" , 
                          case_when(type == "Molecular" ~ "moleculares", 
                                    type == "Serological" ~ "serológicas",
                                    type == "Antigens" ~ "de antígenos",
-                                   type == "Molecular+Antigens" ~ "moleculares y de antígenos")))
+                                   type == "Molecular+Antigens" ~ "moleculares y de antígenos")),
+           caption = "Los puntos son el por ciento de personas con pruebas positivas ese día.")
     
     the_ylim <- range(weekly_rates$rate, na.rm = TRUE)
       } else{
@@ -64,7 +65,8 @@ plot_positivity <- function(tests,
                                    type == "Serological" ~ "serológica",
                                    type == "Antigens" ~ "de antígeno",
                                    type == "Molecular+Antigens" ~ "moleculares o de antígenos"),
-                         "con resultado positivo"))
+                         "con resultado positivo"),
+           caption = "Los puntos son el por ciento de personas con pruebas positivas cada día.")
     
     the_ylim <- dat %>%
       summarize(lower = min(lower, na.rm = TRUE), upper = max(upper, na.rm = TRUE))
@@ -462,28 +464,39 @@ make_table <- function(tests, hosp_mort,
            positives, tests, rate,  cases_rate, cdc_rate, dummy) %>%
     arrange(desc(date)) %>%
     mutate(date = format(date, "%B %d")) %>%
-    setNames(c("Fecha", "Tasa positividad (personas)",  "Casos únicos", "Promedio de 7 días",
+    setNames(c("Fecha", "% personas con prueba positiva",  "Casos únicos", "Promedio de 7 días",
                "Muertes", "ICU", "Hospital", "Positivos", "Pruebas", 
-               "Positivos/ Pruebas", "Tasa + (casos)", "Tasa + (CDC)", "dateorder"))
+               "Positivos/ Pruebas", "Casos/ Personas", "%Pruebas positivas", "dateorder"))
   
       ret <- DT::datatable(ret, #class = 'white-space: nowrap',
-                    caption = paste("Positivos y casos son de pruebas", 
-                                    case_when(type == "Molecular" ~ "moleculares.", 
-                                              type == "Serological" ~ "serológicas.",
-                                              type == "Antigens" ~ "de antígenos.",
-                                              type == "Molecular+Antigens" ~ "moleculares y de antígenos."),
-                                    # "La columna con fechas contiene el día en que se hizo la prueba.", 
-                                    "La tasa de positividad (personas) se cálcula para la semana acabando en la fecha de la primera columna y se define como el por ciento de personas que salieron positivos entre los que se hicieron prueba esa semana.",
-                                    "Los paréntesis contienen un intervalo de confianza del ", (1-alpha)*100,"%.", 
-                                    #   "El estimado de tasa de positividad para última semana esta ajustado tomando en cuenta que pruebas positivas entran antes que las negativas. ",
-                                    "Los casos único son el número de personas con su primera prueba positiva en ese día.",
-                                    "El promedio de casos de 7 días está basado en la semana acabando ese día. Los datos de las pruebas toman ", lag_to_complete, " días en estar aproximadamente completos, por tanto, los casos están inclompletos para días después de ", format(last_day, "%B %d. "),
-                                    "La columna de positivos muestra el número de personas que tuvieron una prueba positiva ese día (no necesariamente son casos únicos).",
-                                    "La columna de pruebas es el número de personas que se hicieron una prueba ese día.",
-                                    "La tasa de positividad (casos) se cálcula para la semana acabando ese día y se define como el por ciento de personas salieron positivos por primera vez entre los que se hicieron la prueba esa semana.",
-                                    "La tasa de positividad (CDC) es la que usa el CDC y se define como el por ciento de pruebas positivas (incluyeno duplicados) para la semana acabando ese día.",
-                                    "Tengan en cuante que los fines de semana se hacen menos pruebas y por lo tanto se reportan menos casos.",
-                                    "Las muertes, casos en el ICU y hospitalizaciones vienen del informe oficial del Departamento de Salud y toman un día en ser reportados."),
+                    caption = htmltools::tags$caption(
+                      style = 'caption-side: top; text-align: Left;',
+                      htmltools::withTags(
+                        div(HTML(paste0("Datos basados en pruebas ", 
+                                        case_when(type == "Molecular" ~ "moleculares.", 
+                                                  type == "Serological" ~ "serológicas.",
+                                                  type == "Antigens" ~ "de antígenos.",
+                                                  type == "Molecular+Antigens" ~ "moleculares y de antígenos."),
+                                        "La métrica en la columna <b>% personas con prueba positiva</b> se calcula para la semana acabando en la fecha de la primera columna. ",
+                                        "Esta métrica es parecida a la tasa de positividad que usa el CDC excepto que se remueven pruebas duplicadas. ",
+                                        "La diferencia es que el CDC usa todas pruebas aunque una persona se haga varias. ",
+                                        "En paréntesis vemos intervalo de confianza del ", (1-alpha)*100,"%. ", 
+                                        "Los <b>casos único</b> son el número de personas con su primera prueba positiva ese día. ",
+                                        "El <b>promedio de 7 días</b> es el número de casos únicos por día durante la semana acabando ese día. ",
+                                        "Noten que los datos de las pruebas toman", lag_to_complete, "días en estar aproximadamente completos, por lo tanto, ",
+                                        "los casos están incompletos para días después de ", format(last_day, "%B %d. "),
+                                        "La columna de <b>positivos</b> muestra el número de personas que tuvieron una prueba positiva ese día (no necesariamente son casos únicos).",
+                                        "La columna de <b>pruebas</b> es el número de personas que se hicieron una prueba ese día.",
+                                        "La métrica <b>casos/ personas</b> se calcula para la semana acabando ese día y ",
+                                        "se define como el por ciento de personas que salieron positivo por primera vez entre los que se hicieron la prueba esa semana. ",
+                                        "La métrica <b>% Pruebas positivas</b> es la tasa de positividad que usa el CDC. ",
+                                        "Se define como el por ciento de pruebas positivas (incluyendo duplicados) para la semana acabando ese día. ",
+                                        "Tengan en cuenta que los fines de semana se hacen menos pruebas y por lo tanto se reportan menos casos. ",
+                                        "Las muertes, casos en el ICU y hospitalizaciones vienen del informe oficial del Departamento de Salud y toman un día en ser reportados. ",
+                                        "<b>Ojo</b>: importante notar que ni la tasa de positividad del CDC, ni las otras métricas, ",
+                                        "son estimados del por ciento de la población que está infectado ya que las personas que se hacen pruebas no son para nada representativas de la población. ",
+                                        "Son útiles y se monitorean porque suben cuando suben los casos o cuando no se hacen suficientes pruebas. "
+                        ))))),
       rownames = FALSE,
       options = list(dom = 't', pageLength = -1,
                      columnDefs = list(
@@ -739,7 +752,7 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular"){
   ## make the table
   tab <- tibble(metrica = c("% de personas con prueba positiva", 
                             "Casos únicos nuevos por día", 
-                            "Personas que se hicieron pruebas por día", 
+                            "Personas por día que se hicieron pruebas", 
                             "Hospitalizaciones",
                             "Muertes por día"),
                 
