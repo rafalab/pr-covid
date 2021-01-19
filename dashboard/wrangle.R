@@ -52,6 +52,8 @@ library(splines)
 ma7 <- function(d, y, k = 7) 
   tibble(date = d, moving_avg = as.numeric(stats::filter(y, rep(1/k, k), side = 1)))
 
+sum7 <- function(d, y, k = 7) 
+  tibble(date = d, moving_sum = as.numeric(stats::filter(y, rep(1, k), side = 1)))
 
 # -- Fixed values
 icu_beds <- 229 #if available beds is missing change to this
@@ -153,23 +155,29 @@ if(FALSE){
 
 # -- Computing observed positivity rate
 ## adding a new test type that combines molecular and antigens
-mol_anti <-  all_tests_with_id %>%
+mol_anti <- all_tests_with_id %>%
   filter(date >= first_day & testType %in% c("Molecular", "Antigens") & 
            result %in% c("positive", "negative")) %>%
   mutate(testType = "Molecular+Antigens") 
 
+
+## compute daily totals
+
 tests <- all_tests_with_id %>%
   bind_rows(mol_anti) %>%
-  filter(date >= first_day & testType %in% c("Molecular", "Serological", "Antigens", "Molecular+Antigens") & 
+  filter(date >= first_day & 
+           testType %in% c("Molecular", "Serological", "Antigens", "Molecular+Antigens") & 
            result %in% c("positive", "negative")) %>%
   group_by(testType, date) %>%
-  summarize(positives = n_distinct(patientId[result == "positive"]),
-            tests = n_distinct(patientId),
-            all_positives = sum(result == "positive"),
-            all_tests = n(),
+  summarize(people_positives = n_distinct(patientId[result == "positive"]),
+            people_total = n_distinct(patientId),
+            tests_positives = sum(result == "positive"),
+            tests_total = n(),
             .groups = "drop") %>%
-  mutate(rate = positives / tests,
-         old_rate = all_positives / all_tests)
+  mutate(rate = people_positives / people_total)
+
+## define function to compute weekly distinct cases
+## and use this to compute percent of people with positive tests
 
 positivity <- function(dat){
   day_seq <- seq(first_day + weeks(1), max(dat$date), by = "day")
@@ -177,21 +185,21 @@ positivity <- function(dat){
     dat %>% filter(date > the_day - weeks(1) & date <= the_day) %>%
       mutate(obs = entry_date <= the_day) %>%
       summarize(date = the_day, 
-                positives = n_distinct(patientId[result == "positive"]),
-                tests = n_distinct(patientId),
-                fit = positives / tests,
-                lower = qbinom(0.025, tests, fit) / tests,
-                upper = qbinom(0.975, tests, fit) / tests,
-                obs_positives = n_distinct(patientId[result == "positive" & obs]),
-                obs_tests = n_distinct(patientId[obs]),
-                obs_fit = obs_positives / obs_tests,
-                obs_lower = qbinom(0.025, obs_tests, obs_fit) / obs_tests,
-                obs_upper = qbinom(0.975, obs_tests, obs_fit) / obs_tests) %>%
-      rename(y = positives, n = tests) %>%
-      select(date, fit, lower, upper, obs_fit, obs_lower, obs_upper, y, n) ##k and n are for the adjustment
+                people_positives_week = n_distinct(patientId[result == "positive"]),
+                people_total_week = n_distinct(patientId),
+                fit = people_positives_week / people_total_week,
+                lower = qbinom(0.025, people_total_week, fit) / people_total_week,
+                upper = qbinom(0.975, people_total_week, fit) / people_total_week,
+                obs_people_positives_week = n_distinct(patientId[result == "positive" & obs]),
+                obs_people_total_week = n_distinct(patientId[obs]),
+                obs_fit = obs_people_positives_week / obs_people_total_week,
+                obs_lower = qbinom(0.025, obs_people_total_week, obs_fit) / obs_people_total_week,
+                obs_upper = qbinom(0.975, obs_people_total_week, obs_fit) / obs_people_total_week) %>%
+      select(date, fit, lower, upper, obs_fit, obs_lower, obs_upper, people_positives_week, people_total_week) 
   })
 }
 
+## run the function on each test type
 fits <- all_tests_with_id %>% 
   bind_rows(mol_anti) %>%
   mutate(entry_date = as_date(orderCreatedAt)) %>%
@@ -200,54 +208,17 @@ fits <- all_tests_with_id %>%
   nest_by(testType) %>%
   summarize(positivity(data), .groups = "drop")
   
-tests <- left_join(tests, fits, by = c("testType", "date")) %>%
-  mutate(wd = wday(date))
+## add new variable to test data frame
+tests <- left_join(tests, fits, by = c("testType", "date")) 
 
-## adjust 
-## Currently not being used
-adjust_fit <- tests %>%
-  filter(date >= today() - months(3) & date < today() - weeks(2) & n >= 250) %>%
-  mutate(x = obs_fit * n) %>%
-  group_by(testType, wd) %>%
-  do(broom::tidy(glm(y ~ x - 1, data = ., family = quasipoisson(link="identity")))) %>%
-  select(testType, wd, estimate) %>%
-  rename(adj = estimate)
-
+## compute weekly totals for positive tests and total tests
 tests <- tests %>% 
-  left_join(adjust_fit, by = c("testType","wd")) %>%
-  mutate(estimate_upper = obs_upper * adj,
-         estimate_lower = obs_lower * adj,
-         estimate = obs_fit * adj) %>%
-  select(testType, date, positives, tests, all_positives, all_tests, rate, old_rate, 
-         fit, lower, upper, 
-         estimate, estimate_lower, estimate_upper)
-
-if(FALSE){
-  library(scales)
-  source("functions.R")
-  lag_to_complete <- 27
-  plot_positivity(tests, first_day, today(), type = "Molecular") +
-    geom_smooth(method = "loess", formula = "y~x", span = 0.2, method.args = list(degree = 1, weight = tests$tests), color = "red", lty =2, fill = "pink") 
-}
-
-tests_fits <- tests %>% 
   group_by(testType) %>%
-  do(ma7(d = .$date, y = .$all_tests)) %>%
-  rename(tests_week_avg = moving_avg)
+  mutate(tests_positives_week = sum7(d = date, y = tests_positives)$moving_sum) %>%
+  mutate(tests_total_week = sum7(d = date, y = tests_total)$moving_sum) %>%
+  ungroup()
 
-tests <- left_join(tests, tests_fits, by = c("testType", "date"))
-
-if(FALSE){
-  lag_to_complete <- 7
-  last_day <- today() - days(lag_to_complete)
-  
-  plot_test(tests, first_day, today())
-  plot_test(tests, first_day, today(), type  = "Serological")
-  plot_test(tests, first_day, today(), type  = "Antigens")
-  plot_test(tests, first_day, today(), type  = "Molecular+Antigens")
-}
-
-# unique cases ------------------------------------------------------------
+# compute unique cases ------------------------------------------------------------
 all_cases <- all_tests_with_id %>%  
   bind_rows(mol_anti) %>%
   filter(date>=first_day & result == "positive" &
@@ -262,7 +233,7 @@ all_cases <- all_tests_with_id %>%
   select(-patientId, -result) %>%
   arrange(testType, date)
 
-# Add cases to tests data frame -------------------------------------------
+# compute daily new cases
 cases <- all_cases %>%
   group_by(testType, date) %>% 
   summarize(cases = n(), .groups = "drop")
@@ -271,17 +242,43 @@ cases <- all_cases %>%
 cases <-  left_join(select(tests, testType, date), cases, by = c("testType", "date")) %>%
   replace_na(list(cases = 0))
 
+# compute daily weekly average and add to cases data frame
 fits <- cases %>% 
   group_by(testType) %>%
-  do(ma7(d = .$date, y = .$cases))
-
+  do(ma7(d = .$date, y = .$cases)) %>%
+  rename(cases_week_avg = moving_avg)
 cases <- left_join(cases, fits, by = c("testType", "date"))
 
+## add new cases and weekly average to tests data frame
+tests <- left_join(tests, cases, by = c("testType", "date"))
+
+
+## the following are diagnostic plots
 if(FALSE){
-  plot_cases(cases)
-  plot_cases(cases, first_day, today(), type  = "Serological")
-  plot_cases(cases, first_day, today(), type  = "Antigens")
-  plot_cases(cases, first_day, today(), type  = "Molecular+Antigens")
+  library(scales)
+  
+  source("functions.R")
+  lag_to_complete <- 7
+  last_day <- today() - days(lag_to_complete)
+  
+  ## check positivity rate
+  
+  plot_positivity(tests, first_day, today(), type = "Molecular", show.all = FALSE) +
+    geom_smooth(method = "loess", formula = "y~x", span = 0.2, method.args = list(degree = 1, weight = tests$tests), color = "red", lty =2, fill = "pink") 
+  
+  plot_positivity(tests, first_day, today(), type = "Molecular", show.all = TRUE) 
+  ## check test plot
+  plot_test(tests, first_day, today())
+  plot_test(tests, first_day, today(), type  = "Serological")
+  plot_test(tests, first_day, today(), type  = "Antigens")
+  plot_test(tests, first_day, today(), type  = "Molecular+Antigens")
+
+  ## check cases plot
+  ys <- TRUE
+  plot_cases(cases, yscale = ys)
+  plot_cases(cases, first_day, today(), type  = "Serological", yscale = ys)
+  plot_cases(cases, first_day, today(), type  = "Antigens", yscale = ys)
+  plot_cases(cases, first_day, today(), type  = "Molecular+Antigens", yscale = ys)
   
 }
 

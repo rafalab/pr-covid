@@ -28,15 +28,20 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                   sidebarPanel(
                     dateRangeInput("range", "Periodo", 
                                    start = today() - days(90), #make_date(2020, 3, 21), 
-                                   end = today(),
+                                   end = today() - days(1),
                                    min = first_day,
                                    format = "M-dd",
                                    max = today(),
                                    language = "es"),
                     
-                    actionButton("weeks", "Última Semana", 
+                    actionButton("weeks", "Última semana", 
                                  style = button_style),
                     br(),br(),
+                    
+                    actionButton("months", "Últimos 90 días", 
+                                 style = button_style),
+                    br(),br(),
+                    
                     actionButton("alldates", "Todas las fechas", 
                                  style = button_style),
                     br(), br(),
@@ -93,11 +98,11 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                #            "Se recomiendan  <b>más restricciones</b> si la tasa de positividad o casos por días sobrepasan los niveles metas, lo cual indica que la situación no mejorará sin intervenciones o cambio de comportamiento. ",
                                #            "Si se alcanzan estas metas, recomendamos <b>flexibilizaciones</b> lo cual indica poco riesgo actual pero, como todavía hay casos, continuamos monitoreando. ",
                                #            "Recomendamos <b>apertura</b> cuando prácticamente desaparece la enfermedad. Estos umbrales pueden cambiar mientras sigamos aprendiendo.")),
-                                HTML(paste0("<h5>La <b>tasa de positividad</b> se define como el número de personas con prueba positiva divido entre el total de personas que se han hecho pruebas. ",
-                                           "<b>Casos</b> y <b>pruebas</b> están basados en un <b>promedio de siete días</b> para contrarrestar el efecto que tiene el día de la semana en los totales. ",
+                                HTML(paste0("<h5> <b> Porcientos</b>, ",
+                                           "<b>casos</b> y <b>pruebas</b> están basados en un <b>promedio de siete días</b> para contrarrestar el efecto que tiene el día de la semana en los totales. ",
                                            "La flechas de colors no dicen si hubo cambio estadísticamente singificative cuando comparamos a la semana anterio. ",
                                            "Noten que los datos de las pruebas toman ", lag_to_complete, " días en estar aproximadamente completos, ",
-                                           "por tanto, calculamos los casos y pruebas para <b>", format(last_day, "%B %d</b>. "))),
+                                           "por lo tanto, calculamos los casos y pruebas para <b>", format(last_day, "%B %d</b>. "))),
                                hr(),
                                h4("Resumen gráfico:"),
                                plotOutput("resumen_plots")),
@@ -165,7 +170,14 @@ server <- function(input, output, session) {
   observeEvent(input$weeks, {
     updateDateRangeInput(session, "range",
                          start = today() - weeks(1),
-                         end   = today() - 1)
+                         end   = today() - days(1))
+  })
+  
+  # -- This sets range to last 90 days (default)
+  observeEvent(input$months, {
+    updateDateRangeInput(session, "range",
+                         start = today() - days(90),
+                         end   = today() - days(1))
   })
   
   # -- This sets range to last two weeks
@@ -207,7 +219,7 @@ server <- function(input, output, session) {
     
   # -- This shows a summary
   output$resumen_table <- DT::renderDataTable({
-    compute_summary(tests, hosp_mort, cases, type = input$testType)$tab %>%
+    compute_summary(tests, hosp_mort, type = input$testType)$tab %>%
       DT::datatable(class = 'white-space: nowrap',
                     rownames = FALSE,
                     escape = FALSE, 
@@ -221,7 +233,7 @@ server <- function(input, output, session) {
   output$resumen_plots <- renderPlot({
     p1 <- plot_positivity(tests, 
                           start_date = input$range[1],  end_date = input$range[2], 
-                          type = input$testType, yscale = input$yscale)
+                          type = input$testType, yscale = input$yscale, show.all = FALSE)
     p2 <- plot_deaths(hosp_mort, 
                     start_date = input$range[1], end_date = input$range[2],
                     cumm = input$acumulativo, yscale = input$yscale)
@@ -239,7 +251,7 @@ server <- function(input, output, session) {
   
   # -- This is used to print table in app
   output$tabla <- DT::renderDataTable({
-    make_table(tests, cases, hosp_mort, 
+    make_table(tests, hosp_mort, 
                start_date = input$range[1], 
                end_date = input$range[2], 
                type = input$testType,
@@ -252,7 +264,8 @@ server <- function(input, output, session) {
     plot_positivity(tests, start_date = input$range[1], 
                     end_date = input$range[2], 
                     type = input$testType, 
-                    yscale = input$yscale)
+                    yscale = input$yscale,
+                    show.all = TRUE)
   )
   
   # -- This creates the hospitalization figure
@@ -374,7 +387,7 @@ server <- function(input, output, session) {
     
     row_total <- mutate(row_total, Total = sum(ret$Total, na.rm = TRUE))
     
-    ret <- bind_rows(ret, row_total) %>% 
+    ret <- bind_rows(row_total, ret) %>% 
       select("Laboratorio",  "Total", all_of(col_names))
 
    ret <- mutate_if(ret, is.numeric, function(x) prettyNum(x, big.mark=",")) %>%

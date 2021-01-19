@@ -1,14 +1,32 @@
 # positivity plot ---------------------------------------------------------
-
 plot_positivity <- function(tests, 
                             start_date = first_day, 
                             end_date = today(), 
                             type = "Molecular", 
-                            yscale = FALSE){
-  ret <- tests %>%
+                            yscale = FALSE,
+                            show.all = TRUE){
+  dat <- tests %>%
     filter(testType == type &
-           date >= start_date & date <= end_date) %>%
-    ggplot(aes(date, rate, lty = date > last_day)) +
+           date >= start_date & date <= end_date) 
+  
+  if(show.all){
+    weekly_rates <- dat %>% 
+      mutate(por_ciento_de_personas_con_prueba_positiva = fit,
+             por_ciento_de_pruebas_positivas = tests_positives_week / tests_total_week,
+             Casos_unicos_nuevos_por_persona_con_prueba  = cases_week_avg / people_total_week * 7) %>%
+      select(date, 
+             por_ciento_de_personas_con_prueba_positiva,
+             por_ciento_de_pruebas_positivas,
+             Casos_unicos_nuevos_por_persona_con_prueba) %>%
+      pivot_longer(-date, names_to = "def", values_to = "rate") %>%
+      mutate(def = str_replace_all(def, "_", " ")) %>%
+      mutate(def = str_replace_all(def, "unicos", "únicos")) %>%
+      mutate(def = str_replace_all(def, "por ciento", "%")) %>%
+      mutate(def = ifelse(def == "% de pruebas positivas", "% de pruebas positivas incluyendo duplicados (definición usada por CDC)", def)) 
+  }
+  
+  ret <- dat %>%
+    ggplot(aes(date, rate)) +
     geom_hline(yintercept = 0.03, lty=2, color = "gray") +
     geom_hline(yintercept = 0.10, lty=2, color = "gray") +
     geom_hline(yintercept = 0.20, lty=2, color = "gray") +
@@ -16,28 +34,52 @@ plot_positivity <- function(tests,
     annotate("text", end_date + days(2), 0.065, label = "Medio") + #, color = "#FFC900") +
     annotate("text", end_date + days(2), 0.15, label = "Alto") + #, color = "#FF9600") +
     annotate("text", end_date + days(2), 0.225, label = "Crítico") + #, color = "#FF0034") +
-    geom_point(aes(date, rate), size=2, alpha = 0.65, show.legend = FALSE) +
-    geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.35, show.legend = FALSE) +
-    geom_line(aes(y = fit), color="blue2", size = 0.80, show.legend = FALSE) +
+    geom_point(size=2, alpha = 0.65, show.legend = FALSE) +
     ylab("Tasa de positividad") +
     xlab("Fecha") +
-    scale_y_continuous(labels = scales::percent) +
-    scale_x_date(date_labels = "%b", breaks = breaks_width("1 month"))  +
-    labs(title = paste("Tasa de Positividad basada en pruebas" , 
-                       case_when(type == "Molecular" ~ "moleculares", 
-                                 type == "Serological" ~ "serológicas",
-                                 type == "Antigens" ~ "de antígenos",
-                                 type == "Molecular+Antigens" ~ "moleculares y de antígenos"))) +
-    theme_bw() +
-    theme(plot.caption=element_text(hjust = 0)) 
+    scale_x_date(date_labels = "%b", breaks = breaks_width("1 month")) +
+    theme_bw() 
   
-  if(yscale){
-    ret <- ret + coord_cartesian(ylim = c(0, 0.25))
-  } else{
-    the_ylim <- tests %>%
-      filter(testType == type & date >= start_date & date <= end_date) %>%
+  if(show.all){
+    ret <- ret +     
+      geom_line(aes(date, rate, color = def, lty = date > last_day), 
+                data = weekly_rates, show.legend = TRUE) +
+      theme(plot.caption=element_text(hjust = 0), legend.position="bottom") +
+      scale_linetype(guide = "none") +
+      scale_color_manual(values = c("#619CCF","#F8766D","#00BA38")) +
+      guides(color=guide_legend(title="Definiciones (todas por semana):", nrow = 2)) +
+      labs(title = paste("Tasa de Positividad basada en pruebas" , 
+                         case_when(type == "Molecular" ~ "moleculares", 
+                                   type == "Serological" ~ "serológicas",
+                                   type == "Antigens" ~ "de antígenos",
+                                   type == "Molecular+Antigens" ~ "moleculares y de antígenos")))
+    
+    the_ylim <- range(weekly_rates$rate, na.rm = TRUE)
+      } else{
+    ret <- ret + 
+      geom_line(aes(date, fit, lty = date > last_day), color = "#619CCF", size = 0.80, show.legend = FALSE) +
+      geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.35, show.legend = FALSE) +
+      labs(title = paste("% de personas que se hicieron prueba\n" , 
+                         case_when(type == "Molecular" ~ "molecular", 
+                                   type == "Serological" ~ "serológica",
+                                   type == "Antigens" ~ "de antígeno",
+                                   type == "Molecular+Antigens" ~ "moleculares o de antígenos"),
+                         "con resultado positivo"))
+    
+    the_ylim <- dat %>%
       summarize(lower = min(lower, na.rm = TRUE), upper = max(upper, na.rm = TRUE))
-    ret <- ret + ylim(c(the_ylim$lower, the_ylim$upper))
+    
+    the_ylim <- c(the_ylim$lower, the_ylim$upper)
+  }
+    
+  if(yscale){
+    ret <- ret + coord_cartesian(ylim = c(0, 0.25)) +
+      scale_y_continuous(labels = scales::percent) 
+
+  } else{
+    ret <- ret + 
+      scale_y_continuous(labels = scales::percent, 
+                         limits = c(the_ylim)) 
   }
   return(ret)
 }
@@ -76,7 +118,7 @@ plot_icu <- function(hosp_mort,
     annotate("text", end_date + days(2), 0.75, label = "Crítico") + #, color = "#FF0034") +
     geom_line(lwd = 1.5, color = "darkblue") +
     xlab("Fecha") +
-    ylab("Porciento") +
+    ylab("por ciento") +
     labs(title = "Camas ICU disponibles usadas por pacientes COVID-19",
          caption = "Algunas pacientes en el ICU están ahí por otras causas.\nLa gráfica muestra el porcentaje de las camas restantes ocupadas por pacientes COVID-19.") +
     scale_x_date(date_labels = "%b", breaks = breaks_width("1 month"))  +
@@ -192,7 +234,7 @@ plot_cases <- function(cases,
       theme_bw()
   } else{
     
-    cases$moving_avg[cases$date > last_day] <- NA
+    cases$cases_week_avg[cases$date > last_day] <- NA
     
     ret <- cases %>%
       filter(testType == type & date >= start_date & date <= end_date) %>%
@@ -209,11 +251,12 @@ plot_cases <- function(cases,
       theme_bw()
     
     if(yscale){
-      ret <- ret + geom_bar(stat = "identity", fill = "#FBBCB2", width= 0.75) +
-        geom_line(aes(y = moving_avg), color = "#CC523A", size = 1.25) 
+      ret <- ret + 
+        geom_bar(stat = "identity", fill = "#FBBCB2", width= 0.75) +
+        geom_line(aes(y = cases_week_avg), color = "#CC523A", size = 1.25) 
     } else{
       ret <- ret + 
-        geom_line(aes(y = moving_avg), color = "#CC523A", size = 1.25) 
+        geom_line(aes(y = cases_week_avg), color = "#CC523A", size = 1.25) 
     }
   }
   return(ret)
@@ -245,19 +288,21 @@ plot_test <- function(tests,
   } else{
     
     ## last_day is a global variable
-    tests$tests_week_avg[tests$date > last_day] <- NA
+    tests$tests_total_week[tests$date > last_day] <- NA
     
     tests %>%
       filter(testType == type & date >= start_date & date <= end_date) %>%
-      ggplot(aes(date, all_tests)) +
+      ggplot(aes(date, tests_total)) +
       geom_bar(stat = "identity", width = 0.75, fill = "#D1D1E8") +
-      geom_line(aes(y = tests_week_avg), color = "#31347A", size = 1.25) +
+      geom_line(aes(y = tests_total_week / 7), color = "#31347A", size = 1.25) +
       ylab("Pruebas") +
       xlab("Fecha") +
       labs(title = paste("Pruebas", 
                          case_when(type == "Molecular" ~ "moleculares", 
                                    type == "Serological" ~ "serológicas",
-                                   type == "Antigens" ~ "de antígenos"), "por día"),
+                                   type == "Antigens" ~ "de antígenos",
+                                   type == "Molecular+Antigens" ~ "moleculares y de antígenos"), 
+           "por día"),
            caption = "Incluye pruebas duplicadas.") + 
       scale_x_date(date_labels = "%b", breaks = breaks_width("1 month"))  +
       scale_y_continuous(labels = scales::comma) +
@@ -371,7 +416,7 @@ plot_map <- function(tests_by_strata,
   return(ret)
 }
 
-make_table <- function(tests, cases, hosp_mort, 
+make_table <- function(tests, hosp_mort, 
                        start_date = first_day, 
                        end_date = today(), 
                        type = "Molecular",
@@ -379,49 +424,47 @@ make_table <- function(tests, cases, hosp_mort,
   
   tmp <- select(hosp_mort, date, HospitCOV19, IncMueSalud, CamasICU)
 
-  cases <- filter(cases, testType == type) %>% select(-testType)
-  
   ## last_day is a global variable 
   #cases$moving_avg[cases$date > last_day] <- NA
 
   ret <- tests %>%
     filter(testType == type) %>%
-    left_join(cases, by = "date") %>%
     left_join(tmp, by = "date") %>%
     filter(date >= start_date & date <= end_date)
   
   if(cumm){
     ret <- ret %>% 
-      mutate(positives = cumsum(replace_na(positives, 0)),
-             tests = cumsum(replace_na(tests, 0)),
-             rate = positives/tests,
-             all_positives = cumsum(replace_na(all_positives, 0)),
-             all_tests = cumsum(replace_na(all_tests, 0)),
+      mutate(people_positives = cumsum(replace_na(people_positives, 0)),
+             people_total = cumsum(replace_na(people_total, 0)),
+             rate = people_positives/people_total,
              cases = cumsum(replace_na(cases, 0)),
              IncMueSalud = cumsum(replace_na(IncMueSalud, 0))
       )
   }
+  make_pct <- function(x, digit = 1) ifelse(is.na(x), "", paste0(format(round(100*x, digit = digit), nsmall = digit), "%"))
+  
   ret <- ret  %>%
     mutate(rate = format(round(rate, 2), nsmall = 2),
            fit = ifelse(is.na(fit), "", 
                         paste0(format(round(100*fit, 1), nsmall = 1), "% ",
                                "(", trimws(format(round(100*lower, 1), nsmall = 1)),"%" , ", ",
-                               format(round(100*upper, 1), nsmall=1),"%", ")")), 
-           moving_avg = round(moving_avg),
+                               format(round(100*upper, 1), nsmall=1),"%", ")")),
+           cases_rate = make_pct(cases_week_avg/people_total_week*7),
+           cdc_rate = make_pct(tests_positives_week / tests_total_week), 
+           rate_week = make_pct(tests_positives_week / tests_total_week),
+           cases_week_avg = round(cases_week_avg),
            dummy = date) %>%
-    mutate(positives = prettyNum(replace_na(positives, " "), big.mark = ","),
-           tests = prettyNum(replace_na(tests, " "), big.mark = ","),
-           all_positives = prettyNum(replace_na(all_positives, " "), big.mark = ","),
-           all_tests = prettyNum(replace_na(all_tests, " "), big.mark = ","),
+    mutate(positives = prettyNum(replace_na(people_positives, " "), big.mark = ","),
+           tests = prettyNum(replace_na(people_total, " "), big.mark = ","),
            cases = prettyNum(replace_na(cases, " "), big.mark = ","),
            IncMueSalud = prettyNum(replace_na(IncMueSalud, " "), big.mark = ",")) %>% 
-  select(date, fit, cases, moving_avg, IncMueSalud, CamasICU, HospitCOV19, 
-           positives, tests, rate, dummy) %>%
+    select(date, fit, cases, cases_week_avg, IncMueSalud, CamasICU, HospitCOV19, 
+           positives, tests, rate,  cases_rate, cdc_rate, dummy) %>%
     arrange(desc(date)) %>%
     mutate(date = format(date, "%B %d")) %>%
-    setNames(c("Fecha", "Tasa de positividad (IC)",  "Casos únicos", "Promedio de 7 días",
+    setNames(c("Fecha", "Tasa positividad (personas)",  "Casos únicos", "Promedio de 7 días",
                "Muertes", "ICU", "Hospital", "Positivos", "Pruebas", 
-               "Positivos/ Pruebas", "dateorder"))
+               "Positivos/ Pruebas", "Tasa + (casos)", "Tasa + (CDC)", "dateorder"))
   
       ret <- DT::datatable(ret, #class = 'white-space: nowrap',
                     caption = paste("Positivos y casos son de pruebas", 
@@ -429,23 +472,24 @@ make_table <- function(tests, cases, hosp_mort,
                                               type == "Serological" ~ "serológicas.",
                                               type == "Antigens" ~ "de antígenos.",
                                               type == "Molecular+Antigens" ~ "moleculares y de antígenos."),
-                                    "La columna con fechas contiene el día en que se hizo la prueba.", 
-                                    "La tasa de positividad se define como el número de personas con al menos una prueba positiva dividido por el número de personas que se han hecho la prueba.",
-                                    "El estimado para cada día está basado en las pruebas hecha durante la semana acabando en ese día.",
-                                    "IC = Intervalo de confianza del ", (1-alpha)*100,"%.",
-                                 #   "El estimado de tasa de positividad para última semana esta ajustado tomando en cuenta que pruebas positivas entran antes que las negativas. ",
+                                    # "La columna con fechas contiene el día en que se hizo la prueba.", 
+                                    "La tasa de positividad (personas) se cálcula para la semana acabando en la fecha de la primera columna y se define como el por ciento de personas que salieron positivos entre los que se hicieron prueba esa semana.",
+                                    "Los paréntesis contienen un intervalo de confianza del ", (1-alpha)*100,"%.", 
+                                    #   "El estimado de tasa de positividad para última semana esta ajustado tomando en cuenta que pruebas positivas entran antes que las negativas. ",
                                     "Los casos único son el número de personas con su primera prueba positiva en ese día.",
-                                    "El promedio de casos de 7 días está basado en la semana acabando ese día. Los datos de las pruebas toman ", lag_to_complete, " días en estar aproximadamente completos, por tanto, calculamos los casos por día hasta ", format(last_day, "%B %d. "),
+                                    "El promedio de casos de 7 días está basado en la semana acabando ese día. Los datos de las pruebas toman ", lag_to_complete, " días en estar aproximadamente completos, por tanto, los casos están inclompletos para días después de ", format(last_day, "%B %d. "),
                                     "La columna de positivos muestra el número de personas que tuvieron una prueba positiva ese día (no necesariamente son casos únicos).",
                                     "La columna de pruebas es el número de personas que se hicieron una prueba ese día.",
+                                    "La tasa de positividad (casos) se cálcula para la semana acabando ese día y se define como el por ciento de personas salieron positivos por primera vez entre los que se hicieron la prueba esa semana.",
+                                    "La tasa de positividad (CDC) es la que usa el CDC y se define como el por ciento de pruebas positivas (incluyeno duplicados) para la semana acabando ese día.",
                                     "Tengan en cuante que los fines de semana se hacen menos pruebas y por lo tanto se reportan menos casos.",
                                     "Las muertes, casos en el ICU y hospitalizaciones vienen del informe oficial del Departamento de Salud y toman un día en ser reportados."),
       rownames = FALSE,
       options = list(dom = 't', pageLength = -1,
                      columnDefs = list(
-                       list(targets = 0, orderData = 10),
-                       list(targets = 10, visible = FALSE),
-                       list(className = 'dt-right', targets = 2:9)))) %>%
+                       list(targets = 0, orderData = 12),
+                       list(targets = 12, visible = FALSE),
+                       list(className = 'dt-right', targets = 2:11)))) %>%
         DT::formatStyle(1:2,"white-space"="nowrap")
       return(ret)
 }
@@ -527,7 +571,7 @@ plot_agedist <- function(tests_by_strata,
     geom_bar(stat = "identity") +
     scale_y_continuous(labels = scales::percent) +
     xlab("Edad") +
-    ylab("Porciento") +
+    ylab("por ciento") +
     ggtitle(paste("Distribución de pruebas",  
                   case_when(type == "Molecular" ~ "moleculares", 
                             type == "Serological" ~ "serológicas",
@@ -544,11 +588,10 @@ plot_agedist <- function(tests_by_strata,
   return(ret)
 }
 
-compute_summary <- function(tests, hosp_mort, cases, type = "Molecular"){
+compute_summary <- function(tests, hosp_mort, type = "Molecular"){
   
   ## function to turn proportions into pretty percentages
   make_pct <- function(x, digits = 1) paste0(format(round(100 * x, digits = digits), nsmall = digits), "%")
-  
   
   ## dates that we will put in the table
   ## they are 4 entries, 1 week apart
@@ -577,13 +620,13 @@ compute_summary <- function(tests, hosp_mort, cases, type = "Molecular"){
   
   ## cases 
   ## same a pos but for cases
-  cas <- filter(cases, testType == type & 
+  cas <- filter(tests, testType == type & 
                   date %in% the_dates)  %>%
     arrange(desc(date))
   
   ## get overdisepersion, last day is a global variable defined in init
   ## we assume cases are Possion with the precalculated trend an offset.
-  phi <- cases %>% filter(date >= make_date(2020, 7, 1) & 
+  phi <- tests %>% filter(date >= make_date(2020, 7, 1) & 
                             date <= make_date(2020, 11, 2) & ## avoid election thanksgiving and xmas
                             date <= last_day &
                             testType == type) %>%
@@ -593,8 +636,8 @@ compute_summary <- function(tests, hosp_mort, cases, type = "Molecular"){
     .$dispersion
   
   change_cas <- sapply(1:(nrow(cas)-1), function(i){
-    d <- cas$moving_avg[i] - cas$moving_avg[i+1]
-    se <- sqrt((phi*cas$moving_avg[i] + phi*cas$moving_avg[i+1])/7)
+    d <- cas$cases_week_avg[i] - cas$cases_week_avg[i+1]
+    se <- sqrt((phi*cas$cases_week_avg[i] + phi*cas$cases_week_avg[i+1])/7)
     signif <- abs(d/se) > qnorm(0.975)
     sign(d) * signif 
   })
@@ -610,13 +653,13 @@ compute_summary <- function(tests, hosp_mort, cases, type = "Molecular"){
                             date <= last_day &
                             testType == type) %>%
     mutate(wd = factor(wday(date)), week = factor(round_date(date, "week"))) %>%
-    glm(all_tests ~ wd + week, data = ., family = quasipoisson) %>%
+    glm(people_total_week ~ wd + week, data = ., family = quasipoisson) %>%
     summary()  %>%
     .$dispersion
   
   change_tes <- sapply(1:(nrow(tes)-1), function(i){
-    d <- tes$tests_week_avg[i] - tes$tests_week_avg[i+1]
-    se <- sqrt((phi*tes$tests_week_avg[i] + phi*tes$tests_week_avg[i+1])/7)
+    d <- (tes$people_total_week[i] - tes$people_total_week[i+1]) / 7
+    se <- sqrt((phi*tes$people_total_week[i] + phi*tes$people_total_week[i+1]))/7
     signif <- abs(d/se) > qnorm(0.975)
     sign(d) * signif 
   })
@@ -684,8 +727,8 @@ compute_summary <- function(tests, hosp_mort, cases, type = "Molecular"){
   
   make_values <- function(i){
     c(make_pct(pos$fit[i]), 
-      round(cas$moving_avg[i]), 
-      prettyNum(round(tes$tests_week_avg[i]), 
+      round(cas$cases_week_avg[i]), 
+      prettyNum(round(tes$tests_total_week[i] / 7), 
                 big.mark = ","),
       prettyNum(round(hos$HospitCOV19[i]), 
                 big.mark = ","),
@@ -694,9 +737,9 @@ compute_summary <- function(tests, hosp_mort, cases, type = "Molecular"){
   
   
   ## make the table
-  tab <- tibble(metrica = c("Tasa de positividad", 
-                            "Casos nuevos por día", 
-                            "Pruebas por día", 
+  tab <- tibble(metrica = c("% de personas con prueba positiva", 
+                            "Casos únicos nuevos por día", 
+                            "Personas que se hicieron pruebas por día", 
                             "Hospitalizaciones",
                             "Muertes por día"),
                 
@@ -728,7 +771,7 @@ plot_rezago <- function(rezago,
       ggplot(aes(x=diff, color = Resultado)) +
       stat_ecdf(alpha = 0.75) + 
       xlab("Días") + 
-      ylab("Porciento de pruebas") +
+      ylab("por ciento de pruebas") +
       labs(title = paste("Rezago entre toma de muestra y día en que se reporta prueba",  
                          case_when(type == "Molecular" ~ "moleculares", 
                                    type == "Serological" ~ "serológicas",
