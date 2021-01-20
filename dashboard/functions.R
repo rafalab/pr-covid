@@ -452,7 +452,7 @@ make_table <- function(tests, hosp_mort,
                         paste0(format(round(100*fit, 1), nsmall = 1), "% ",
                                "(", trimws(format(round(100*lower, 1), nsmall = 1)),"%" , ", ",
                                format(round(100*upper, 1), nsmall=1),"%", ")")),
-           cases_rate = make_pct(cases_week_avg/people_total_week*7),
+           cases_rate = make_pct(cases_week_avg * 7 / (people_total_week - tests_positives_week + cases_week_avg * 7)),
            cdc_rate = make_pct(tests_positives_week / tests_total_week), 
            cases_week_avg = round(cases_week_avg),
            dummy = date) %>%
@@ -461,12 +461,12 @@ make_table <- function(tests, hosp_mort,
            cases = prettyNum(replace_na(cases, " "), big.mark = ","),
            IncMueSalud = prettyNum(replace_na(IncMueSalud, " "), big.mark = ",")) %>% 
     select(date, fit, cases, cases_week_avg, IncMueSalud, CamasICU, HospitCOV19, 
-           positives, tests, rate,  cases_rate, cdc_rate, dummy) %>%
+           positives, tests, rate, cdc_rate, cases_rate, dummy) %>%
     arrange(desc(date)) %>%
     mutate(date = format(date, "%B %d")) %>%
-    setNames(c("Fecha", "% personas con prueba positiva",  "Casos únicos", "Promedio de 7 días",
+    setNames(c("Fecha", "%Personas con prueba positiva",  "Casos únicos", "Promedio de 7 días",
                "Muertes", "ICU", "Hospital", "Positivos", "Pruebas", 
-               "Positivos/ Pruebas", "Casos/ Personas", "%Pruebas positivas", "dateorder"))
+               "Positivos/ Pruebas", "%Pruebas positivas", "Casos/ Personas", "dateorder"))
   
       ret <- DT::datatable(ret, #class = 'white-space: nowrap',
                     caption = htmltools::tags$caption(
@@ -488,7 +488,7 @@ make_table <- function(tests, hosp_mort,
                                         "La columna de <b>positivos</b> muestra el número de personas que tuvieron una prueba positiva ese día (no necesariamente son casos únicos).",
                                         "La columna de <b>pruebas</b> es el número de personas que se hicieron una prueba ese día.",
                                         "La métrica <b>casos/ personas</b> se calcula para la semana acabando ese día y ",
-                                        "se define como el por ciento de personas que salieron positivo por primera vez entre los que se hicieron la prueba esa semana. ",
+                                        "se define como el por ciento de personas que salieron positivo por primera vez entre los que se hicieron la prueba esa semana, luego de remover los que han salid positivo antes. ",
                                         "La métrica <b>% Pruebas positivas</b> es la tasa de positividad que usa el CDC. ",
                                         "Se define como el por ciento de pruebas positivas (incluyendo duplicados) para la semana acabando ese día. ",
                                         "Tengan en cuenta que los fines de semana se hacen menos pruebas y por lo tanto se reportan menos casos. ",
@@ -522,7 +522,7 @@ make_positivity_table <- function(tests, hosp_mort,
   
   ret <- ret %>%
     mutate(fit = make_pct(fit),
-           cases_rate = make_pct(cases_week_avg/people_total_week*7),
+           cases_rate = make_pct(cases_week_avg * 7 / (people_total_week - tests_positives_week + cases_week_avg * 7)),
            cdc_rate = make_pct(tests_positives_week / tests_total_week), 
            people_positives_week = make_pretty(people_positives_week),
            people_total_week = make_pretty(people_total_week),
@@ -550,11 +550,11 @@ make_positivity_table <- function(tests, hosp_mort,
                              "<UL>",
                              "<LI>Rojo: definición usada por el CDC = <b>Pruebas+</b> / <b>Pruebas</b></LI>",
                              "<LI>Azul: definición que hemos usado aquí = <b>Personas+</b> / <b>Personas</b> </LI>",
-                             "<LI>Verde: <b>Casos</b> / <b>Personas</b> &#8776; <b>Casos</b> / (<b>Casos</b> + <b>Pruebas</b> - <b>Pruebas+</b>) </LI>",
+                             "<LI>Verde: <b>Casos</b> / (<b>Casos</b> + <b>Personas</b> - <b>Personas+</b>) </LI>",
                              "</UL>",
                              "<p>Noten que hay más <b>Pruebas</b> que <b>Personas</b> porque algunas personas se hacen más de una prueba a la semana y hay errores de duplicación. ",
                              "Noten también que hay más <b>Personas+</b> que <b>Casos</b> únicos nuevos porque algunas personas salen positivo en múltiples semanas.</p>",
-                             "Importante notar que la tasa de positividad <b>no un estimado del por ciento de la población que está infectada</b> ",
+                             "Importante notar que la tasa de positividad <b>no es un estimado del por ciento de la población que está infectada</b> ",
                              "ya que las personas que se hacen pruebas no son para nada representativas de la población. ",
                              "Son útiles y se monitorean porque suben cuando suben los casos o cuando no se hacen suficientes pruebas."
                            ))))),
