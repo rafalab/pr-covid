@@ -22,7 +22,8 @@ plot_positivity <- function(tests,
       mutate(def = str_replace_all(def, "_", " ")) %>%
       mutate(def = str_replace_all(def, "unicos", "únicos")) %>%
       mutate(def = str_replace_all(def, "por ciento", "%")) %>%
-      mutate(def = ifelse(def == "% de pruebas positivas", "% de pruebas positivas incluyendo duplicados (definición usada por CDC)", def)) 
+      mutate(def = ifelse(def == "% de pruebas positivas", "% de pruebas positivas incluyendo duplicados (definición usada por CDC)", def)) %>%
+      mutate(def = factor(def, levels = sort(unique(def))[c(2,1,3)]))
   }
   
   ret <- dat %>%
@@ -46,7 +47,7 @@ plot_positivity <- function(tests,
                 data = weekly_rates, show.legend = TRUE) +
       theme(plot.caption=element_text(hjust = 0), legend.position="bottom") +
       scale_linetype(guide = "none") +
-      scale_color_manual(values = c("#619CCF","#F8766D","#00BA38")) +
+      scale_color_manual(values = c("#F8766D","#619CCF","#00BA38")) +
       guides(color=guide_legend(title="Definiciones (todas por semana):", nrow = 3)) +
       labs(title = paste("Tasa de Positividad basada en pruebas" , 
                          case_when(type == "Molecular" ~ "moleculares", 
@@ -453,7 +454,6 @@ make_table <- function(tests, hosp_mort,
                                format(round(100*upper, 1), nsmall=1),"%", ")")),
            cases_rate = make_pct(cases_week_avg/people_total_week*7),
            cdc_rate = make_pct(tests_positives_week / tests_total_week), 
-           rate_week = make_pct(tests_positives_week / tests_total_week),
            cases_week_avg = round(cases_week_avg),
            dummy = date) %>%
     mutate(positives = prettyNum(replace_na(people_positives, " "), big.mark = ","),
@@ -492,10 +492,8 @@ make_table <- function(tests, hosp_mort,
                                         "La métrica <b>% Pruebas positivas</b> es la tasa de positividad que usa el CDC. ",
                                         "Se define como el por ciento de pruebas positivas (incluyendo duplicados) para la semana acabando ese día. ",
                                         "Tengan en cuenta que los fines de semana se hacen menos pruebas y por lo tanto se reportan menos casos. ",
-                                        "Las muertes, casos en el ICU y hospitalizaciones vienen del informe oficial del Departamento de Salud y toman un día en ser reportados. ",
-                                        "<b>Ojo</b>: importante notar que ni la tasa de positividad del CDC, ni las otras métricas, ",
-                                        "son estimados del por ciento de la población que está infectado ya que las personas que se hacen pruebas no son para nada representativas de la población. ",
-                                        "Son útiles y se monitorean porque suben cuando suben los casos o cuando no se hacen suficientes pruebas. "
+                                        "Las muertes, casos en el ICU y hospitalizaciones vienen del informe oficial del Departamento de Salud y toman un día en ser reportados."
+                                        
                         ))))),
       rownames = FALSE,
       options = list(dom = 't', pageLength = -1,
@@ -507,6 +505,68 @@ make_table <- function(tests, hosp_mort,
       return(ret)
 }
 
+make_positivity_table <- function(tests, hosp_mort, 
+                       start_date = first_day, 
+                       end_date = today(), 
+                       type = "Molecular"){
+
+  tmp <- select(hosp_mort, date, HospitCOV19, IncMueSalud, CamasICU)
+  
+  ret <- tests %>%
+    filter(testType == type) %>%
+    left_join(tmp, by = "date") %>%
+    filter(date >= start_date & date <= end_date)
+  
+  make_pct <- function(x, digit = 1) ifelse(is.na(x), "", paste0(format(round(100*x, digit = digit), nsmall = digit), "%"))
+  make_pretty <- function(x) prettyNum(replace_na(x, " "), big.mark = ",")
+  
+  ret <- ret %>%
+    mutate(fit = make_pct(fit),
+           cases_rate = make_pct(cases_week_avg/people_total_week*7),
+           cdc_rate = make_pct(tests_positives_week / tests_total_week), 
+           people_positives_week = make_pretty(people_positives_week),
+           people_total_week = make_pretty(people_total_week),
+           cases = make_pretty(round(cases_week_avg*7)),
+           tests_positives_week = make_pretty(tests_positives_week),
+           tests_total_week = make_pretty(tests_total_week),
+           dummy = date) %>%
+    select(date, tests_total_week, people_total_week, tests_positives_week, 
+           people_positives_week, cases, cdc_rate, fit, cases_rate, dummy) %>%
+    arrange(desc(date)) %>%
+    mutate(date = format(date, "%b %d")) %>%
+    setNames(c("Fecha", "Pruebas", "Personas", "Pruebas+", "Personas+", "Casos", "Rojo", "Azul", "Verde", "dateorder"))
+  
+  ret <- DT::datatable(ret, #class = 'white-space: nowrap',
+                       caption = htmltools::tags$caption(
+                         style = 'caption-side: top; text-align: Left;',
+                         htmltools::withTags(
+                           div(HTML(paste0(
+                             "<p> Las tasas se calculan usando los siguientes totales semanales:</b>",
+                             "<UL>",
+                             "<LI><b>Pruebas</b> = total de pruebas hechas, <b>Pruebas+</b> = pruebas positivas.</LI>",
+                             "<LI><b>Personas</b> = personas que se hicieron pruebas, <b>Personas+</b> personas que salieron positivo.</LI>",
+                             "<LI><b>Casos</b> = casos nuevos únicos, personas que salieron positivo por primera vez.</LI>",
+                             "</UL><p>Se caluclan para la semana acabando el día en la columna <b>Fecha</b>. Las tasa mostradas en la gráfica se definen así:</p>",
+                             "<UL>",
+                             "<LI>Rojo: definición usada por el CDC = <b>Pruebas+</b> / <b>Pruebas</b></LI>",
+                             "<LI>Azul: definición que hemos usado aquí = <b>Personas+</b> / <b>Personas</b> </LI>",
+                             "<LI>Verde: <b>Casos</b> / <b>Personas</b> &#8776; <b>Casos</b> / (<b>Casos</b> + <b>Pruebas</b> - <b>Pruebas+</b>) </LI>",
+                             "</UL>",
+                             "<p>Noten que hay más <b>Pruebas</b> que <b>Personas</b> porque algunas personas se hacen más de una prueba a la semana y hay errores de duplicación. ",
+                             "Noten también que hay más <b>Personas+</b> que <b>Casos</b> únicos nuevos porque algunas personas salen positivo en múltiples semanas.</p>",
+                             "Importante notar que la tasa de positividad <b>no un estimado del por ciento de la población que está infectada</b> ",
+                             "ya que las personas que se hacen pruebas no son para nada representativas de la población. ",
+                             "Son útiles y se monitorean porque suben cuando suben los casos o cuando no se hacen suficientes pruebas."
+                           ))))),
+                       rownames = FALSE,
+                       options = list(dom = 't', pageLength = -1,
+                                      columnDefs = list(
+                                        list(targets = 0, orderData = ncol(ret)-1),
+                                        list(targets = ncol(ret)-1, visible = FALSE),
+                                        list(className = 'dt-right', targets = 1:(ncol(ret)-1))))) %>%
+    DT::formatStyle(1, "white-space"="nowrap")
+  return(ret)
+}
 
 make_municipio_table <- function(tests_by_strata, 
                                  start_date = first_day, 

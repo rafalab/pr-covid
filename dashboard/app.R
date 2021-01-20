@@ -98,9 +98,9 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                #            "Se recomiendan  <b>más restricciones</b> si la tasa de positividad o casos por días sobrepasan los niveles metas, lo cual indica que la situación no mejorará sin intervenciones o cambio de comportamiento. ",
                                #            "Si se alcanzan estas metas, recomendamos <b>flexibilizaciones</b> lo cual indica poco riesgo actual pero, como todavía hay casos, continuamos monitoreando. ",
                                #            "Recomendamos <b>apertura</b> cuando prácticamente desaparece la enfermedad. Estos umbrales pueden cambiar mientras sigamos aprendiendo.")),
-                                HTML(paste0("<h5> <b> Porcientos</b>, ",
-                                           "<b>casos</b> y <b>pruebas</b> están basados en un <b>promedio de siete días</b> para contrarrestar el efecto que tiene el día de la semana en los totales. ",
-                                           "La flechas de colors no dicen si hubo cambio estadísticamente singificative cuando comparamos a la semana anterio. ",
+                                HTML(paste0("<h5> <b> Por cientos</b>, ",
+                                           "<b>casos</b>, y <b>pruebas</b> están basados en un <b>promedio de siete días</b> para contrarrestar el efecto que tiene el día de la semana. ",
+                                           "La flechas de colores no dicen si hubo cambio estadísticamente singificative cuando comparamos a la semana anterio. ",
                                            "Noten que los datos de las pruebas toman ", lag_to_complete, " días en estar aproximadamente completos, ",
                                            "por lo tanto, calculamos los casos y pruebas para <b>", format(last_day, "%B %d</b>. "))),
                                hr(),
@@ -112,7 +112,10 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                DT::dataTableOutput("tabla")),
                       
                       tabPanel("Positividad",
-                               plotOutput("tasa_positividad")),
+                               plotOutput("tasa_positividad"),
+                               hr(),
+                               h5("Definición y explicación sobre las diferentes definiciones de tasa de positividad"),
+                               DT::dataTableOutput("tabla_positividad")),
                       
                       tabPanel("Hospitalizaciones",
                                plotOutput("hospitalizaciones")),
@@ -267,6 +270,14 @@ server <- function(input, output, session) {
                     yscale = input$yscale,
                     show.all = TRUE)
   )
+  
+  output$tabla_positividad <- DT::renderDataTable({
+    make_positivity_table(tests, hosp_mort, 
+               start_date = input$range[1], 
+               end_date = input$range[2], 
+               type = input$testType)
+  }, server = FALSE)
+  
   
   # -- This creates the hospitalization figure
   output$hospitalizaciones <- renderPlot(
