@@ -3,7 +3,6 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular", day = today() 
   ## function to turn proportions into pretty percentages
   make_pct <- function(x, digits = 1) paste0(format(round(100 * x, digits = digits), nsmall = digits), "%")
   
-  
   ## dates that we will put in the table
   ## they are 4 entries, 1 week apart
   ## lag_to_complete is a global var
@@ -20,12 +19,24 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular", day = today() 
   ##determines if they are significant
   ## and returns -1 (decrease), 0 (no change), 1 (increase)
   change_pos <- sapply(1:(nrow(pos)-1), function(i){
-    x <- c(pos$lower[i], pos$upper[i])
-    y <- c(pos$lower[i+1], pos$upper[i+1])
-    
-    signif <- !any(c(between(x, y[1], y[2])), 
-                   c(between(y, x[1], x[2])))
-    
+    p1 <- pos$fit[i] 
+    p0 <- pos$fit[i+1]
+    d <- p1 - p0
+    se <- sqrt(p1*(1-p1) / pos$people_total_week[i] + p0*(1-p0) / pos$people_total_week[i+1])
+    signif <- abs(d/se) > qnorm(0.975)
+    sign(pos$fit[i] - pos$fit[i+1]) * signif 
+  })
+  
+  casespos <- pos %>%
+    mutate(n =  people_total_week - people_positives_week + cases_week_avg * 7,
+           cases_rate = cases_week_avg * 7 / n)
+  
+  change_casespos <- sapply(1:(nrow(pos)-1), function(i){
+    p1 <- casespos$cases_rate[i] 
+    p0 <- casespos$cases_rate[i+1]
+    d <- p1 - p0
+    se <- sqrt(p1*(1-p1) / casespos$n[i] + p0*(1-p0) / casespos$n[i+1])
+    signif <- abs(d/se) > qnorm(0.975)
     sign(pos$fit[i] - pos$fit[i+1]) * signif 
   })
   
@@ -144,6 +155,7 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular", day = today() 
   make_arrow <- function(i){
     replace_na(
       c(arrows[change_pos[i]+2], 
+        arrows[change_casespos[i]+2],
         arrows[change_cas[i]+2],
         arrows_2[change_tes[i]+2],
         arrows[change_hos[i]+2],
@@ -153,8 +165,9 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular", day = today() 
   
   make_values <- function(i){
     c(make_pct(pos$fit[i]), 
+      make_pct(casespos$cases_rate[i]), 
       round(cas$cases_week_avg[i]), 
-      prettyNum(round(tes$tests_total_week[i] / 7), 
+      prettyNum(round(tes$people_total_week[i] / 7), 
                 big.mark = ","),
       prettyNum(round(hos$HospitCOV19[i]), 
                 big.mark = ","),
@@ -167,30 +180,43 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular", day = today() 
   pos <- pos[-1,]
   change_pos <- change_pos[-1]
   
+  casos_positividad <- paste(make_pct(casespos$cases_rate[1]),  arrows[change_casespos[1] + 2])
+  casespos <- casespos[-1,]
+  change_casespos <- change_casespos[-1]
+  
   hosp <- paste(prettyNum(hos$HospitCOV19[1], big.mark = ","), arrows[change_hos[1]+2])
   hos <- hos[-1,]
   change_hos <- change_hos[-1]
   
   ## make the table
-  tab <- tibble(metrica = c("% de personas con prueba positiva", 
-                            "Casos únicos nuevos por día", 
-                            "Personas por día que se hicieron pruebas", 
+  tab <- tibble(metrica = c("% pruebas positivas", 
+                            "% casos nuevos",
+                            "Casos nuevos por día", 
+                            "Pruebas por día", 
                             "Hospitalizaciones",
                             "Muertes por día"),
                 
-                valor =  paste(make_values(1), make_arrow(1)),
-                meta = c("< 3.0%", 
+                meta = c("< 3.0%",
+                         "< 3.0%", 
                          "< 30", 
                          "> 4,500", 
                          "< 300",
                          "< 1"),
+                
+                 valor =  paste(make_values(1), make_arrow(1)),
+                 
                 cambio_1 = paste(make_values(2), make_arrow(2)),
                 cambio_2 = paste(make_values(3), make_arrow(3)),
   )
   
-  colnames(tab) <- c("Métrica", "Nivel",  "Meta", "7 días antes",  "14 días antes")
-  
+  colnames(tab) <- c("Métrica", 
+                     "Meta", 
+                     paste0(format(pos$date[1]-days(6), "%b%d-"),format(pos$date[1], "%b%d")),
+                     paste0(format(pos$date[2]-days(6), "%b%d-"),format(pos$date[2], "%b%d")),
+                     paste0(format(pos$date[3]-days(6), "%b%d-"),format(pos$date[3], "%b%d")))
+                     
+                     
   return(list(tab = tab, riesgo = riesgo, nivel = nivel, tendencia = tendencia, 
-              positividad = positividad, hosp = hosp))
+              positividad = positividad, casos_positividad = casos_positividad, hosp = hosp))
   
 }
