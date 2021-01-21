@@ -112,9 +112,15 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                DT::dataTableOutput("tabla")),
                       
                       tabPanel("Positividad",
+                               radioButtons("pos_version", 
+                                            label = "Definición:",
+                                            choices = list("Pruebas sobre pruebas" = "pruebas",
+                                                           "Casos sobre personas" = "casos"),
+                                            selected = "pruebas",
+                                            inline = TRUE),
                                plotOutput("tasa_positividad"),
                                hr(),
-                               h5("Definición y explicación sobre las diferentes definiciones de tasa de positividad"),
+                               h5("Explicación sobre las diferentes definiciones de Tasa de Positividad"),
                                DT::dataTableOutput("tabla_positividad")),
                       
                       tabPanel("Hospitalizaciones",
@@ -229,14 +235,14 @@ server <- function(input, output, session) {
                     options = list(dom = 't', ordering = FALSE, pageLength = -1, 
                                    columnDefs = list(
                                      list(className = 'dt-center', targets = 0:3)))) %>%
-      DT::formatStyle(columns = 1:4, fontSize = '110%')
+      DT::formatStyle(columns = 1:4, fontSize = '100%')
   }, server = FALSE)
   
   
   output$resumen_plots <- renderPlot({
     p1 <- plot_positivity(tests, 
                           start_date = input$range[1],  end_date = input$range[2], 
-                          type = input$testType, yscale = input$yscale, show.all = FALSE)
+                          type = input$testType, yscale = input$yscale, version = "pruebas")
     p2 <- plot_deaths(hosp_mort, 
                     start_date = input$range[1], end_date = input$range[2],
                     cumm = input$acumulativo, yscale = input$yscale)
@@ -268,7 +274,7 @@ server <- function(input, output, session) {
                     end_date = input$range[2], 
                     type = input$testType, 
                     yscale = input$yscale,
-                    show.all = TRUE)
+                    version = input$pos_version)
   )
   
   output$tabla_positividad <- DT::renderDataTable({

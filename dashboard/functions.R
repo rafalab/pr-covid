@@ -4,26 +4,33 @@ plot_positivity <- function(tests,
                             end_date = today(), 
                             type = "Molecular", 
                             yscale = FALSE,
-                            show.all = TRUE){
+                            version = c("pruebas", "casos")){
+  version <- match.arg(version)
+  
   dat <- tests %>%
     filter(testType == type &
            date >= start_date & date <= end_date) 
   
-  if(show.all){
-    weekly_rates <- dat %>% 
-      mutate(por_ciento_de_personas_con_prueba_positiva = fit,
-             por_ciento_de_pruebas_positivas = tests_positives_week / tests_total_week,
-             Casos_unicos_nuevos_por_persona_con_prueba  = cases_week_avg / people_total_week * 7) %>%
-      select(date, 
-             por_ciento_de_personas_con_prueba_positiva,
-             por_ciento_de_pruebas_positivas,
-             Casos_unicos_nuevos_por_persona_con_prueba) %>%
-      pivot_longer(-date, names_to = "def", values_to = "rate") %>%
-      mutate(def = str_replace_all(def, "_", " ")) %>%
-      mutate(def = str_replace_all(def, "unicos", "únicos")) %>%
-      mutate(def = str_replace_all(def, "por ciento", "%")) %>%
-      mutate(def = ifelse(def == "% de pruebas positivas", "% de pruebas positivas incluyendo duplicados (definición usada por CDC)", def)) %>%
-      mutate(def = factor(def, levels = sort(unique(def))[c(2,1,3)]))
+  if(version == "casos"){
+    dat <- dat %>%
+      mutate(n = people_total_week - people_positives_week + cases_week_avg * 7,
+             fit =cases_week_avg * 7 / n,
+             rate = cases / (people_total - people_positives + cases),
+             lower = qbinom(0.025, n, fit) / n,
+             upper = qbinom(0.975, n, fit) / n)
+    the_title <- paste("% de personas que se hicieron prueba\n" , 
+                       case_when(type == "Molecular" ~ "molecular", 
+                                 type == "Serological" ~ "serológica",
+                                 type == "Antigens" ~ "de antígeno",
+                                 type == "Molecular+Antigens" ~ "moleculares o de antígenos"),
+                       "que son casos únicos nuevos")
+  } else{
+    the_title <- paste("% de personas que se hicieron prueba\n" , 
+                       case_when(type == "Molecular" ~ "molecular", 
+                                 type == "Serological" ~ "serológica",
+                                 type == "Antigens" ~ "de antígeno",
+                                 type == "Molecular+Antigens" ~ "moleculares o de antígenos"),
+                       "con resultado positivo")
   }
   
   ret <- dat %>%
@@ -35,46 +42,21 @@ plot_positivity <- function(tests,
     annotate("text", end_date + days(2), 0.065, label = "Medio") + #, color = "#FFC900") +
     annotate("text", end_date + days(2), 0.15, label = "Alto") + #, color = "#FF9600") +
     annotate("text", end_date + days(2), 0.225, label = "Crítico") + #, color = "#FF0034") +
-    geom_point(size=2, alpha = 0.65, show.legend = FALSE) +
-    ylab("Tasa de positividad") +
+    geom_point(size = 2, alpha = 0.65, show.legend = FALSE) +
+    ylab("Tasa") +
     xlab("Fecha") +
     scale_x_date(date_labels = "%b", breaks = breaks_width("1 month")) +
-    theme_bw() 
+    theme_bw() +
+    geom_line(aes(date, fit, lty = date > last_day), color = "blue", size = 0.80, show.legend = FALSE) +
+    geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.35, show.legend = FALSE) +
+    labs(title = the_title,
+         caption = "Los puntos son el por ciento diarios, la curva el porciento semanal.")
+    
+  the_ylim <- dat %>%
+    summarize(lower = min(lower, na.rm = TRUE), upper = max(upper, na.rm = TRUE))
   
-  if(show.all){
-    ret <- ret +     
-      geom_line(aes(date, rate, color = def, lty = date > last_day), 
-                data = weekly_rates, show.legend = TRUE) +
-      theme(plot.caption=element_text(hjust = 0), legend.position="bottom") +
-      scale_linetype(guide = "none") +
-      scale_color_manual(values = c("#F8766D","#619CCF","#00BA38")) +
-      guides(color=guide_legend(title="Definiciones (todas por semana):", nrow = 3)) +
-      labs(title = paste("Tasa de Positividad basada en pruebas" , 
-                         case_when(type == "Molecular" ~ "moleculares", 
-                                   type == "Serological" ~ "serológicas",
-                                   type == "Antigens" ~ "de antígenos",
-                                   type == "Molecular+Antigens" ~ "moleculares y de antígenos")),
-           caption = "Los puntos son el por ciento de personas con pruebas positivas ese día.")
-    
-    the_ylim <- range(weekly_rates$rate, na.rm = TRUE)
-      } else{
-    ret <- ret + 
-      geom_line(aes(date, fit, lty = date > last_day), color = "#619CCF", size = 0.80, show.legend = FALSE) +
-      geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.35, show.legend = FALSE) +
-      labs(title = paste("% de personas que se hicieron prueba\n" , 
-                         case_when(type == "Molecular" ~ "molecular", 
-                                   type == "Serological" ~ "serológica",
-                                   type == "Antigens" ~ "de antígeno",
-                                   type == "Molecular+Antigens" ~ "moleculares o de antígenos"),
-                         "con resultado positivo"),
-           caption = "Los puntos son el por ciento de personas con pruebas positivas cada día.")
-    
-    the_ylim <- dat %>%
-      summarize(lower = min(lower, na.rm = TRUE), upper = max(upper, na.rm = TRUE))
-    
-    the_ylim <- c(the_ylim$lower, the_ylim$upper)
-  }
-    
+  the_ylim <- c(the_ylim$lower, the_ylim$upper)
+  
   if(yscale){
     ret <- ret + coord_cartesian(ylim = c(0, 0.25)) +
       scale_y_continuous(labels = scales::percent) 
@@ -333,10 +315,10 @@ plot_positivity_by_lab <- function(labs,
       geom_line(col = "blue") +
       scale_x_date(date_labels = "%b", breaks = scales::breaks_width("1 month"))  +
       xlab("Fecha") +
-      ylab("Tasa de positividad") +
+      ylab("Tasa") +
       theme_bw() +
       facet_wrap(~Laboratorio) +
-      labs(title = paste("Tasa de Positividad por laboratorio basada en pruebas" , 
+      labs(title = paste("Por ciento de pruebas positivas por laboratorio basada en pruebas" , 
                          case_when(type == "Molecular" ~ "moleculares", 
                                    type == "Serological" ~ "serológicas",
                                    type == "Antigens" ~ "de antígenos")))
@@ -403,11 +385,11 @@ plot_map <- function(tests_by_strata,
                 color = "black",
                 fontface = "bold") +
       scale_fill_gradientn(colors = RColorBrewer::brewer.pal(9, "Reds"),
-                           name = "Tasa de Positividad:",
+                           name = "Por ciento de pruebas positivas:",
                            limits= c(0, 100*max_rate)) +
       theme_void() +
       theme(legend.position = "bottom") +
-      ggtitle(paste("Tasa de positividad por municipio para el period de",
+      ggtitle(paste("Por ciento de pruebas positivas por municipio para el period de",
                     format(start_date, "%B %d"),
                     "a",
                     format(end_date, "%B %d."), "\n",
@@ -452,8 +434,14 @@ make_table <- function(tests, hosp_mort,
                         paste0(format(round(100*fit, 1), nsmall = 1), "% ",
                                "(", trimws(format(round(100*lower, 1), nsmall = 1)),"%" , ", ",
                                format(round(100*upper, 1), nsmall=1),"%", ")")),
-           cases_rate = make_pct(cases_week_avg * 7 / (people_total_week - tests_positives_week + cases_week_avg * 7)),
-           cdc_rate = make_pct(tests_positives_week / tests_total_week), 
+           n = people_total_week - people_positives_week + cases_week_avg * 7,
+           cases_rate = cases_week_avg * 7 / n,
+           cases_lower = qbinom(0.025, n, cases_rate) / n,
+           cases_upper = qbinom(0.975, n, cases_rate) / n,
+           cases_rate = ifelse(is.na(cases_rate), "", 
+                               paste0(format(round(100*cases_rate, 1), nsmall = 1), "% ",
+                                      "(", trimws(format(round(100*cases_lower, 1), nsmall = 1)),"%" , ", ",
+                                      format(round(100*cases_upper, 1), nsmall=1),"%", ")")),
            cases_week_avg = round(cases_week_avg),
            dummy = date) %>%
     mutate(positives = prettyNum(replace_na(people_positives, " "), big.mark = ","),
@@ -461,48 +449,46 @@ make_table <- function(tests, hosp_mort,
            cases = prettyNum(replace_na(cases, " "), big.mark = ","),
            IncMueSalud = prettyNum(replace_na(IncMueSalud, " "), big.mark = ",")) %>% 
     select(date, fit, cases, cases_week_avg, IncMueSalud, CamasICU, HospitCOV19, 
-           positives, tests, rate, cdc_rate, cases_rate, dummy) %>%
+           positives, tests, rate, cases_rate, dummy) %>%
     arrange(desc(date)) %>%
     mutate(date = format(date, "%B %d")) %>%
-    setNames(c("Fecha", "%Personas con prueba positiva",  "Casos únicos", "Promedio de 7 días",
+    setNames(c("Fecha", "% pruebas positivas", "Casos únicos", "Promedio de 7 días",
                "Muertes", "ICU", "Hospital", "Positivos", "Pruebas", 
-               "Positivos/ Pruebas", "%Pruebas positivas", "Casos/ Personas", "dateorder"))
+               "Positivos/ Pruebas", "% casos nuevos", "dateorder"))
   
-      ret <- DT::datatable(ret, #class = 'white-space: nowrap',
-                    caption = htmltools::tags$caption(
-                      style = 'caption-side: top; text-align: Left;',
-                      htmltools::withTags(
-                        div(HTML(paste0("Datos basados en pruebas ", 
-                                        case_when(type == "Molecular" ~ "moleculares.", 
-                                                  type == "Serological" ~ "serológicas.",
-                                                  type == "Antigens" ~ "de antígenos.",
-                                                  type == "Molecular+Antigens" ~ "moleculares y de antígenos."),
-                                        "La métrica en la columna <b>% personas con prueba positiva</b> se calcula para la semana acabando en la fecha de la primera columna. ",
-                                        "Esta métrica es parecida a la tasa de positividad que usa el CDC excepto que se remueven pruebas duplicadas. ",
-                                        "La diferencia es que el CDC usa todas pruebas aunque una persona se haga varias. ",
-                                        "En paréntesis vemos intervalo de confianza del ", (1-alpha)*100,"%. ", 
-                                        "Los <b>casos único</b> son el número de personas con su primera prueba positiva ese día. ",
-                                        "El <b>promedio de 7 días</b> es el número de casos únicos por día durante la semana acabando ese día. ",
-                                        "Noten que los datos de las pruebas toman", lag_to_complete, "días en estar aproximadamente completos, por lo tanto, ",
-                                        "los casos están incompletos para días después de ", format(last_day, "%B %d. "),
-                                        "La columna de <b>positivos</b> muestra el número de personas que tuvieron una prueba positiva ese día (no necesariamente son casos únicos).",
-                                        "La columna de <b>pruebas</b> es el número de personas que se hicieron una prueba ese día.",
-                                        "La métrica <b>casos/ personas</b> se calcula para la semana acabando ese día y ",
-                                        "se define como el por ciento de personas que salieron positivo por primera vez entre los que se hicieron la prueba esa semana, luego de remover los que han salid positivo antes. ",
-                                        "La métrica <b>% Pruebas positivas</b> es la tasa de positividad que usa el CDC. ",
-                                        "Se define como el por ciento de pruebas positivas (incluyendo duplicados) para la semana acabando ese día. ",
-                                        "Tengan en cuenta que los fines de semana se hacen menos pruebas y por lo tanto se reportan menos casos. ",
-                                        "Las muertes, casos en el ICU y hospitalizaciones vienen del informe oficial del Departamento de Salud y toman un día en ser reportados."
-                                        
-                        ))))),
-      rownames = FALSE,
-      options = list(dom = 't', pageLength = -1,
-                     columnDefs = list(
-                       list(targets = 0, orderData = 12),
-                       list(targets = 12, visible = FALSE),
-                       list(className = 'dt-right', targets = 2:11)))) %>%
-        DT::formatStyle(1:2,"white-space"="nowrap")
-      return(ret)
+  ret <- DT::datatable(ret, #class = 'white-space: nowrap',
+                       caption = htmltools::tags$caption(
+                         style = 'caption-side: top; text-align: Left;',
+                         htmltools::withTags(
+                           div(HTML(paste0("Datos basados en pruebas ", 
+                                           case_when(type == "Molecular" ~ "moleculares.", 
+                                                     type == "Serological" ~ "serológicas.",
+                                                     type == "Antigens" ~ "de antígenos.",
+                                                     type == "Molecular+Antigens" ~ "moleculares y de antígenos."),
+                                           "La métrica en la columna <b>% pruebas positiva</b> se calcula para la semana acabando en la fecha de la primera columna. ",
+                                           "Esta métrica es parecida a la tasa de positividad que usa el CDC excepto que se remueven pruebas duplicadas dentro de la semana. ",
+                                           "La diferencia es que el CDC usa todas pruebas aunque una persona se haga varias. ",
+                                           "En paréntesis vemos intervalo de confianza del ", (1-alpha)*100,"%. ", 
+                                           "Los <b>casos único</b> son el número de personas con su primera prueba positiva ese día. ",
+                                           "El <b>promedio de 7 días</b> es el número de casos únicos por día durante la semana acabando ese día. ",
+                                           "Noten que los datos de las pruebas toman", lag_to_complete, "días en estar aproximadamente completos, por lo tanto, ",
+                                           "los casos están incompletos para días después de ", format(last_day, "%B %d. "),
+                                           "La columna de <b>positivos</b> muestra el número de personas que tuvieron una prueba positiva ese día (no necesariamente son casos únicos).",
+                                           "La columna de <b>pruebas</b> es el número de personas que se hicieron una prueba ese día.",
+                                           "La métrica <b>% casos nuevos</b> se calcula para la semana acabando ese día y ",
+                                           "se define como el por ciento de personas que salieron positivo por primera vez entre los que se hicieron la prueba esa semana, luego de remover los que han salid positivo antes. ",
+                                           "Se define como el por ciento de pruebas positivas (incluyendo duplicados) para la semana acabando ese día. ",
+                                           "Tengan en cuenta que los fines de semana se hacen menos pruebas y por lo tanto se reportan menos casos. ",
+                                           "Las muertes, casos en el ICU y hospitalizaciones vienen del informe oficial del Departamento de Salud y toman un día en ser reportados."
+                           ))))),
+                       rownames = FALSE,
+                       options = list(dom = 't', pageLength = -1,
+                                      columnDefs = list(
+                                        list(targets = 0, orderData = ncol(ret)-1),
+                                        list(targets = ncol(ret)-1, visible = FALSE),
+                                        list(className = 'dt-right', targets = 2:(ncol(ret)-2))))) %>%
+    DT::formatStyle(c(1, 2, ncol(ret) - 1), "white-space"="nowrap")
+  return(ret)
 }
 
 make_positivity_table <- function(tests, hosp_mort, 
@@ -522,7 +508,7 @@ make_positivity_table <- function(tests, hosp_mort,
   
   ret <- ret %>%
     mutate(fit = make_pct(fit),
-           cases_rate = make_pct(cases_week_avg * 7 / (people_total_week - tests_positives_week + cases_week_avg * 7)),
+           cases_rate = make_pct(cases_week_avg * 7 / (people_total_week - people_positives_week + cases_week_avg * 7)),
            cdc_rate = make_pct(tests_positives_week / tests_total_week), 
            people_positives_week = make_pretty(people_positives_week),
            people_total_week = make_pretty(people_total_week),
@@ -534,29 +520,31 @@ make_positivity_table <- function(tests, hosp_mort,
            people_positives_week, cases, cdc_rate, fit, cases_rate, dummy) %>%
     arrange(desc(date)) %>%
     mutate(date = format(date, "%b %d")) %>%
-    setNames(c("Fecha", "Pruebas", "Personas", "Pruebas+", "Personas+", "Casos", "Rojo", "Azul", "Verde", "dateorder"))
+    setNames(c("Fecha", "Pruebas", "Personas", "Pruebas+", "Personas+", "Casos",  "Pruebas+/ Pruebas", "Personas+/ Personas", "Casos/ (Casos+Neg)"))
   
   ret <- DT::datatable(ret, #class = 'white-space: nowrap',
                        caption = htmltools::tags$caption(
                          style = 'caption-side: top; text-align: Left;',
                          htmltools::withTags(
                            div(HTML(paste0(
-                             "<p> Las tasas se calculan usando los siguientes totales semanales:</b>",
+                             "<p> Las primeras columnas 2-5 en la tabla abajo representan los totales de la semana que acaba en el día bajo la primera columna (<b>Fecha</b>):</b>",
                              "<UL>",
                              "<LI><b>Pruebas</b> = total de pruebas hechas, <b>Pruebas+</b> = pruebas positivas.</LI>",
                              "<LI><b>Personas</b> = personas que se hicieron pruebas, <b>Personas+</b> personas que salieron positivo.</LI>",
                              "<LI><b>Casos</b> = casos nuevos únicos, personas que salieron positivo por primera vez.</LI>",
-                             "</UL><p>Se caluclan para la semana acabando el día en la columna <b>Fecha</b>. Las tasa mostradas en la gráfica se definen así:</p>",
+                             "</UL><p>Las dos definiciones son las siguientes:</p>",
                              "<UL>",
-                             "<LI>Rojo: definición usada por el CDC = <b>Pruebas+</b> / <b>Pruebas</b></LI>",
-                             "<LI>Azul: definición que hemos usado aquí = <b>Personas+</b> / <b>Personas</b> </LI>",
-                             "<LI>Verde: <b>Casos</b> / (<b>Casos</b> + <b>Personas</b> - <b>Personas+</b>) </LI>",
+                             "<LI><b>Prueba sobre prueba</b> = <b>Personas+</b> / <b>Personas</b></LI>",
+                             "<LI><b>Casos sobre personas</b> = <b>Casos</b> / (<b>Casos</b> + <b>Neg</b>), <b>Neg</b> =  <b>Personas</b> - <b>Personas+</b> </LI>",
                              "</UL>",
+                             "<p> Estas son basadas en <em>Approach 3</em> y <em>Approch 1</em>, respectivamente, que <a href=\"https://coronavirus.jhu.edu/testing/differences-in-positivity-rates\">esta explicación</a> recomiendo monitorearde ser posible.",
+                             "Una pequeña diferencia es que <em>Approch 1</em> usa <b>Pruebas+</b> / <b>Pruebas</b></LI> y aqui removemos duplicados dentro de las semanas. ",
+                             "El <a href = \"https://covid.cdc.gov/covid-data-tracker/#testing_positivity7day\">CDC</a> usa <em>Approch 1</em>.</p>",
                              "<p>Noten que hay más <b>Pruebas</b> que <b>Personas</b> porque algunas personas se hacen más de una prueba a la semana y hay errores de duplicación. ",
                              "Noten también que hay más <b>Personas+</b> que <b>Casos</b> únicos nuevos porque algunas personas salen positivo en múltiples semanas.</p>",
-                             "Importante notar que la tasa de positividad <b>no es un estimado del por ciento de la población que está infectada</b> ",
+                             "<p>La tasa de positividad <b>no es un estimado del por ciento de la población que está infectada</b> ",
                              "ya que las personas que se hacen pruebas no son para nada representativas de la población. ",
-                             "Son útiles y se monitorean porque suben cuando suben los casos o cuando no se hacen suficientes pruebas."
+                             "Son útiles y se monitorean porque suben cuando suben los casos o cuando no se hacen suficientes pruebas. </b>"
                            ))))),
                        rownames = FALSE,
                        options = list(dom = 't', pageLength = -1,
@@ -603,12 +591,12 @@ make_municipio_table <- function(tests_by_strata,
                            format(round(100*upper, 1), nsmall=1),"%", ")"),
              poblacion_text = prettyNum(poblacion, big.mark=",")) %>%
       select(patientCity, rate, positives, tests, ppc, poblacion_text, `0 to 9`, `10 to 19`, poblacion) %>%
-      setNames(c("Municipio", "Tasa de positividad (IC)", "Positivos", "Pruebas",  
+      setNames(c("Municipio", "% Pruebas positivas (IC)", "Positivos", "Pruebas",  
                  "Positivos por\n100,000 por día", "Población", "Positiovs 0 a 9 años", "Positivos 10 a 19 años", "dummy"))
  
     ret <- DT::datatable(ret, #class = 'white-space: nowrap',
-                         caption = paste0("Por razones de privacidad, estos estimados de positividad están basado en datos sin remover duplicados.",
-                                          " Tasa de positividad es un estimado basado en periodo ",
+                         caption = paste0("Por razones de privacidad, no tenemos accesoso a identificadors por lo cual estos estimados de positividad están basado en el porciento de pruebas positivas, sin remover duplicados.",
+                                          " El porciento de pruebas positivas se calcula en periodo ",
                                           format(start_date, "%B %d"),
                                           " a ",
                                           format(end_date, "%B %d"),
@@ -661,7 +649,7 @@ plot_agedist <- function(tests_by_strata,
   return(ret)
 }
 
-compute_summary <- function(tests, hosp_mort, type = "Molecular"){
+compute_summary <- function(tests, hosp_mort, type = "Molecular", day = today() - days(1)){
   
   ## function to turn proportions into pretty percentages
   make_pct <- function(x, digits = 1) paste0(format(round(100 * x, digits = digits), nsmall = digits), "%")
@@ -669,25 +657,37 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular"){
   ## dates that we will put in the table
   ## they are 4 entries, 1 week apart
   ## lag_to_complete is a global var
-  the_dates <- last_day - weeks(0:3)
+  the_dates <- day - days(lag_to_complete) - weeks(0:3)
   
   ## positivity
   ## we include the latest day because we have a usable value
   ## we take it out later to keep the table dimensions the same
   pos <- filter(tests, testType == type & 
-                  date %in% the_dates) %>%
+                  date %in% c(the_dates, day)) %>%
     arrange(desc(date))
   
   ## this computes the difference in positivity between weeks
   ##determines if they are significant
   ## and returns -1 (decrease), 0 (no change), 1 (increase)
   change_pos <- sapply(1:(nrow(pos)-1), function(i){
-    x <- c(pos$lower[i], pos$upper[i])
-    y <- c(pos$lower[i+1], pos$upper[i+1])
-    
-    signif <- !any(c(between(x, y[1], y[2])), 
-                   c(between(y, x[1], x[2])))
-    
+    p1 <- pos$fit[i] 
+    p0 <- pos$fit[i+1]
+    d <- p1 - p0
+    se <- sqrt(p1*(1-p1) / pos$people_total_week[i] + p0*(1-p0) / pos$people_total_week[i+1])
+    signif <- abs(d/se) > qnorm(0.975)
+    sign(pos$fit[i] - pos$fit[i+1]) * signif 
+  })
+  
+  casespos <- pos %>%
+    mutate(n =  people_total_week - people_positives_week + cases_week_avg * 7,
+           cases_rate = cases_week_avg * 7 / n)
+  
+  change_casespos <- sapply(1:(nrow(pos)-1), function(i){
+    p1 <- casespos$cases_rate[i] 
+    p0 <- casespos$cases_rate[i+1]
+    d <- p1 - p0
+    se <- sqrt(p1*(1-p1) / casespos$n[i] + p0*(1-p0) / casespos$n[i+1])
+    signif <- abs(d/se) > qnorm(0.975)
     sign(pos$fit[i] - pos$fit[i+1]) * signif 
   })
   
@@ -741,7 +741,8 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular"){
   ## as pos but for hospitalizations
   hos <- hosp_mort %>% select(date, HospitCOV19, hosp_week_avg) %>% 
     filter(!is.na(HospitCOV19)) %>%
-    filter(date %in% the_dates)  %>%
+    filter(date <= day) %>%
+    filter(date %in% the_dates | date == max(date))  %>%
     arrange(desc(date))
   
   phi <- hosp_mort %>% filter(date >= make_date(2020, 7, 1) & date <= last_day) %>%
@@ -774,6 +775,20 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular"){
   })
   
   
+  tendencia <- case_when(change_pos[1] == 1 ~ 1,
+                         change_pos[1] == -1 & change_pos[2] == -1 & change_pos[3] == -1 ~ -1,
+                         TRUE ~ 0)
+  
+  nivel <- case_when(pos$fit[1] >= 0.20 | cas$cases_week_avg[1] >= 800 | hos$HospitCOV19[1] > 1000 ~ 4,
+                     pos$fit[1] < 0.03 & cas$cases_week_avg[1] < 30 & hos$HospitCOV19[1] < 300 ~ 1,
+                     pos$fit[2] >= 0.05 ~ 3,
+                     TRUE ~ 2)
+  
+  ## here we decide what recommendation to make
+  riesgo <- case_when(nivel == 4 ~ 4,
+                      nivel == 1 & tendencia == -1 ~ 1,
+                      tendencia == 1 | (nivel == 3 & tendencia == 0) ~ 3,
+                      TRUE ~ 2)
   
   ## this is the htlm to make colored arrows:  down is green, sideways is yelloww, up is red (bad)
   arrows <- c( "<span style=\"color:#01D474;font-weight: bold;\">&#8595;</span>",
@@ -791,6 +806,7 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular"){
   make_arrow <- function(i){
     replace_na(
       c(arrows[change_pos[i]+2], 
+        arrows[change_casespos[i]+2],
         arrows[change_cas[i]+2],
         arrows_2[change_tes[i]+2],
         arrows[change_hos[i]+2],
@@ -800,35 +816,59 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular"){
   
   make_values <- function(i){
     c(make_pct(pos$fit[i]), 
+      make_pct(casespos$cases_rate[i]), 
       round(cas$cases_week_avg[i]), 
-      prettyNum(round(tes$tests_total_week[i] / 7), 
+      prettyNum(round(tes$people_total_week[i] / 7), 
                 big.mark = ","),
       prettyNum(round(hos$HospitCOV19[i]), 
                 big.mark = ","),
       round(mor$mort_week_avg[i]))
   }
   
+  ## These are the positivity and hospitalizations for today
+  ## we remove the first row to have them match the others
+  positividad <- paste(make_pct(pos$fit[1]),  arrows[change_pos[1] + 2])
+  pos <- pos[-1,]
+  change_pos <- change_pos[-1]
+  
+  casos_positividad <- paste(make_pct(casespos$cases_rate[1]),  arrows[change_casespos[1] + 2])
+  casespos <- casespos[-1,]
+  change_casespos <- change_casespos[-1]
+  
+  hosp <- paste(prettyNum(hos$HospitCOV19[1], big.mark = ","), arrows[change_hos[1]+2])
+  hos <- hos[-1,]
+  change_hos <- change_hos[-1]
   
   ## make the table
-  tab <- tibble(metrica = c("% de personas con prueba positiva", 
-                            "Casos únicos nuevos por día", 
-                            "Personas por día que se hicieron pruebas", 
+  tab <- tibble(metrica = c("% pruebas positivas", 
+                            "% casos nuevos",
+                            "Casos nuevos por día", 
+                            "Pruebas por día", 
                             "Hospitalizaciones",
                             "Muertes por día"),
                 
-                valor =  paste(make_values(1), make_arrow(1)),
-                meta = c("< 3.0%", 
+                meta = c("< 3.0%",
+                         "< 3.0%", 
                          "< 30", 
                          "> 4,500", 
                          "< 300",
                          "< 1"),
+                
+                valor =  paste(make_values(1), make_arrow(1)),
+                
                 cambio_1 = paste(make_values(2), make_arrow(2)),
                 cambio_2 = paste(make_values(3), make_arrow(3)),
   )
   
-  colnames(tab) <- c("Métrica", "Nivel",  "Meta", "7 días antes",  "14 días antes")
+  colnames(tab) <- c("Métrica", 
+                     "Meta", 
+                     paste0(format(pos$date[1]-days(6), "%b%d-"),format(pos$date[1], "%b%d")),
+                     paste0(format(pos$date[2]-days(6), "%b%d-"),format(pos$date[2], "%b%d")),
+                     paste0(format(pos$date[3]-days(6), "%b%d-"),format(pos$date[3], "%b%d")))
   
-  return(list(tab = tab))
+  
+  return(list(tab = tab, riesgo = riesgo, nivel = nivel, tendencia = tendencia, 
+              positividad = positividad, casos_positividad = casos_positividad, hosp = hosp))
   
 }
 
