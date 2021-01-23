@@ -633,6 +633,36 @@ make_lab_tab <- function(lab_tab,
   return(ret)
 }
 
+plot_vaccines <- function(hosp_mort,  
+                                  start_date = first_vaccine - days(1), 
+                                  end_date = today()){
+  
+  tmp <- hosp_mort %>% 
+    filter(date >= start_date & date <= end_date) %>% 
+    select(date, total_distributed, total_vaccinations, 
+    people_fully_vaccinated) %>% 
+    rename("Dosis distribuidas" = total_distributed,
+           "Vacunaciones totales" = total_vaccinations,
+           "Personas vacunadas (2 dosis)" =  people_fully_vaccinated) %>%
+    pivot_longer(-date) %>%
+    mutate(name = factor(name, 
+                         levels = c("Personas vacunadas (2 dosis)",
+                                    "Vacunaciones totales",
+                                    "Dosis distribuidas")))
+      
+  
+  tmp %>% ggplot(aes(date, value/1000, color = name)) +
+    geom_line() +
+    geom_point(show.legend = FALSE) +
+    scale_x_date(date_labels = "%b %d") +#, breaks = breaks_width("days")) +
+    ggtitle("Por ciento de la población vacunada con dos dosis") +
+    ylab("Total en miles") +
+    xlab("Fecha") +
+    theme_bw() +   theme(legend.position="bottom",legend.title=element_blank()) 
+    
+}
+
+  
 plot_fully_vaccinated <- function(hosp_mort,  
               start_date = first_day, 
               end_date = today(),
