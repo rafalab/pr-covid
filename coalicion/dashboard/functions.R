@@ -1,7 +1,8 @@
 compute_summary <- function(tests, hosp_mort, type = "Molecular", day = today() - days(1)){
   
   ## function to turn proportions into pretty percentages
-  make_pct <- function(x, digits = 1) paste0(format(round(100 * x, digits = digits), nsmall = digits), "%")
+  make_pct <- function(x, digits = 1) 
+    ifelse(is.na(x), "", paste0(format(round(100 * x, digits = digits), nsmall = digits), "%"))
   
   ## dates that we will put in the table
   ## they are 4 entries, 1 week apart
@@ -123,6 +124,13 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular", day = today() 
     sign(d) * signif 
   })
   
+  ## Vacunas
+  vac <- hosp_mort %>% select(date,  people_fully_vaccinated) %>% 
+    filter(!is.na(people_fully_vaccinated)) %>%
+    filter(date %in% the_dates | date == max(date)) %>%
+    arrange(desc(date)) %>%
+    mutate(pct_fully_vaccinated = people_fully_vaccinated/pr_pop)
+  
   
   tendencia <- case_when(change_pos[1] == 1 ~ 1,
                          change_pos[1] == -1 & change_pos[2] == -1 & change_pos[3] == -1 ~ -1,
@@ -159,7 +167,8 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular", day = today() 
         arrows[change_cas[i]+2],
         arrows_2[change_tes[i]+2],
         arrows[change_hos[i]+2],
-        arrows[change_mor[i]+2]),
+        arrows[change_mor[i]+2],
+        NA),
      no_arrow)
   }
   
@@ -171,37 +180,43 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular", day = today() 
                 big.mark = ","),
       prettyNum(round(hos$HospitCOV19[i]), 
                 big.mark = ","),
-      round(mor$mort_week_avg[i]))
+      round(mor$mort_week_avg[i]),
+      make_pct(vac$pct_fully_vaccinated[i]))
   }
   
   ## These are the positivity and hospitalizations for today
   ## we remove the first row to have them match the others
   positividad <- paste(make_pct(pos$fit[1]),  arrows[change_pos[1] + 2])
-  pos <- pos[-1,]
+  pos <- slice(pos, -1)
   change_pos <- change_pos[-1]
   
   casos_positividad <- paste(make_pct(casespos$cases_rate[1]),  arrows[change_casespos[1] + 2])
-  casespos <- casespos[-1,]
+  casespos <- slice(casespos, -1)
   change_casespos <- change_casespos[-1]
   
   hosp <- paste(prettyNum(hos$HospitCOV19[1], big.mark = ","), arrows[change_hos[1]+2])
-  hos <- hos[-1,]
+  hos <- slice(hos, -1)
   change_hos <- change_hos[-1]
   
+  vacunas <- paste(make_pct(vac$pct_fully_vaccinated[1]),  no_arrow)
+  vac <- slice(vac, -1)
+
   ## make the table
   tab <- tibble(metrica = c("% pruebas positivas", 
                             "% casos nuevos",
                             "Casos nuevos por día", 
                             "Pruebas por día", 
                             "Hospitalizaciones",
-                            "Muertes por día"),
+                            "Muertes por día",
+                            "% población vacunada"),
                 
                 meta = c("< 3.0%",
                          "< 3.0%", 
                          "< 30", 
                          "> 4,500", 
                          "< 300",
-                         "< 1"),
+                         "< 1",
+                         "> 70%"),
                 
                  valor =  paste(make_values(1), make_arrow(1)),
                  
@@ -217,6 +232,6 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular", day = today() 
                      
                      
   return(list(tab = tab, riesgo = riesgo, nivel = nivel, tendencia = tendencia, 
-              positividad = positividad, casos_positividad = casos_positividad, hosp = hosp))
+              positividad = positividad, casos_positividad = casos_positividad, hosp = hosp, vacunas = vacunas))
   
 }
