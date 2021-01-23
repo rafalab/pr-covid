@@ -56,6 +56,8 @@ sum7 <- function(d, y, k = 7)
   tibble(date = d, moving_sum = as.numeric(stats::filter(y, rep(1, k), side = 1)))
 
 # -- Fixed values
+pr_pop <- 3193694 ## population of puerto rico
+
 icu_beds <- 229 #if available beds is missing change to this
 
 first_day <- make_date(2020, 3, 12)
@@ -512,11 +514,41 @@ if(Sys.info()["nodename"] == "fermat.dfci.harvard.edu"){
   rda_path <- "rdas"
 }
 
+## Vaccine data
+## We will add it to hosp_mort data
+url <- "https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/vaccinations/us_state_vaccinations.csv"
+vaccines <- read_csv(url) %>% 
+  filter(location == "Puerto Rico") %>%
+  select(date, total_distributed, total_vaccinations, people_vaccinated, people_fully_vaccinated) %>%
+  arrange(date) 
+
+##2020-12-13 was the day before the first vaccine. We know it was 0 then
+##next operation starts the dataset that day
+vaccines <- 
+  data.frame(date = make_date(2020, 12, 13)) %>% 
+  full_join(data.frame(date = make_date(2020, 12, 13)+weeks(2)), by = "date") %>%
+  full_join(vaccines, by = "date")
+vaccines$total_distributed[1] <- 0
+vaccines$total_vaccinations[1] <- 0
+vaccines$people_vaccinated[1] <- 0
+vaccines$people_fully_vaccinated[2] <- 0 ##2 because it's 14 days later
+
+## fill in NAs
+for(j in which(names(vaccines)!="date")){
+  for(i in 4:nrow(vaccines)){
+   if(is.na(vaccines[[j]][i])) vaccines[[j]][i] <- max(vaccines[[j]][1:(i-1)], na.rm=TRUE)
+  }
+}
+
+
+## fill in the NAs
+
+hosp_mort <- left_join(hosp_mort, vaccines, by = "date") 
 ## define date and time of latest download
 the_stamp <- now()
 save(first_day, alpha, the_stamp, 
      tests, tests_by_strata, cases,
-     hosp_mort, labs, 
+     hosp_mort, labs, pr_pop, 
      file = file.path(rda_path, "data.rda"))
 save(lab_tab, file = file.path(rda_path, "lab_tab.rda"))
 save(rezago, file = file.path(rda_path, "rezago.rda"))

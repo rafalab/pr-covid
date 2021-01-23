@@ -73,6 +73,7 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                             "Positivos y pruebas por edad por día" = "edad",
                                             "Positivos y pruebas por municipio/edad por día" = "municipios-edad",
                                             "Positivos por laboratorio" = "labs",
+                                            "Pruebas por laboratorio" = "labs_pruebas",
                                             "Rezago" = "rezago")),
                     
                     downloadButton("downloadData", "Download",
@@ -93,12 +94,7 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                #htmlOutput("riesgo"),
                                htmlOutput("table_title"),
                                DT::dataTableOutput("resumen_table"),
-                                  # HTML(paste0("<h5> Los datos se usan para hacer cuatro posibles recomendaciones: apertura, flexibilización, más restricciones o \"lockdown\". ",
-                               #            "Se recomienda <b>\"lockdown\"</b> cuando la tasa de positividad sobrepasa 20%, los casos nuevos por día sobrepasan 800,  el uso de camas ICU sobrepasa 70%, o las hospitalizaciones pasan las 1,000, lo cual indica que los hospitales pronto no podrán recibir más pacientes en condiciones críticas. ",
-                               #            "Se recomiendan  <b>más restricciones</b> si la tasa de positividad o casos por días sobrepasan los niveles metas, lo cual indica que la situación no mejorará sin intervenciones o cambio de comportamiento. ",
-                               #            "Si se alcanzan estas metas, recomendamos <b>flexibilizaciones</b> lo cual indica poco riesgo actual pero, como todavía hay casos, continuamos monitoreando. ",
-                               #            "Recomendamos <b>apertura</b> cuando prácticamente desaparece la enfermedad. Estos umbrales pueden cambiar mientras sigamos aprendiendo.")),
-                                HTML(paste0("<h5> <b> Por cientos</b>, ",
+                               HTML(paste0("<h5> <b> Por cientos</b>, ",
                                            "<b>casos</b>, y <b>pruebas</b> están basados en un <b>promedio de siete días</b> para contrarrestar el efecto que tiene el día de la semana. ",
                                            "La flechas de colores no dicen si hubo cambio estadísticamente singificative cuando comparamos a la semana anterio. ",
                                            "Noten que los datos de las pruebas toman ", lag_to_complete, " días en estar aproximadamente completos, ",
@@ -155,6 +151,9 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                               plotOutput("rezago")),
                       
                       tabPanel("Labs",
+                               br(),
+                               downloadButton("downloadLabData", "Download",
+                                              style = button_style),
                                DT::dataTableOutput("labs"))
                       
                     )
@@ -260,12 +259,49 @@ server <- function(input, output, session) {
   
   # -- This is used to print table in app
   output$tabla <- DT::renderDataTable({
-    make_table(tests, hosp_mort, 
+    ret <- make_table(tests, hosp_mort, 
                start_date = input$range[1], 
                end_date = input$range[2], 
                type = input$testType,
                cumm = input$acumulativo)
-  }, server = FALSE)
+    
+    type <- case_when(input$testType == "Molecular" ~ "moleculares.", 
+                      input$testType == "Serological" ~ "serológicas.",
+                      input$testType == "Antigens" ~ "de antígenos.",
+                      input$testType == "Molecular+Antigens" ~ "moleculares y de antígenos.")
+    
+    DT::datatable(ret, #class = 'white-space: nowrap',
+                  caption = htmltools::tags$caption(
+                    style = 'caption-side: top; text-align: Left;',
+                    htmltools::withTags(
+                      div(HTML(paste0("Datos basados en pruebas ", type,
+                                      " La métrica en la columna <b>% pruebas positiva</b> se calcula para la semana acabando en la fecha de la primera columna. ",
+                                      "Esta métrica es parecida a la definición de <b>tasa de positividad</b> que usa el CDC excepto que se remueven pruebas duplicadas dentro de la semana. ",
+                                      "En paréntesis vemos un intervalo de confianza del ", (1-alpha)*100,"%. ", 
+                                      "Los <b>casos único</b> son el número de personas con su primera prueba positiva ese día. ",
+                                      "El <b>promedio de 7 días</b> es el número de casos únicos por día durante la semana acabando ese día. ",
+                                      "Noten que los datos de las pruebas toman ", lag_to_complete, " días en estar aproximadamente completos, por lo tanto, ",
+                                      "los casos están incompletos para días después de ", format(last_day, "%B %d. "),
+                                      "La columna de <b>positivos</b> muestra el número de personas que tuvieron una prueba positiva ese día (no necesariamente son casos únicos). ",
+                                      "La columna de <b>pruebas</b> es el número de personas que se hicieron una prueba ese día. ",
+                                      "La métrica <b>% casos nuevos</b> se calcula para la semana acabando ese día y ",
+                                      "se define como el por ciento de personas que salieron positivo por primera vez entre los que se hicieron la prueba esa semana, luego de remover los que han salid positivo antes. ",
+                                      "Esta es una de las definiciones de <b>tasa de positividad</b> recomendadas <a href=\"https://coronavirus.jhu.edu/testing/differences-in-positivity-rates\">aquí</a>. ",
+                                      "En paréntesis vemos un intervalo de confianza del ", (1-alpha)*100,"%. ", 
+                                      "Tengan en cuenta que los fines de semana se hacen menos pruebas y por lo tanto se reportan menos casos. ",
+                                      "Las muertes, casos en el ICU y hospitalizaciones vienen del informe oficial del Departamento de Salud y toman un día en ser reportados.",
+                                      "Vea más información sobre las distintas definiciones de tasa de positividad en la pestaña <b>POSITIVIDAD</b>."
+                      ))))),
+                  rownames = FALSE,
+                  options = list(dom = 't', pageLength = -1,
+                                 columnDefs = list(
+                                   list(targets = 0, orderData = ncol(ret)-1),
+                                   list(targets = ncol(ret)-1, visible = FALSE),
+                                   list(className = 'dt-right', targets = 2:(ncol(ret)-2))))) %>%
+      DT::formatStyle(c(1, 2, ncol(ret) - 1), "white-space"="nowrap")
+    },
+    server = FALSE
+  )
   
   
   # -- This creates the positivity rate figure
@@ -278,11 +314,45 @@ server <- function(input, output, session) {
   )
   
   output$tabla_positividad <- DT::renderDataTable({
-    make_positivity_table(tests, hosp_mort, 
-               start_date = input$range[1], 
-               end_date = input$range[2], 
-               type = input$testType)
-  }, server = FALSE)
+    ret <- make_positivity_table(tests, hosp_mort, 
+                                 start_date = input$range[1], 
+                                 end_date = input$range[2], 
+                                 type = input$testType)
+    DT::datatable(ret, #class = 'white-space: nowrap',
+                  caption = htmltools::tags$caption(
+                    style = 'caption-side: top; text-align: Left;',
+                    htmltools::withTags(
+                      div(HTML(paste0(
+                        "<p> Las primeras columnas 2-6 en la tabla abajo representan los totales de la semana que acaba en el día bajo la primera columna (<b>Fecha</b>):</b>",
+                        "<UL>",
+                        "<LI><b>Pruebas</b> = total de pruebas hechas, <b>Pruebas+</b> = pruebas positivas.</LI>",
+                        "<LI><b>Personas</b> = personas que se hicieron pruebas, <b>Personas+</b> personas que salieron positivo.</LI>",
+                        "<LI><b>Casos</b> = casos nuevos únicos, personas que salieron positivo por primera vez.</LI>",
+                        "</UL><p>Las dos definiciones son las siguientes:</p>",
+                        "<UL>",
+                        "<LI><b>Prueba sobre prueba</b> = <b>Personas+</b> / <b>Personas</b></LI>",
+                        "<LI><b>Casos sobre personas</b> = <b>Casos</b> / (<b>Casos</b> + <b>Neg</b>), <b>Neg</b> =  <b>Personas</b> - <b>Personas+</b> </LI>",
+                        "</UL>",
+                        "<p> Estas son basadas en <em>Approach 3</em> y <em>Approch 1</em>, respectivamente, que <a href=\"https://coronavirus.jhu.edu/testing/differences-in-positivity-rates\">esta explicación</a> recomienda monitorear, de ser posible.",
+                        "Una pequeña diferencia es que <em>Approch 3</em> usa <b>Pruebas+</b> / <b>Pruebas</b></LI> y aqui removemos duplicados dentro de las semanas para evitar el posible efecto de duplicados causados por errores de entrada de datos. ",
+                        "El <a href = \"https://covid.cdc.gov/covid-data-tracker/#testing_positivity7day\">CDC</a> usa <em>Approch 3</em>.</p>",
+                        "<p>Noten que hay más <b>Pruebas</b> que <b>Personas</b> porque algunas personas se hacen más de una prueba a la semana y hay errores de duplicación. ",
+                        "Noten también que hay más <b>Personas+</b> que <b>Casos</b> únicos nuevos porque algunas personas salen positivo en múltiples semanas.</p>",
+                        "<p>La tasa de positividad <b>no es un estimado del por ciento de la población que está infectada</b> ",
+                        "ya que las personas que se hacen pruebas no son para nada representativas de la población. ",
+                        "Son útiles y se monitorean porque suben cuando suben los casos o cuando no se hacen suficientes pruebas. </b>"
+                      ))))),
+                  rownames = FALSE,
+                  options = list(dom = 't', pageLength = -1,
+                                 columnDefs = list(
+                                   list(targets = 0, orderData = ncol(ret)-1),
+                                   list(targets = ncol(ret)-1, visible = FALSE),
+                                   list(className = 'dt-right', targets = 1:(ncol(ret)-1))))) %>%
+      DT::formatStyle(1, "white-space"="nowrap")
+    }, 
+    server = FALSE
+  )
+  
   
   
   # -- This creates the hospitalization figure
@@ -348,11 +418,28 @@ server <- function(input, output, session) {
   
   # -- This creates a geographical table of positivity rate
   output$municipios <- DT::renderDataTable({
-    make_municipio_table(tests_by_strata,  
-                         start_date =input$range[1], 
-                         end_date =input$range[2], 
-                         type = input$testType)
-  }, server = FALSE)
+    ret <- make_municipio_table(tests_by_strata,  
+                                start_date =input$range[1], 
+                                end_date =input$range[2], 
+                                type = input$testType)
+    
+    DT::datatable(ret, #class = 'white-space: nowrap',
+                  caption = paste0("Por razones de privacidad, no tenemos accesoso a identificadors por lo cual estos estimados de positividad están basado en el porciento de pruebas positivas, sin remover duplicados.",
+                                   " El porciento de pruebas positivas se calcula en periodo ",
+                                   format(input$range[1], "%B %d"),
+                                   " a ",
+                                   format(input$range[2], "%B %d"),
+                                   ". IC = Intervalo de confianza del ", (1-alpha)*100,"%."),
+                  rownames = FALSE,
+                  options = list(dom = 't', pageLength = -1,
+                                 columnDefs = list(
+                                   list(targets = 5, orderData = 8),
+                                   list(targets = 8, visible = FALSE),
+                                   list(className = 'dt-right', targets = 2:7)))) %>%
+      DT::formatStyle(1:2,"white-space"="nowrap")
+  }, 
+  server = FALSE
+  )
   
   # -- This creates a geographical map of positivity rate
   output$mapa_positividad <- renderPlot(
@@ -378,44 +465,19 @@ server <- function(input, output, session) {
   })
   
   output$labs <- DT::renderDataTable({
-    
+   
     load(file.path(rda_path, "lab_tab.rda"))
     
-    ret <- filter(lab_tab,  
-           date >= input$range[1], 
-           date <= input$range[2], 
-           testType == input$testType) %>%
-      arrange(desc(date)) %>%
-      select(-testType) 
-    
-    col_total <- ret %>% group_by(Laboratorio) %>% 
-      summarize(Total = sum(tests, na.rm = TRUE),  .groups= "drop")
-    row_total <- ret %>% group_by(date) %>% 
-      summarize(tests = sum(tests, na.rm = TRUE), .groups = "drop") %>%
-      arrange(desc(date)) 
-    
-    col_names <- as.character(row_total$date)
-    
-    row_total <- 
-      spread(row_total, date, tests, fill = 0) %>% mutate(Laboratorio = "Total") 
-    
-    ret <- left_join(col_total, by="Laboratorio", spread(ret, date, tests, fill = 0)) %>%
-      arrange(desc(Total)) 
-    
-    row_total <- mutate(row_total, Total = sum(ret$Total, na.rm = TRUE))
-    
-    ret <- bind_rows(row_total, ret) %>% 
-      select("Laboratorio",  "Total", all_of(col_names))
-
-   ret <- mutate_if(ret, is.numeric, function(x) prettyNum(x, big.mark=",")) %>%
-     rename(Entidad = Laboratorio) ## hay hospitales también
-   
-   
+    ret <- make_lab_tab(lab_tab,
+                        input$range[1],
+                        input$range[2],
+                        input$testType)
+                        
    DT::datatable(ret,   
                  caption =  paste0("Número de pruebas reportadas por los Laboratorios y Hospitales para los días: ",
-                                             format(input$range[1], "%Y %B %d"),
-                                             " a ",
-                                             format(input$range[2],  "%Y %B %d.")),
+                                   format(input$range[1], "%Y %B %d"),
+                                   " a ",
+                                   format(input$range[2],  "%Y %B %d.")),
                  rownames = FALSE,
                  options = list(dom = 't', pageLength = -1,
                                 columnDefs = list(list(className = 'dt-right', targets = 1:(ncol(ret)-1))))) %>%
@@ -429,7 +491,13 @@ server <- function(input, output, session) {
     switch(input$dataset,
            "pruebas" = readRDS(file.path(rda_path, "all_tests.rds")),
            "casos" = cases,
-           "hosp-mort" = hosp_mort,
+           "hosp-mort" = {
+             hosp_mort %>%
+               select(date, HospitCOV19, CamasICU, CamasICU_disp, IncMueSalud, 
+                      hosp_week_avg, icu_week_avg, mort_week_avg) %>%
+               setNames(c("dates", "hospitalizaciones", "camas_icu", "camas_icu_disp", "muertes",
+                        "hospitalizaciones_week_avg", "camas_icu_week_avg", "muertes_week_avg"))
+           },
            "positivos" = select(tests, -old_rate),
            "municipios" = {
              tests_by_strata %>%
@@ -458,7 +526,6 @@ server <- function(input, output, session) {
                mutate(patientCity = as.character(patientCity)) %>%
                filter(patientCity %in% c("No reportado", poblacion_municipios$patientCity)) 
            },
-           "labs" = labs,
            "rezago" = {
              load(file.path(rda_path, "rezago.rda"))
              rezago
@@ -471,8 +538,23 @@ server <- function(input, output, session) {
       paste0(input$dataset, "-", format(the_stamp, "%Y-%m-%d_%H:%M:%S"),".csv")
     },
     content = function(file) {
-      #all_tests <- readRDS(file.path(rda_path,"all_tests.rds"))
       write.csv(datasetInput(), file = file, row.names = FALSE)  
+    },
+    contentType = "txt/csv"
+  )
+  
+  output$downloadLabData <- downloadHandler(
+    filename = function() {
+      paste0("lab_dat", "-", format(the_stamp, "%Y-%m-%d_%H:%M:%S"),".csv")
+    },
+    content = function(file) {
+      load(file.path(rda_path, "lab_tab.rda"))
+      
+      ret <- make_lab_tab(lab_tab,
+                          input$range[1],
+                          input$range[2],
+                          input$testType)
+      write.csv(ret, file = file, row.names = FALSE)  
     },
     contentType = "txt/csv"
   )
