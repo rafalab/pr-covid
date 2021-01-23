@@ -58,6 +58,8 @@ sum7 <- function(d, y, k = 7)
 # -- Fixed values
 pr_pop <- 3193694 ## population of puerto rico
 
+first_vaccine <- make_date(2020, 12, 15)
+
 icu_beds <- 229 #if available beds is missing change to this
 
 first_day <- make_date(2020, 3, 12)
@@ -525,8 +527,8 @@ vaccines <- read_csv(url) %>%
 ##2020-12-13 was the day before the first vaccine. We know it was 0 then
 ##next operation starts the dataset that day
 vaccines <- 
-  data.frame(date = make_date(2020, 12, 13)) %>% 
-  full_join(data.frame(date = make_date(2020, 12, 13)+weeks(2)), by = "date") %>%
+  data.frame(date = first_vaccine - days(1)) %>% 
+  full_join(data.frame(date = first_vaccine - days(1) + weeks(2)), by = "date") %>%
   full_join(vaccines, by = "date")
 vaccines$total_distributed[1] <- 0
 vaccines$total_vaccinations[1] <- 0
@@ -548,7 +550,7 @@ hosp_mort <- left_join(hosp_mort, vaccines, by = "date")
 the_stamp <- now()
 save(first_day, alpha, the_stamp, 
      tests, tests_by_strata, cases,
-     hosp_mort, labs, pr_pop, 
+     hosp_mort, labs, pr_pop, first_vaccine,
      file = file.path(rda_path, "data.rda"))
 save(lab_tab, file = file.path(rda_path, "lab_tab.rda"))
 save(rezago, file = file.path(rda_path, "rezago.rda"))
