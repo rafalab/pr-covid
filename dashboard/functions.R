@@ -648,7 +648,7 @@ plot_fully_vaccinated <- function(hosp_mort,
       ggplot(aes(date, people_fully_vaccinated / pr_pop)) +
       geom_point() +
       geom_line() +
-      scale_x_date(date_labels = "%b-%d") +#, breaks = breaks_width("days")) +
+      scale_x_date(date_labels = "%b %d") +#, breaks = breaks_width("days")) +
       scale_y_continuous(labels = scales::percent) +
       ggtitle("Por ciento de la población vacunada con dos dosis") +
       ylab("Por ciento") +
