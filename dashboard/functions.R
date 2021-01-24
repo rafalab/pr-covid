@@ -1,3 +1,7 @@
+# helpers
+make_pct <- function(x, digit = 1) ifelse(is.na(x), "", paste0(format(round(100*x, digit = digit), nsmall = digit), "%"))
+make_pretty <- function(x) prettyNum(replace_na(x, " "), big.mark = ",")
+
 # positivity plot ---------------------------------------------------------
 plot_positivity <- function(tests, 
                             start_date = first_day, 
@@ -407,7 +411,8 @@ make_table <- function(tests, hosp_mort,
                        type = "Molecular",
                        cumm = FALSE){
   
-  tmp <- select(hosp_mort, date, HospitCOV19, IncMueSalud, CamasICU)
+  tmp <- select(hosp_mort, date, HospitCOV19, IncMueSalud, CamasICU,
+                total_distributed, total_vaccinations, people_fully_vaccinated)
 
   ## last_day is a global variable 
   #cases$moving_avg[cases$date > last_day] <- NA
@@ -427,7 +432,6 @@ make_table <- function(tests, hosp_mort,
       )
   }
   
-  make_pct <- function(x, digit = 1) ifelse(is.na(x), "", paste0(format(round(100*x, digit = digit), nsmall = digit), "%"))
   
   ret <- ret  %>%
     mutate(rate = format(round(rate, 2), nsmall = 2),
@@ -445,17 +449,23 @@ make_table <- function(tests, hosp_mort,
                                       format(round(100*cases_upper, 1), nsmall=1),"%", ")")),
            cases_week_avg = round(cases_week_avg),
            dummy = date) %>%
-    mutate(positives = prettyNum(replace_na(people_positives, " "), big.mark = ","),
-           tests = prettyNum(replace_na(people_total, " "), big.mark = ","),
-           cases = prettyNum(replace_na(cases, " "), big.mark = ","),
-           IncMueSalud = prettyNum(replace_na(IncMueSalud, " "), big.mark = ",")) %>% 
+    mutate(positives = make_pretty(people_positives),
+           tests = make_pretty(people_total),
+           cases = make_pretty(cases),
+           IncMueSalud = make_pretty(IncMueSalud),
+           total_distributed = make_pretty(total_distributed), 
+           total_vaccinations = make_pretty(total_vaccinations),
+           people_fully_vaccinated = make_pretty(people_fully_vaccinated)) %>% 
     select(date, fit, cases, cases_week_avg, IncMueSalud, CamasICU, HospitCOV19, 
-           positives, tests, rate, cases_rate, dummy) %>%
+           positives, tests, rate, cases_rate, 
+           people_fully_vaccinated,total_vaccinations, total_distributed, 
+           dummy) %>%
     arrange(desc(date)) %>%
     mutate(date = format(date, "%B %d")) %>%
     setNames(c("Fecha", "% pruebas positivas", "Casos únicos", "Promedio de 7 días",
                "Muertes", "ICU", "Hospital", "Positivos", "Pruebas", 
-               "Positivos/ Pruebas", "% casos nuevos", "dateorder"))
+               "Positivos/ Pruebas", "% casos nuevos", "Vacunados",
+               "Vacunas", "Distribuidas", "dateorder"))
   
   return(ret)
 }
@@ -471,9 +481,6 @@ make_positivity_table <- function(tests, hosp_mort,
     filter(testType == type) %>%
     left_join(tmp, by = "date") %>%
     filter(date >= start_date & date <= end_date)
-  
-  make_pct <- function(x, digit = 1) ifelse(is.na(x), "", paste0(format(round(100*x, digit = digit), nsmall = digit), "%"))
-  make_pretty <- function(x) prettyNum(replace_na(x, " "), big.mark = ",")
   
   ret <- ret %>%
     mutate(fit = make_pct(fit),
@@ -527,7 +534,7 @@ make_municipio_table <- function(tests_by_strata,
       mutate(rate = paste0(format(round(100*rate,1), nsmall=1),"% ", "(",
                            format(round(100*lower, 1), nsmall=1),"%", ", ",
                            format(round(100*upper, 1), nsmall=1),"%", ")"),
-             poblacion_text = prettyNum(poblacion, big.mark=",")) %>%
+             poblacion_text = make_pretty(poblacion))%>%
       select(patientCity, rate, positives, tests, ppc, poblacion_text, `0 to 9`, `10 to 19`, poblacion) %>%
       setNames(c("Municipio", "% Pruebas positivas (IC)", "Positivos", "Pruebas",  
                  "Positivos por\n100,000 por día", "Población", "Positiovs 0 a 9 años", "Positivos 10 a 19 años", "dummy"))
@@ -634,11 +641,11 @@ make_lab_tab <- function(lab_tab,
 }
 
 plot_vaccines <- function(hosp_mort,  
-                                  start_date = first_vaccine - days(1), 
+                                  start_date = first_day, 
                                   end_date = today()){
   
   tmp <- hosp_mort %>% 
-    filter(date >= start_date & date <= end_date) %>% 
+    filter(date >= start_date & date <= end_date & !is.na(people_fully_vaccinated)) %>% 
     select(date, total_distributed, total_vaccinations, 
     people_fully_vaccinated) %>% 
     rename("Dosis distribuidas" = total_distributed,
@@ -655,10 +662,12 @@ plot_vaccines <- function(hosp_mort,
     geom_line() +
     geom_point(show.legend = FALSE) +
     scale_x_date(date_labels = "%b %d") +#, breaks = breaks_width("days")) +
-    ggtitle("Por ciento de la población vacunada con dos dosis") +
+    ggtitle("Personas vacunadas, vacunaciones totales y dosis distribuidas") +
+    ylim(c(0, max(tmp$value/1000))) + 
     ylab("Total en miles") +
     xlab("Fecha") +
-    theme_bw() +   theme(legend.position="bottom",legend.title=element_blank()) 
+    theme_bw() +   
+    theme(legend.position="bottom",legend.title=element_blank()) 
     
 }
 

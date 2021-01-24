@@ -154,7 +154,10 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                br(),
                                downloadButton("downloadLabData", "Download",
                                               style = button_style),
-                               DT::dataTableOutput("labs"))
+                               DT::dataTableOutput("labs")),
+                      
+                      tabPanel("Vacunas",
+                               plotOutput("vaccines"))
                       
                     )
                   )),
@@ -290,7 +293,8 @@ server <- function(input, output, session) {
                                       "En paréntesis vemos un intervalo de confianza del ", (1-alpha)*100,"%. ", 
                                       "Tengan en cuenta que los fines de semana se hacen menos pruebas y por lo tanto se reportan menos casos. ",
                                       "Las muertes, casos en el ICU y hospitalizaciones vienen del informe oficial del Departamento de Salud y toman un día en ser reportados.",
-                                      "Vea más información sobre las distintas definiciones de tasa de positividad en la pestaña <b>POSITIVIDAD</b>."
+                                      "Vea más información sobre las distintas definiciones de tasa de positividad en la pestaña <b>POSITIVIDAD</b>.",
+                                      "<b>Vacunados</b> son el total de personas que han recibido ambas dosis de vacunas. <b>Vacunas</b> son el total de vacunas administradas. <b>Distribuidas</b> son el total de vacunas distribuidas."
                       ))))),
                   rownames = FALSE,
                   options = list(dom = 't', pageLength = -1,
@@ -298,7 +302,7 @@ server <- function(input, output, session) {
                                    list(targets = 0, orderData = ncol(ret)-1),
                                    list(targets = ncol(ret)-1, visible = FALSE),
                                    list(className = 'dt-right', targets = 2:(ncol(ret)-2))))) %>%
-      DT::formatStyle(c(1, 2, ncol(ret) - 1), "white-space"="nowrap")
+      DT::formatStyle(c(1, 2, 11), "white-space"="nowrap")
     },
     server = FALSE
   )
@@ -484,6 +488,13 @@ server <- function(input, output, session) {
      DT::formatStyle(1,"white-space"="nowrap")
    
   }, server = FALSE)
+  
+  output$vaccines <- renderPlot({
+    load(file.path(rda_path,"rezago.rda"))
+    plot_vaccines(hosp_mort, 
+                start_date = input$range[1],
+                end_date =input$range[2])
+  })
   
   
   # -- This allows users to download data
