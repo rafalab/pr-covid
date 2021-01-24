@@ -524,7 +524,7 @@ vaccines <- read_csv(url) %>%
 
 ## fill in NAs
 for(j in which(names(vaccines)!="date")){
-  for(i in 4:nrow(vaccines)){
+  for(i in 2:nrow(vaccines)){
    if(is.na(vaccines[[j]][i])) vaccines[[j]][i] <- max(vaccines[[j]][1:(i-1)], na.rm=TRUE)
   }
 }
