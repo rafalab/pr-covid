@@ -92,6 +92,10 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                       
                       tabPanel("Resumen",
                                #htmlOutput("riesgo"),
+                               h4("Niveles actuales: "),
+                               htmlOutput("positividad"),
+                               htmlOutput("fecha"),
+                               hr(),
                                htmlOutput("table_title"),
                                DT::dataTableOutput("resumen_table"),
                                HTML(paste0("<h5> <b> Por cientos</b>, ",
@@ -229,6 +233,16 @@ server <- function(input, output, session) {
   })
     
   # -- This shows a summary
+  res <- reactive(compute_summary(tests, hosp_mort, type = input$testType))
+  
+  output$positividad <-  renderText({
+    paste0(
+      "<p>pruebas positivas: ", res()$positividad, " &emsp;", 
+      "casos nuevos: ", res()$casos_positividad, "&emsp;", 
+      "Hospitalizaciones: ", res()$hosp, "&emsp;",
+      "% población vacunada: ", res()$vacunas, "</p>")
+  })
+  
   output$resumen_table <- DT::renderDataTable({
     compute_summary(tests, hosp_mort, type = input$testType)$tab %>%
       DT::datatable(class = 'white-space: nowrap',
