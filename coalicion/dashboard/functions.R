@@ -13,8 +13,13 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular", day = today() 
   ## we include the latest day because we have a usable value
   ## we take it out later to keep the table dimensions the same
   pos <- filter(tests, testType == type & 
-                   date %in% c(the_dates, day)) %>%
+                  date %in% the_dates) %>%
     arrange(desc(date))
+  
+  latest <- tests %>% filter(date <= day & date > max(the_dates) & testType == type) %>%
+    arrange(desc(date)) %>% slice(1)
+  
+  if(nrow(latest) > 0) pos <- bind_rows(latest, pos) else bind_rows(slice(pos, 1), pos)
   
   ## this computes the difference in positivity between weeks
   ##determines if they are significant
@@ -89,13 +94,19 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular", day = today() 
   
   ## Hosp
   ## as pos but for hospitalizations
-   hos <- hosp_mort %>% select(date, HospitCOV19, hosp_week_avg) %>% 
-    filter(!is.na(HospitCOV19)) %>%
+  hos <- hosp_mort %>% select(date, HospitCOV19, hosp_week_avg) %>% 
+    filter() %>%
     filter(date <= day) %>%
-    filter(date %in% the_dates | date == max(date))  %>%
+    filter(date %in% the_dates)  %>%
     arrange(desc(date))
-
-   phi <- hosp_mort %>% filter(date >= make_date(2020, 7, 1) & date <= last_day) %>%
+  
+  latest <- hosp_mort %>% select(date, HospitCOV19, hosp_week_avg) %>% 
+    filter(!is.na(HospitCOV19) & date <= day & date > max(the_dates)) %>%
+    arrange(desc(date)) %>% slice(1)
+  
+  if(nrow(latest) > 0) hos <- bind_rows(latest, hos) else hos <- bind_rows(slice(hos, 1), hos)
+  
+  phi <- hosp_mort %>% filter(date >= make_date(2020, 7, 1) & date <= last_day) %>%
     filter(!is.na(HospitCOV19)) %>%
     mutate(wd = factor(wday(date))) %>%
     glm(HospitCOV19 ~ wd, offset = log(hosp_week_avg), data = ., family = quasipoisson) %>%
@@ -127,14 +138,23 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular", day = today() 
   ## Vacunas
   vac <- hosp_mort %>% select(date,  people_fully_vaccinated) %>% 
     filter(!is.na(people_fully_vaccinated)) %>%
-    filter(date %in% the_dates | date == max(date)) %>%
-    arrange(desc(date)) %>%
+    filter(date %in% the_dates) %>%
+    arrange(desc(date)) 
+  
+  latest <- hosp_mort %>% select(date,  people_fully_vaccinated) %>% 
+    filter(!is.na(people_fully_vaccinated) & date <= day & date > max(the_dates)) %>%
+    arrange(desc(date)) %>% 
+    slice(1)
+  
+  if(nrow(latest) > 0) vac <- bind_rows(latest, vac) else vac <- bind_rows(slice(vac, 1), vac)
+  
+  vac <- vac %>%
     mutate(pct_fully_vaccinated = people_fully_vaccinated/pr_pop)
   
-  
+  ### Definir tendencia y recomendación automatica
   tendencia <- case_when(change_pos[1] == 1 ~ 1,
-                         change_pos[1] == -1 & change_pos[2] == -1 & change_pos[3] == -1 ~ -1,
-                         TRUE ~ 0)
+                           change_pos[1] == -1 & change_pos[2] == -1 & change_pos[3] == -1 ~ -1,
+                           TRUE ~ 0)
   
   nivel <- case_when(pos$fit[1] >= 0.20 | cas$cases_week_avg[1] >= 800 | hos$HospitCOV19[1] > 1000 ~ 4,
                      pos$fit[1] < 0.03 & cas$cases_week_avg[1] < 30 & hos$HospitCOV19[1] < 300 ~ 1,
