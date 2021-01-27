@@ -535,7 +535,9 @@ for(j in which(names(vaccines)!="date")){
 hosp_mort <- left_join(hosp_mort, vaccines, by = "date") 
 ## define date and time of latest download
 the_stamp <- now()
-save(first_day, alpha, the_stamp, 
+last_complete_day <- today() - 1
+save(first_day, last_complete_day,
+     alpha, the_stamp, 
      tests, tests_by_strata, cases,
      hosp_mort, labs, pr_pop, 
      file = file.path(rda_path, "data.rda"))
