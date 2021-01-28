@@ -49,7 +49,7 @@ ui <- fixedPage(
                      column(6, dateInput(
                          "the_day",
                          "Fecha:",
-                         value = today() - days(1),
+                         value = last_complete_day,
                          min = make_date(2020, 5, 1),
                          max = today() - days(1),
                          format = "yyyy-mm-dd",
@@ -60,8 +60,9 @@ ui <- fixedPage(
                      ))
                  ),
                  HTML(paste("<p> Este informe es generado automaticamente usando los datos más recientes.",
-                            "Pueden ver el código <a href=\"https://github.com/rafalab/pr-covid/tree/master/coalicion/dashboard\" style=\"color:darkblue;\">aquí</a> y ",
-                            "datos completos <a href=\"https://rconnect.dfci.harvard.edu/covidpr/\" style=\"color:darkblue;\">aquí</a>.</p>")),
+                            "Pueden ver el código <a href=\"https://github.com/rafalab/pr-covid/tree/master/coalicion/dashboard\" style=\"color:darkblue;\">aquí</a>, ",
+                            "datos completos <a href=\"https://rconnect.dfci.harvard.edu/covidpr/\" style=\"color:darkblue;\">aquí</a>, e",
+                            "informes previos <a href=\"https://rafalab.github.io/pr-covid/\" style=\"color:darkblue;\">aquí</a>.</p>")),
                  
                  uiOutput("stamp")
         ),

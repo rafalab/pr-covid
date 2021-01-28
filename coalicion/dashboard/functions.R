@@ -1,4 +1,4 @@
-compute_summary <- function(tests, hosp_mort, type = "Molecular", day = today() - days(1)){
+compute_summary <- function(tests, hosp_mort, type = "Molecular", day = last_complete_day){
   
   ## function to turn proportions into pretty percentages
   make_pct <- function(x, digits = 1) 
@@ -37,7 +37,7 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular", day = today() 
     mutate(n =  people_total_week - people_positives_week + cases_week_avg * 7,
            cases_rate = cases_week_avg * 7 / n)
   
-  change_casespos <- sapply(1:(nrow(pos)-1), function(i){
+  change_casespos <- sapply(1:(nrow(casespos)-1), function(i){
     p1 <- casespos$cases_rate[i] 
     p0 <- casespos$cases_rate[i+1]
     d <- p1 - p0

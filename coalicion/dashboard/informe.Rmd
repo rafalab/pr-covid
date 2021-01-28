@@ -25,7 +25,7 @@ Fechas: `r paste0(format(last_complete_day-days(6), "%B/%d/%Y - "), format(last_
 
 Actualización: `r the_stamp`
 
-#### Resumen basado en datos hasta `r format(last_complete_day - days(lag_to_complete), "%B %d, ")` cuando estaban más completos:
+#### Resumen basado en datos de pruebas moleculares hasta `r format(last_complete_day - days(lag_to_complete), "%B %d, ")` cuando estaban más completos:
 
 
 ```{r}
