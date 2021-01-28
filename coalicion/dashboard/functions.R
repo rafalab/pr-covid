@@ -1,8 +1,9 @@
 compute_summary <- function(tests, hosp_mort, type = "Molecular", day = last_complete_day){
   
   ## function to turn proportions into pretty percentages
-  make_pct <- function(x, digits = 1) 
+  make_pct <- function(x, digits = 1){
     ifelse(is.na(x), "", paste0(format(round(100 * x, digits = digits), nsmall = digits), "%"))
+  }
   
   ## dates that we will put in the table
   ## they are 4 entries, 1 week apart
@@ -43,7 +44,7 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular", day = last_com
     d <- p1 - p0
     se <- sqrt(p1*(1-p1) / casespos$n[i] + p0*(1-p0) / casespos$n[i+1])
     signif <- abs(d/se) > qnorm(0.975)
-    sign(pos$fit[i] - pos$fit[i+1]) * signif 
+    sign(casespos$cases_rate[i] - casespos$cases_rate[i+1]) * signif 
   })
   
   ## cases 
