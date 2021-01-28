@@ -27,8 +27,8 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                 sidebarLayout(
                   sidebarPanel(
                     dateRangeInput("range", "Periodo", 
-                                   start = today() - days(90), #make_date(2020, 3, 21), 
-                                   end = today() - days(1),
+                                   start = last_complete_day - days(89), 
+                                   end = last_complete_day,
                                    min = first_day,
                                    format = "M-dd",
                                    max = today(),
@@ -100,7 +100,7 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                DT::dataTableOutput("resumen_table"),
                                HTML(paste0("<h5> <b> Por cientos</b>, ",
                                            "<b>casos</b>, y <b>pruebas</b> están basados en un <b>promedio de siete días</b> para contrarrestar el efecto que tiene el día de la semana. ",
-                                           "La flechas de colores no dicen si hubo cambio estadísticamente singificative cuando comparamos a la semana anterio. ",
+                                           "La flechas de colores no dicen si hubo cambio estadísticamente singificative cuando comparamos a la semana anterior. ",
                                            "Noten que los datos de las pruebas toman ", lag_to_complete, " días en estar aproximadamente completos, ",
                                            "por lo tanto, calculamos los casos y pruebas para <b>", format(last_day, "%B %d</b>. "))),
                                hr(),
@@ -184,15 +184,15 @@ server <- function(input, output, session) {
   # -- This sets range to last two weeks
   observeEvent(input$weeks, {
     updateDateRangeInput(session, "range",
-                         start = today() - weeks(1),
-                         end   = today() - days(1))
+                         start = last_complete_day - days(6),
+                         end   = last_complete_day)
   })
   
   # -- This sets range to last 90 days (default)
   observeEvent(input$months, {
     updateDateRangeInput(session, "range",
-                         start = today() - days(90),
-                         end   = today() - days(1))
+                         start = last_complete_day - days(89),
+                         end   = last_complete_day)
   })
   
   # -- This sets range to last two weeks
@@ -237,8 +237,8 @@ server <- function(input, output, session) {
   
   output$positividad <-  renderText({
     paste0(
-      "<p>pruebas positivas: ", res()$positividad, " &emsp;", 
-      "casos nuevos: ", res()$casos_positividad, "&emsp;", 
+      "<p>% pruebas positivas: ", res()$positividad, " &emsp;", 
+      "% casos nuevos: ", res()$casos_positividad, "&emsp;", 
       "Hospitalizaciones: ", res()$hosp, "&emsp;",
       "% población vacunada: ", res()$vacunas, "</p>")
   })

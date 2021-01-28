@@ -6,9 +6,6 @@ library(scales)
 library(sf)
 source("functions.R")
 
-lag_to_complete <- 7
-last_day <- today() - days(1) - days(lag_to_complete)
-
 ## if on the server get the latest data
 if(Sys.info()["nodename"] == "fermat.dfci.harvard.edu"){
   rda_path <- "/homes10/rafa/dashboard/pr-covid/dashboard/rdas"
@@ -37,5 +34,7 @@ map <- cbind(map, st_coordinates(st_centroid(map)))
 
 load(file.path(rda_path,"data.rda"))
 
+lag_to_complete <- 7
+last_day <- last_complete_day - days(lag_to_complete)
 
 

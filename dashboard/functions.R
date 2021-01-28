@@ -5,7 +5,7 @@ make_pretty <- function(x) prettyNum(replace_na(x, " "), big.mark = ",")
 # positivity plot ---------------------------------------------------------
 plot_positivity <- function(tests, 
                             start_date = first_day, 
-                            end_date = today(), 
+                            end_date = last_complete_day, 
                             type = "Molecular", 
                             yscale = FALSE,
                             version = c("pruebas", "casos")){
@@ -77,7 +77,7 @@ plot_positivity <- function(tests,
 # ICU usage ---------------------------------------------------------------
 plot_icu <- function(hosp_mort,  
                       start_date = first_day, 
-                      end_date = today(), 
+                      end_date = last_complete_day, 
                       yscale = FALSE){
   
   tmp <- hosp_mort %>% 
@@ -122,7 +122,7 @@ plot_icu <- function(hosp_mort,
 
 plot_deaths <- function(hosp_mort,  
                         start_date = first_day, 
-                        end_date = today(), 
+                        end_date = last_complete_day, 
                         cumm = FALSE,
                         yscale = FALSE){
   if(cumm){
@@ -165,7 +165,7 @@ plot_deaths <- function(hosp_mort,
   
 plot_hosp <- function(hosp_mort,  
                       start_date = first_day, 
-                      end_date = today(),
+                      end_date = last_complete_day,
                       yscale = FALSE){
   
   tmp <- hosp_mort %>% 
@@ -200,7 +200,7 @@ plot_hosp <- function(hosp_mort,
 
 plot_cases <- function(cases, 
                        start_date = first_day, 
-                       end_date = today(), 
+                       end_date = last_complete_day, 
                        type = "Molecular", 
                        cumm = FALSE,
                        yscale = FALSE){
@@ -253,7 +253,7 @@ plot_cases <- function(cases,
 
 plot_test <- function(tests, 
                       start_date = first_day, 
-                      end_date = today(), 
+                      end_date = last_complete_day, 
                       type = "Molecular", 
                       cumm = FALSE){
   if(cumm){
@@ -301,7 +301,7 @@ plot_test <- function(tests,
 
 plot_positivity_by_lab <- function(labs, 
                             start_date = first_day, 
-                            end_date = today()-1, 
+                            end_date = last_complete_day, 
                             type = "Molecular", 
                             yscale = FALSE){
   if(type == "Molecular+Antigens") return(NULL) else{
@@ -335,7 +335,7 @@ plot_positivity_by_lab <- function(labs,
 
 plot_tests_by_lab <- function(labs, 
                                    start_date = first_day, 
-                                   end_date = today()-1, 
+                                   end_date = last_complete_day, 
                                    type = "Molecular"){
   
   if(type == "Molecular+Antigens") return(NULL) else{
@@ -363,7 +363,7 @@ plot_tests_by_lab <- function(labs,
 }
 plot_map <- function(tests_by_strata,
                      start_date = first_day, 
-                     end_date = today(), 
+                     end_date = last_complete_day, 
                      type = "Molecular",
                      max_rate = 0.25){
     
@@ -407,7 +407,7 @@ plot_map <- function(tests_by_strata,
 
 make_table <- function(tests, hosp_mort, 
                        start_date = first_day, 
-                       end_date = today(), 
+                       end_date = last_complete_day, 
                        type = "Molecular",
                        cumm = FALSE){
   
@@ -472,7 +472,7 @@ make_table <- function(tests, hosp_mort,
 
 make_positivity_table <- function(tests, hosp_mort, 
                        start_date = first_day, 
-                       end_date = today(), 
+                       end_date = last_complete_day, 
                        type = "Molecular"){
 
   tmp <- select(hosp_mort, date, HospitCOV19, IncMueSalud, CamasICU)
@@ -503,7 +503,7 @@ make_positivity_table <- function(tests, hosp_mort,
 
 make_municipio_table <- function(tests_by_strata, 
                                  start_date = first_day, 
-                                 end_date = today(), 
+                                 end_date = last_complete_day, 
                                  type = "Molecular"){
   
     tmp <- tests_by_strata %>%
@@ -544,7 +544,7 @@ make_municipio_table <- function(tests_by_strata,
 
 plot_agedist <- function(tests_by_strata,
                          start_date = first_day, 
-                         end_date = today(), 
+                         end_date = last_complete_day, 
                          type = "Molecular",
                          yscale = FALSE){
   
@@ -581,7 +581,7 @@ plot_agedist <- function(tests_by_strata,
 
 plot_rezago <- function(rezago,
                         start_date = first_day, 
-                        end_date = today(), 
+                        end_date = last_complete_day, 
                         type = "Molecular"){
   
   if(type == "Molecular+Antigens") return(NULL) else{
@@ -605,7 +605,7 @@ plot_rezago <- function(rezago,
   
 make_lab_tab <- function(lab_tab,
                          start_date = first_day, 
-                         end_date = today(), 
+                         end_date = last_complete_day, 
                          type = "Molecular"){
   ret <- filter(lab_tab,  
                 date >= start_date, 
@@ -642,7 +642,7 @@ make_lab_tab <- function(lab_tab,
 
 plot_vaccines <- function(hosp_mort,  
                                   start_date = first_day, 
-                                  end_date = today()){
+                                  end_date = last_complete_day){
   
   tmp <- hosp_mort %>% 
     filter(date >= start_date & date <= end_date & !is.na(people_fully_vaccinated)) %>% 
@@ -674,7 +674,7 @@ plot_vaccines <- function(hosp_mort,
   
 plot_fully_vaccinated <- function(hosp_mort,  
               start_date = first_day, 
-              end_date = today(),
+              end_date = last_complete_day,
               yscale = FALSE){
 
 
