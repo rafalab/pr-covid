@@ -254,6 +254,36 @@ cases <- left_join(cases, fits, by = c("testType", "date"))
 ## add new cases and weekly average to tests data frame
 tests <- left_join(tests, cases, by = c("testType", "date"))
 
+## Compute unique negatives
+
+# compute unique negative cases ------------------------------------------------------------
+negative_cases <- all_tests_with_id %>%  
+  bind_rows(mol_anti) %>%
+  filter(date>=first_day & result == "negative" &
+           testType %in% c("Molecular", "Serological", "Antigens",  "Molecular+Antigens")) %>%
+  group_by(testType, patientId) %>%
+  arrange(date) %>%
+  slice(1) %>% 
+  ungroup() %>%
+  select(-patientId, -result) %>%
+  arrange(testType, date) %>%
+  group_by(testType, date) %>% 
+  summarize(negative_cases = n(), .groups = "drop")
+
+# Make sure all dates are included
+negative_cases <-  select(tests, testType, date) %>% 
+  left_join(negative_cases, by = c("testType", "date")) %>%
+  replace_na(list(negative_cases = 0))
+
+# compute daily weekly average and add to negative_cases data frame
+fits <- negative_cases %>% 
+  group_by(testType) %>%
+  do(ma7(d = .$date, y = .$negative_cases)) %>%
+  rename(negative_cases_week_avg = moving_avg)
+negative_cases <- left_join(negative_cases, fits, by = c("testType", "date"))
+
+## add new cases and weekly average to tests data frame
+tests <- left_join(tests, negative_cases, by = c("testType", "date"))
 
 ## the following are diagnostic plots
 if(FALSE){
