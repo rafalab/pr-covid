@@ -232,7 +232,7 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular", day = last_com
                             "% población vacunada"),
                 
                 meta = c("< 3.0%",
-                         "< 3.0%", 
+                         "< 2.0%", 
                          "< 30", 
                          "> 4,500", 
                          "< 300",
