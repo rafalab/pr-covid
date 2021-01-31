@@ -577,4 +577,5 @@ save(rezago, file = file.path(rda_path, "rezago.rda"))
 ## For backward compatibility
 all_tests <- all_tests %>%  filter(testType == "Molecular")
 saveRDS(all_tests, file = file.path(rda_path, "all_tests.rds"), compress = "xz")
+saveRDS(all_tests_with_id, file = file.path(rda_path, "all_tests_with_id.rds"), compress = "xz")
 

@@ -308,7 +308,7 @@ server <- function(input, output, session) {
                                       "Tengan en cuenta que los fines de semana se hacen menos pruebas y por lo tanto se reportan menos casos. ",
                                       "Las muertes, casos en el ICU y hospitalizaciones vienen del informe oficial del Departamento de Salud y toman un día en ser reportados.",
                                       "Vea más información sobre las distintas definiciones de tasa de positividad en la pestaña <b>POSITIVIDAD</b>.",
-                                      "<b>Vacunados</b> son el total de personas que han recibido ambas dosis de vacunas. <b>Vacunas</b> son el total de vacunas administradas. <b>Distribuidas</b> son el total de vacunas distribuidas."
+                                      "<b>Vacunados</b> son el total de personas con por lo menos una dosis. <b>Ambas dosis</b> son el total de personas que han recibido ambas dosis de vacunas.<b>Vacunas</b> son el total de vacunas administradas. <b>Distribuidas</b> son el total de vacunas distribuidas."
                       ))))),
                   rownames = FALSE,
                   options = list(dom = 't', pageLength = -1,

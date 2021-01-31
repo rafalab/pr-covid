@@ -412,7 +412,7 @@ make_table <- function(tests, hosp_mort,
                        cumm = FALSE){
   
   tmp <- select(hosp_mort, date, HospitCOV19, IncMueSalud, CamasICU,
-                total_distributed, total_vaccinations, people_fully_vaccinated)
+                total_distributed, total_vaccinations, people_vaccinated, people_fully_vaccinated)
 
   ## last_day is a global variable 
   #cases$moving_avg[cases$date > last_day] <- NA
@@ -455,16 +455,17 @@ make_table <- function(tests, hosp_mort,
            IncMueSalud = make_pretty(IncMueSalud),
            total_distributed = make_pretty(total_distributed), 
            total_vaccinations = make_pretty(total_vaccinations),
+           people_vaccinated = make_pretty(people_vaccinated),
            people_fully_vaccinated = make_pretty(people_fully_vaccinated)) %>% 
     select(date, fit, cases, cases_week_avg, IncMueSalud, CamasICU, HospitCOV19, 
            positives, tests, rate, cases_rate, 
-           people_fully_vaccinated,total_vaccinations, total_distributed, 
+           people_vaccinated, people_fully_vaccinated, total_vaccinations, total_distributed, 
            dummy) %>%
     arrange(desc(date)) %>%
     mutate(date = format(date, "%B %d")) %>%
     setNames(c("Fecha", "% pruebas positivas", "Casos únicos", "Promedio de 7 días",
                "Muertes", "ICU", "Hospital", "Positivos", "Pruebas", 
-               "Positivos/ Pruebas", "% casos nuevos", "Vacunados",
+               "Positivos/ Pruebas", "% casos nuevos", "Vacunados", "Ambas dosis", 
                "Vacunas", "Distribuidas", "dateorder"))
   
   return(ret)
@@ -646,14 +647,16 @@ plot_vaccines <- function(hosp_mort,
   
   tmp <- hosp_mort %>% 
     filter(date >= start_date & date <= end_date & !is.na(people_fully_vaccinated)) %>% 
-    select(date, total_distributed, total_vaccinations, 
+    select(date, total_distributed, total_vaccinations, people_vaccinated,
     people_fully_vaccinated) %>% 
     rename("Dosis distribuidas" = total_distributed,
            "Vacunaciones totales" = total_vaccinations,
-           "Personas vacunadas (2 dosis)" =  people_fully_vaccinated) %>%
+           "Personas vacunadas" = people_vaccinated,
+           "Personas vacunadas (ambas dosis)" =  people_fully_vaccinated) %>%
     pivot_longer(-date) %>%
     mutate(name = factor(name, 
-                         levels = c("Personas vacunadas (2 dosis)",
+                         levels = c("Personas vacunadas (ambas dosis)",
+                                    "Personas vacunadas",
                                     "Vacunaciones totales",
                                     "Dosis distribuidas")))
       
@@ -667,7 +670,7 @@ plot_vaccines <- function(hosp_mort,
     ylab("Total en miles") +
     xlab("Fecha") +
     theme_bw() +   
-    theme(legend.position="bottom",legend.title=element_blank()) 
+    theme(legend.position="bottom", legend.title=element_blank()) 
     
 }
 
@@ -689,7 +692,7 @@ plot_fully_vaccinated <- function(hosp_mort,
       geom_line() +
       scale_x_date(date_labels = "%b %d") +#, breaks = breaks_width("days")) +
       scale_y_continuous(labels = scales::percent) +
-      ggtitle("Por ciento de la población vacunada con dos dosis") +
+      ggtitle("Por ciento de la población vacunada con ambas dosis") +
       ylab("Por ciento") +
       xlab("Fecha") +
       theme_bw() 
