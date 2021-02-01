@@ -222,6 +222,11 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular", day = last_com
   vacunas <- paste(make_pct(vac$pct_fully_vaccinated[1]),  no_arrow)
   vac <- slice(vac, -1)
 
+  if(type == "Molecular"){
+    meta <- c("< 3.0%", "< 2.0%",  "< 30",  "> 4,500", "< 300", "< 1", "> 70%")
+  } else {
+    meta <- c("", "",  "",  "",  "< 300", "< 1", "> 70%")
+  }
   ## make the table
   tab <- tibble(metrica = c("% pruebas positivas", 
                             "% casos nuevos",
@@ -231,13 +236,7 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular", day = last_com
                             "Muertes por día",
                             "% población vacunada"),
                 
-                meta = c("< 3.0%",
-                         "< 2.0%", 
-                         "< 30", 
-                         "> 4,500", 
-                         "< 300",
-                         "< 1",
-                         "> 70%"),
+                meta = meta,
                 
                  valor =  paste(make_values(1), make_arrow(1)),
                  
