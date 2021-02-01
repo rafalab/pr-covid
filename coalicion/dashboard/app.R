@@ -24,6 +24,7 @@ ui <- fixedPage(
     
                  h5("Niveles actuales: "),
                  htmlOutput("positividad"),
+                 br(),
                  htmlOutput("fecha"),
                  
                  br(),
@@ -105,7 +106,8 @@ ui <- fixedPage(
                      <LI><b>Hospitalizaciones</b> = Número de hospitalizaciones reportados por salud el último día de la semana.</LI>
                      <LI><b>Muertes por día</b> = Promedio diario de muertes reportadas por salud esa semana. </LI>
                      <LI><b>% población vacunada</b> = Por ciento de la población de Puerto Rico que ha recibido ambas dosis de la vacuna. </LI>
-                     </UL>",
+                     <LI><b>Días para alcanzar 70%</b> = Basado en la tasa de crecimiento de la última semana, el número de días que tardará llegar a la meta de 70% de la población vacunada con amabas dosis.</LI>
+                    </UL>",
                      "<p> Importante notar que no se detectan todos los casos y que cuántos detectamos depende de cuántas pruebas se hacen."                 )))
         ),
         tabPanel("Disclaimer",
@@ -159,7 +161,8 @@ server <- function(input, output, session) {
             "<tr><td>% pruebas positivas:</td><td align=\"right\">&emsp;", res()$positividad, "</td></tr>", 
             "<tr><td>% casos nuevos:</td><td align=\"right\">&emsp;", res()$casos_positividad, "</td></tr>", #, "&emsp;", 
             "<tr><td>Hospitalizaciones:</td><td align=\"right\">&emsp;", res()$hosp, "</td></tr>",
-            "<tr><td>% población vacunada:</td><td align=\"right\">&emsp;", res()$vacunas, "</td></tr></table>")
+            "<tr><td>% población vacunada:</td><td align=\"right\">&emsp;", res()$vacunas, "</td></tr>",
+            "<tr><td>Días para alcanzar 70%:</td><td align=\"right\">&emsp;", res()$dias_hasta_meta_vacunas,"</td></tr></table>")
     })
     
     output$tab_title <- renderText({

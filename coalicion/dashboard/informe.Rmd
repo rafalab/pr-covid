@@ -77,6 +77,7 @@ Los colores indican la tendencia que deseamos ver (verde) y la que no (rojo). El
 * **Hospitalizaciones** = Número de hospitalizaciones reportados por salud el último día de la semana.
 * **Muertes por día** = Promedio diario de muertes reportadas por salud esa semana. 
 * **% población vacunada** = Por ciento de la población de Puerto Rico que ha recibido ambas dosis de la vacuna. 
+* **Días para alcanzar 70%** = Basado en la tasa de crecimiento de la última semana, el número de días que tardará llegar a la meta de 70% de la población vacunada con amabas dosis.
 
 Importante notar que no se detectan todos los casos y que cuántos detectamos depende de cuántas pruebas se hacen.        
 

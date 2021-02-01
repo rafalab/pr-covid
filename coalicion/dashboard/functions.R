@@ -259,6 +259,6 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular", day = last_com
   return(list(tab = tab, riesgo = riesgo, nivel = nivel, tendencia = tendencia, 
               positividad = positividad, casos_positividad = casos_positividad, 
               hosp = hosp, vacunas = vacunas,
-              dias_hasta_meta_vacunas = dias_hasta_meta_vacunas ))
+              dias_hasta_meta_vacunas = dias_hasta_meta_vacunas))
   
 }
