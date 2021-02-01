@@ -221,6 +221,11 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular", day = last_com
   
   vacunas <- paste(make_pct(vac$pct_fully_vaccinated[1]),  no_arrow)
   vac <- slice(vac, -1)
+  
+  vacs_per_day <- diff(vac$people_fully_vaccinated[1:2])/diff(as.numeric(vac$date[1:2]))
+  dias_hasta_meta_vacunas <- paste(
+    prettyNum(round((pr_pop*0.7 - vac$people_fully_vaccinated[1]) / vacs_per_day), big.mark = ","),
+    no_arrow)
 
   if(type == "Molecular"){
     meta <- c("< 3.0%", "< 2.0%",  "< 30",  "> 4,500", "< 300", "< 1", "> 70%")
@@ -252,6 +257,8 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular", day = last_com
                      
                      
   return(list(tab = tab, riesgo = riesgo, nivel = nivel, tendencia = tendencia, 
-              positividad = positividad, casos_positividad = casos_positividad, hosp = hosp, vacunas = vacunas))
+              positividad = positividad, casos_positividad = casos_positividad, 
+              hosp = hosp, vacunas = vacunas,
+              dias_hasta_meta_vacunas = dias_hasta_meta_vacunas ))
   
 }
