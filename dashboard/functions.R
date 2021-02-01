@@ -28,6 +28,7 @@ plot_positivity <- function(tests,
                                  type == "Antigens" ~ "de antígeno",
                                  type == "Molecular+Antigens" ~ "moleculares o de antígenos"),
                        "que son casos únicos nuevos")
+    bajo <- 0.02
   } else{
     the_title <- paste("% de personas que se hicieron prueba\n" , 
                        case_when(type == "Molecular" ~ "molecular", 
@@ -35,14 +36,15 @@ plot_positivity <- function(tests,
                                  type == "Antigens" ~ "de antígeno",
                                  type == "Molecular+Antigens" ~ "moleculares o de antígenos"),
                        "con resultado positivo")
+    bajo <- 0.03
   }
   
   ret <- dat %>%
     ggplot(aes(date, rate)) +
-    geom_hline(yintercept = 0.03, lty=2, color = "gray") +
+    geom_hline(yintercept = bajo, lty=2, color = "gray") +
     geom_hline(yintercept = 0.10, lty=2, color = "gray") +
     geom_hline(yintercept = 0.20, lty=2, color = "gray") +
-    annotate("text", end_date + days(2), 0.015, label = "Bajo") + #, color = "#01D474") +
+    annotate("text", end_date + days(2), bajo - 0.015, label = "Bajo") + #, color = "#01D474") +
     annotate("text", end_date + days(2), 0.065, label = "Medio") + #, color = "#FFC900") +
     annotate("text", end_date + days(2), 0.15, label = "Alto") + #, color = "#FF9600") +
     annotate("text", end_date + days(2), 0.225, label = "Crítico") + #, color = "#FF0034") +
