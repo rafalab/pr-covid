@@ -71,13 +71,21 @@ test_url <- "https://bioportal.salud.gov.pr/api/administration/reports/minimal-i
 
 cases_url <- "https://bioportal.salud.gov.pr/api/administration/reports/orders/basic"
 
+get_bioportal <- function(url){
+  jsonlite::fromJSON(
+    rawToChar(
+      httr::GET(url, httr::content_type('application/json'), 
+                        httr::add_headers('Accept-Enconding'="br"))$content)
+  )
+}
+
 imputation_delay  <- 2
 
 alpha <- 0.05
 
 # Reading and wrangling test data from database ----------------------------------------------
 
-all_tests <- jsonlite::fromJSON(test_url)
+all_tests <- get_bioportal(test_url)
 
 all_tests <- all_tests %>%  
   rename(patientCity = city) %>%
@@ -117,7 +125,7 @@ if(FALSE){
 
 # Reading and wrangling cases data from database ---------------------------
 
-all_tests_with_id <- jsonlite::fromJSON(cases_url)
+all_tests_with_id <- get_bioportal(cases_url)
 
 all_tests_with_id <- all_tests_with_id %>%  
   as_tibble() %>%
