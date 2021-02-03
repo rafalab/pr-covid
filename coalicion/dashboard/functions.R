@@ -107,17 +107,35 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular", day = last_com
   
   if(nrow(latest) > 0) hos <- bind_rows(latest, hos) else hos <- bind_rows(slice(hos, 1), hos)
   
-  phi <- hosp_mort %>% filter(date >= make_date(2020, 7, 1) & date <= last_day) %>%
+  hosp_fit <- hosp_mort %>% filter(date >= make_date(2020, 7, 1) & date <= last_day) %>%
     filter(!is.na(HospitCOV19)) %>%
     mutate(wd = factor(wday(date))) %>%
-    glm(HospitCOV19 ~ wd, offset = log(hosp_week_avg), data = ., family = quasipoisson) %>%
+    glm(HospitCOV19 ~ wd, offset = log(hosp_week_avg), data = ., family = quasipoisson) 
+  
+  phi <- hosp_fit %>%
     summary()  %>%
     .$dispersion
   
+  ##becuase data is so correlated we have to compute correlation matrix to compute SE
+  hosp_corrs <- acf(hosp_fit$resid)$acf[1:14, 1, 1]
+  ## this is the transformation needed to compute difference of averages
+  X <- matrix(rep(c(1/7, -1/7), each = 7))
+  
   change_hos <- sapply(1:(nrow(hos)-1), function(i){
     d <- hos$hosp_week_avg[i] - hos$hosp_week_avg[i+1]
-    se <- sqrt((phi*hos$hosp_week_avg[i] + phi*hos$hosp_week_avg[i+1])/7)
+    
+    ## compute the SE of the difference of averages given correlation
+    Sigma <- matrix(0, 14, 14)
+    ## these are the estimated standard deviations from Poisson assumption
+    s<- sqrt(c(rep(phi*hos$hosp_week_avg[i], 7), rep(phi*hos$hosp_week_avg[i+1], 7)))
+    for(j in 1:14) for(k in 1:14) Sigma[j, k] = hosp_corrs[abs(j-k)+1]*s[j]*s[k]
+    se <- sqrt(t(X) %*% Sigma %*% X)
+    
+    ## because correlation is positive, the SE can't be smaller than the one obtined assuming IID
+    se <- pmax(se, sqrt((phi*hos$hosp_week_avg[i] + phi*hos$hosp_week_avg[i+1])/7))
+  
     signif <- abs(d/se) > qnorm(0.975)
+    
     sign(d) * signif 
   })
   
