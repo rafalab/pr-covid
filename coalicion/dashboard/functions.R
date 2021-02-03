@@ -64,6 +64,8 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular", day = last_com
     summary()  %>%
     .$dispersion
   
+  phi <- pmax(phi, 1)
+  
   change_cas <- sapply(1:(nrow(cas)-1), function(i){
     d <- cas$cases_week_avg[i] - cas$cases_week_avg[i+1]
     se <- sqrt((phi*cas$cases_week_avg[i] + phi*cas$cases_week_avg[i+1])/7)
@@ -85,6 +87,9 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular", day = last_com
     glm(people_total_week ~ wd + week, data = ., family = quasipoisson) %>%
     summary()  %>%
     .$dispersion
+  
+  phi <- pmax(phi, 1)
+  
   
   change_tes <- sapply(1:(nrow(tes)-1), function(i){
     d <- (tes$people_total_week[i] - tes$people_total_week[i+1]) / 7
@@ -115,6 +120,8 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular", day = last_com
   phi <- hosp_fit %>%
     summary()  %>%
     .$dispersion
+  
+  phi <- pmax(phi, 1)
   
   ##becuase data is so correlated we have to compute correlation matrix to compute SE
   hosp_corrs <- acf(hosp_fit$resid, plot = FALSE)$acf[1:14, 1, 1]
