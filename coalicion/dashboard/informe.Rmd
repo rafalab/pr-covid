@@ -74,7 +74,7 @@ Los colores indican la tendencia que deseamos ver (verde) y la que no (rojo). El
                      
 * **Casos nuevos por día** = Promedio diario de casos únicos **detectados** esa semana.
 * **Pruebas por día** = Promedio diario de personas que se hicieron la prueba esa semana.
-* **Hospitalizaciones** = Número de hospitalizaciones reportados por salud el último día de la semana.
+* **Hospitalizaciones** = Número de hospitalizaciones reportados por salud el último día de la semana. La tendencia se calcula para una media móvil de 7 días que no mostramos en la tabla.
 * **Muertes por día** = Promedio diario de muertes reportadas por salud esa semana. 
 * **% población vacunada** = Por ciento de la población de Puerto Rico que ha recibido ambas dosis de la vacuna. 
 * **Días para alcanzar 70%** = Basado en la tasa de crecimiento de la última semana, el número de días que tardará llegar a la meta de 70% de la población vacunada con amabas dosis.
