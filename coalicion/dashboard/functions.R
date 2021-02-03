@@ -117,7 +117,7 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular", day = last_com
     .$dispersion
   
   ##becuase data is so correlated we have to compute correlation matrix to compute SE
-  hosp_corrs <- acf(hosp_fit$resid)$acf[1:14, 1, 1]
+  hosp_corrs <- acf(hosp_fit$resid, plot = FALSE)$acf[1:14, 1, 1]
   ## this is the transformation needed to compute difference of averages
   X <- matrix(rep(c(1/7, -1/7), each = 7))
   
