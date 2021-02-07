@@ -8,129 +8,305 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE,
+                      out.width =  "90%", fig.width = 10, fig_height = 5,
+                      fig.asp = 0.5)
 ```
 
-### ¿Cuál es el objetivo de las métricas que monitoremos?
-<details><summary>clic</b></summary>
+```{r}
+library(tidyverse)
+library(lubridate)
 
-Queremos saber **cuántos casos activos COVID-19 hay en un momento dado** (la incidencia) y si estás subiendo o bajando (la tendencia). 
+tmp <- Sys.setlocale("LC_TIME", "es_ES")
 
-Recordemos que COVID-19 es una enfermedad infecciosa: mientras más casos hay hoy, más casos puede haber mañana. Sin estrategias de mitigación el crecimiento puede ser exponencial: hoy hay 100, la samana que viene 200, entonces, 400, 800, 1,600 y antes de que nos demos cuentas los hospitales están abarrotados y sufrimos cientos de muertes. Por suerte, medidas de mitigación como el distanciamiento físico, usar mascarillas, y prohibir aglomeraciones en espacios cerrados, ayudan a detener el crecimiento. Pero para saber cuándo hacen falta estas medidas, necesitamos saber cuántos casos activos hay **en el presente**.
+latest_day <- make_date(2021, 2, 6)
+
+ma7 <- function(d, y, k = 7) 
+  tibble(date = d, moving_avg = as.numeric(stats::filter(y, rep(1/k, k))))
+
+
+load(url("https://github.com/rafalab/pr-covid/raw/master/dashboard/rdas/data.rda"))
+
+dat <- tests %>% filter(testType == "Molecular") %>%
+  left_join(hosp_mort, by = "date") %>% 
+  mutate(n =  people_total_week - people_positives_week + cases_week_avg * 7,
+         cases_rate = cases_week_avg * 7 / n,
+         cases_rate_daily = cases / (people_total - people_positives + cases)) %>%
+  rename(mort = IncMueSalud, hosp = HospitCOV19)
+```
+
+
+----
+
+#### Has clic en los triángulos para ver las contestaciones.
+
+---
+
+#### ¿Cuál es el objetivo de las métricas de monitoreo? 
+<details><summary></summary>
+
+El COVID-19 es una enfermedad infecciosa con el número de casos activos contagiosos cambiando a través del tiempo. Mientras más casos hay hoy, más casos puede haber mañana. Sin estrategias de mitigación el crecimiento puede ser exponencial: hoy hay 100, la semana que viene 200, entonces, 400, 800, 1,600, y antes de que nos demos cuenta los hospitales están abarrotados y cientos de personas mueren. Por suerte, medidas de mitigación, como el distanciamiento físico, usar mascarillas, y prohibir aglomeraciones en espacios cerrados, ayudan a detener el crecimiento. Pero para saber cuándo hacen falta estas medidas, necesitamos saber cuántos casos activos hay **en el presente**.
+
+Queremos saber **cuántos casos activos COVID-19 hay en un momento dado** (la incidencia) y si están subiendo o bajando (la tendencia). Monitoreamos métricas que nos informan sobre la incidencia y la tendencia.
 
 </details>
 
-### ¿Por qué no simplemente medir el número de casos detectados?
+#### ¿Por qué no simplemente medir el número de casos detectados?
 
-<details><summary><b>click</b></summary>
+<details><summary></summary>
 
 Caundo el Departamento de Salud reporta casos para un día, se refieren a los casos **detectados**. Este número es mucho menor al número de casos activos. ¿Por qué? 
 
-* La mayoría de los casos nunca los detectamos porque son asintomáticos o se recuperan sin hacerse la prueba.
+* La mayoría de los casos no se detectan porque son asintomáticos o se recuperan sin hacerse la prueba. Aun asi pueden transmitir el virus.
 
-* Hay retrasos en reportar los resultados de las pruebas. Por ejemplo, hoy se reportan 50 casos, pero durante los próximos 14 días nos enteraremos de otros 450 que dieron positivo hoy.
+* Hay retrasos en reportar los resultados de las pruebas. Por ejemplo, es posible que hoy se reporten 50 casos, pero durante los próximos 14 días nos enteraremos de otros 450 que dieron positivo hoy.
 
-Otro problema con esta métrica es que depende de cuantas pruebas se hacen: **mientras más pruebas se hacen, más casos se detectan**. 
+Otro problema con esta métrica es que depende de cuantas pruebas se hacen: **mientras más pruebas se hacen, más casos se detectan**. Aquí dos ejemplos basados en observaciones recientes:
 
-**Ejemplos:**
+```{r}
+#dat %>% group_by(wd = wday(date)) %>% summarize(cases = mean(cases, na.rm=TRUE))
+```
 
-* En Massachussets ahora mismo se están haciendo alrededor de 100,000 pruebas moleculares al día, mientras que en Puerto Rico solo se hacen alrededor de 5,000. Por lo tanto el hecho que en Massachussets se detectan más casos no necesariamete quiere decir que hay más casos activos.
+* Los domingos se reportan casi 10 veces menos casos que los lunes, no por que hay menos contagios sino por que algunos laboratorios cierran ese día. Por lo tanto se hacen menos pruebas.
 
-* En los días feriados se reportan menos casos que otros días. La razón no es que hay menos casos, es que se hicieron menos pruebas.
+* Durante los días feriados en Puerto Rico se reportan mucho menos casos que en otros días. La razón no es que hay menos casos, es que se hicieron menos pruebas.
+
+* En Massachussets se están haciendo alrededor de 100,000 pruebas moleculares al día, mientras que en Puerto Rico solo se hacen alrededor de 5,000. Por lo tanto el que en Massachussets se detectan muchos más casos no necesariamente significa que hay muchos más casos activos.
+
+La siguiente gráfica muestra los casos nuevos de octubre 15 a enero 15. Pueden ver el bajón el día de las elecciones (nóviembre 3), fin de semana de acción de gracias (noviembre 25-28), y las navidades (diciembre 24-enero 6).
+```{r}
+dat %>% filter(date >= make_date(2020, 10, 15) & date <= make_date(2021, 1, 15)) %>%
+  ggplot(aes(date, cases_week_avg)) + 
+  geom_line() + 
+  xlab("Fecha") + 
+  annotate("segment", x = make_date(2020, 11, 1), xend = make_date(2020, 11, 3), 
+           y = 350, yend = 475, size=1, color = "blue", arrow=arrow())+
+  annotate("text", x = make_date(2020, 11, 1), 
+           y = 340, label = "Elecciones")+
+  annotate("segment", x = make_date(2020, 11, 26), xend = make_date(2020, 11, 27), 
+           y = 400, yend = 575, size=1, color = "blue", arrow=arrow())+
+  annotate("text", x = make_date(2020, 11, 26), 
+           y = 385, label = "Acción de gracia")+
+  annotate("segment", x = make_date(2020, 12, 23), xend = make_date(2020, 12, 25), 
+           y = 250, yend = 325, size=1, color = "blue", arrow=arrow())+
+  annotate("text", x = make_date(2020, 12, 23), 
+           y = 235, label = "Navidad") +
+  annotate("segment", x = make_date(2021, 1, 9), xend = make_date(2021, 1, 6), 
+           y = 200, yend = 260, size=1, color = "blue", arrow=arrow())+
+  annotate("text", x = make_date(2021, 1, 9), 
+           y = 190, label = "Reyes") +
+  
+  ylab("Casos nuevos por día (promedio de 7 días)") + theme_bw()
+```
 
 </details>
 
 
-### ¿Qué es la tasa de positividad?
 
-<details><summary>clic</summary>
+#### ¿Qué es la tasa de positividad?
 
-La tasa de positividad es una solución al problema de que los casos detectados depende de cuantas pruebas se hacen. Esto se logra reportando el **porciento** de casos positivos entre los que se hacen pruebas en vez de los casos absolutos. En una próxima sección damos definiciones exactas y explicamos que hay varias definiciones. Aquí ofrecemos un ejemplos para ayudarlos a enteder la ventaja de una tasa sobre un total absoluto.
+<details><summary></summary>
 
-En diciembre 23 se detectaron 500 casos nuevos mientras que dos días más tarde 
- el día de navidad, sólo se detectaron 40 casos. Al ver esto ¿no debemos concluir que mejoro la situación? La contestanción es **no** porque en diciembre 23 se hicieron alrededor de 5,000 preubas mientras que el día de navidad sólo se hicieron 400. La tasa de positividad es 10% en ambos días.
- 
-En general, la tasa de positividad sube cuando los casos suben. Una excepción es cuando se hacen tan pocas pruebas que se comienza a priorizar a los sintomáticos y como resultado la tasa sube sin que los casos necesariamente suban. Pero igual esto es un problema: si se están haciendo tan pocas pruebas será más difícil detecetar y aislar los casos contagiosos.
+La tasa de positividad es una solución al problema de que los casos detectados depende de cuantas pruebas se hacen. Esto se logra reportando el **por ciento** de casos positivos entre los que se hacen pruebas. Se calcula para periodos especificos, como por ejemplo para una semana. En la próxima sección damos definiciones y explicamos que hay varias definiciones. 
 
-En general tasas de positividad alta son un problema y razón para tener suma cautela.
 
-### ¿Por qué se reportan distintas tasas de positividad?
-<details><summary>Clic</summary>
 
-Durante la pandemia se han están usando diferentes definiciones de tasa de positividad. De aquí emana mucha de la confusión. Aquí damos las definiciones y explicamos la diferencia. Pero es importante notar que lo más importante para monitoreo es mantener la definición fija. 
+</details>
 
-La definicióm más sencilla es:
+
+#### ¿Por qué se reportan distintas tasas de positividad?
+<details><summary></summary>
+
+Durante la pandemia se han usando diferentes definiciones de tasa de positividad. De aquí emana mucha de la confusión. Pero si entendemos las definiciones, y las mantenemos fijas, esto no es un problema. Aquí damos las definiciones y explicamos las diferencia. 
+La definición más sencilla es:
 
 $$\mbox{tasa de positividad (por ciento de pruebas)} = \frac{\mbox{Número de pruebas moleculares positivas}}{\mbox{Número de pruebas moleculares totales}}$$
-Aquí llamaremos esta versión _% pruebas_.
+**Aquí llamaremos esta versión _% pruebas_.**
 
-Otra definición comumente usada es
+Otra definición comúnmente usada es:
 
 $$\mbox{tasa de positividad (por ciento de casos)} =\frac{\mbox{Casos único detectados con prueba molecular}}{\mbox{Número de personas que se hicieron la prueba molecular}}$$
-Aquí llamaremos esta versión _% casos_. La razón que la version % pruebas es más común es simplemente por qué es más fácil de calcular ya que no hay que descifrar que pruebas son de quién. El CDC, por ejemplo, usa está definición [aquí](https://covid.cdc.gov/covid-data-tracker/#testing_positivity7day).
+**Aquí llamaremos esta versión _% casos_.**
 
-Otra diferencia emana de que todas las definiciones se pueden calcular para distintos periodos. El periodo más comúnmente usado es una semana pero otros periodos que hemos visto son 1 día, 3 días, y dos semanas. La ventaja de periodos largos es que la métrica es más estable ya que depende de la variabilidad aleatórea que resulta en cambios de día a día. La ventaja de periodos cortos es que son más representativos de la situación actual.
+La razón que la versión % pruebas es más común que la versión % casos es simplemente porque es más fácil de calcular: no hay que descifrar que pruebas son de quién. El CDC, por ejemplo, usa la definición basada en pruebas [cuando compara los estados](https://covid.cdc.gov/covid-data-tracker/#testing_positivity7day).
 
-Aunque ambas versiones pueden parecen lo mismo no lo son. La razón es que es común para una persona con prueba positiva volverse a hacerse la prueba una o dos semanas más tarde. Si sale positivo de nuevo se cuenta como positivo pero no como caso único. Salir positivo dos semanas más tarde es común ya que el DNA del virus continua en el cuerpo aún cuando ya no se es contagioso. 
-
-Como resultado:
-
+Aunque ambas versiones pueden parecen lo mismo no lo son. La razón es que es común para una persona con prueba positiva volverse a hacerse la prueba una o dos semanas más tarde. Si sale positivo de nuevo se cuenta como prueba positiva pero no como caso único. Salir positivo dos semanas más tarde es común ya que el DNA del virus continua en el cuerpo aún cuando ya no se es contagioso. Como resultado
 
 $$\mbox{% pruebas} > \mbox{% casos}$$
-
-Y mientras más personas se repiten la prueba más grande la diferencia. 
+y mientras más personas se repiten la prueba más grande la diferencia. 
 
 Ahora bien, aunque los números no son iguales, en Puerto Rico ambas definiciones han seguido el mismo patrón desde el comienzo durante la pandemia.
 
-Notas técinca: 
-* En Puerto Rico también observamos duplicados que parecen ser errores de entrada.Esto es fácil de remover y siempre lo hacemos.
-* Otro factor que hace la diferencia entre las versiones aun mayor es que para calcular el % pruebas a veces se remueven los casos únicos anteriores pero solo si salen positivo. 
+```{r}
+dat %>% select(date, fit, cases_rate) %>% 
+  rename('% casos' = cases_rate, '% pruebas' = fit) %>%
+  pivot_longer(-date, names_to = "Versión") %>%
+  filter(!is.na(value)) %>%
+  ggplot(aes(date, value, color = Versión)) +
+  geom_line() + 
+  ylab("Tasa de positividad") + 
+  xlab("Fecha") +
+  theme(legend.position="bottom") +
+  theme_bw()
+```
+
+**Como cada definición tiene sus ventajas y desventajas, monitoreamos ambas.**
+
+Notas técnicas:
+
+* En Puerto Rico también observamos duplicados que parecen ser errores de entrada. Estas son fáciles de remover y siempre lo hacemos.
+* Otro factor que hace la diferencia entre las versiones aun mayor es que para calcular la versión % pruebas a veces se remueven los casos únicos anteriores pero solo si salen positivo. 
+* Otras versiones de la tasa de positividad emanan de que se pueden calcular para distintos periodos. El periodo más comúnmente usado son 7 días, pero otros periodos que hemos visto son 1 día, 3 días, y 14 días. La ventaja de periodos largos es que la métrica es más estable ya que se amortigua la variabilidad aleatórea que observamos de día a día. La ventaja de periodos cortos es que son más representativos de la situación actual ya que no depende tanto de datos del pasado.
+
+</details>
+
+#### ¿Cómo es útil la tasa de positividad?
+
+<details><summary></summary>
+
+Empecemos con un ejemplo para ayudarlos a entender la ventaja que ofrece monitorear la tasa de positividad comparado a los casos únicos.
+
+En diciembre 23 se detectaron alrededor de 500 casos nuevos mientras que dos días más tarde, el día de navidad, sólo se detectaron alrededor de 40 casos. En estos dos días se hicieron alrededor de 5,000 y 400, respectivamente. Al ver que los casos bajaron de 500 a 40, ¿debemos concluir que mejoró la situación? La contestación es **no** ya que se hicieron menos pruebas y el hecho de que la tasa de positividad es alrededor 10% en ambos días nos ayuda a evitar llegar a esta conclusión errónea.
+
+La siguiente gráfica muestra como la tasa de positividad predice las muertes que ocurrirán en el futuro.
+
+```{r}
+tmp <- dat %>% 
+  mutate(x_1 = lag(fit, 7), x_2 = lag(cases_rate, 14)) %>%
+  filter(date>make_date(2020, 6, 1) & date < latest_day - days(14)) %>% 
+  select(date, x_1, x_2) %>%
+  rename('% pruebas'= x_1, '% casos' = x_2) %>%
+  pivot_longer(-date, names_to = "Version") %>%
+  mutate(Version = factor(Version, levels = c("% pruebas", "% casos"))) %>%
+  left_join(select(dat, date, mort, mort_week_avg), by = "date")
+
+tmp %>%
+  ggplot(aes(value, mort_week_avg)) +
+  geom_point() +
+  xlab("Tasa de positividad (promedio de 7 días)") +
+  ylab("Muertes por día dos semanas despues (promedio 7 días)") +
+  theme_bw() +
+  facet_wrap(~Version)
+
+#tmp %>% group_by(Version) %>% summarize(cor=round(cor(value, mort_week_avg),2))
+```
+
+La correlación es alrededor de 0.9 para ambas definiciones de la tasa.
+Osea que, en general, la tasa de positividad sube cuando los casos suben y baja cuando los casos bajan. Una excepción es cuando se hacen tan pocas pruebas que se comienza a priorizar a los sintomáticos y como resultado la tasa sube sin que los casos necesariamente suban. En este caso la tasa de positividad alta esta detectando otro problema: si se están haciendo tan pocas pruebas, será más difícil detectar y aislar los casos contagiosos. Este fenomeno lo vimos durante el comienzo de la pandemia y las fiestas de navidad.
+
+
+#### ¿ Cómo se escogen los umbrales?
+
+<details><summary></summary>
+
+Hemos seleccionado los umbrales de 3% y 2% para la tasa de positividad (por ciento de pruebas) y la tasas de positividad (porciento de casos), respectivamente. Esto por cientos se escogen estudiando los datos de los pasados meses. Específicamente, calculamos el número de muertes por día que ocurren dos semanas después de días con tasas de positivdad por debajo de estos umbrales y notamos que la tasa de positividad tiene que ser así de baja para volver a llagar a la normalidad de menos de 1 caso por día necesitamos.
+
+```{r}
+tmp %>% mutate(below = (Version == "% pruebas" & value < 0.03) |
+                 (Version == "% casos" & value < 0.02)) %>%
+  group_by(Version, below) %>%
+  summarize(muertes_por_dia = mean(mort)) %>%
+  pivot_wider(names_from = below, values_from = muertes_por_dia) %>%
+  setNames(c("Versión", "Sobre el umbral", "Debajo de umbral")) %>%
+  .[,c(1,3,2)] %>%
+  knitr::kable(digit = 1, caption = "Muertes por día para días debajo y encima del umbral.")
+```
+
+Importante notar que nuestras recomendaciones no están basadas exclusivamente en la tasa de positividad y estos umbrales. Se consideran otros factores. Esto es particularmente cierto para recomendaciones relacionadas a decisiones como la re-apertura de escuelas que puede traer tantos beneficios a los estudiantes.
 
 </details>
 
 
-### ¿La tasa de positividad estima la incidencia?
+#### ¿Por qué no usamso las pruebas de antígenos?
 
-<details><summary>clic</summary>
-
-No!
-
-La incidencia para un perdiodo dado se define como el por ciento de personas en Puerto Rico que son casos nuevos para ese periodo.
-
-La tasa de positividad **no estima** la incidencia. Para que una tasa de positividad sea un estimado de la incidencia tendríamos que hacerle pruebas a una muestra representativa de la población y esto no es lo que se hace. Es mucho más probable que un sintomático se haga una prueba molecular que una persona saludable sin síntomas.
-
-Noten que si 5% de los Puertorriqueños son casos activos esto significa que hay alrededor de 150,000 casos activos! Con 150,000 casos los hospitales estarían abarroatados y sobre 1,000 personas estarían muriendo. Un estimado mucho más realista de la incidencia para los últimos 10 días en Puerto Rico, basado en las muertes que vemos, es 0.3% o 3 de cada 1,000 personas, que aun se considera algo alto dado la posibilidad de crecimiento exponencial.
-
-La tasa de positividad es útil pues nos permite saber si los casos están subiendo. Además como explicamos en una próxima sección, nos permite predecir otros resultados improtantes como el número de muertes.
-
-</details>
-
-## ¿ Cómo se escogen los umbrales?
-
-<details><summary>clic</summary>
-</details>
-
-
-## ¿Por qué no usamso las pruebas de antígenos?
-
-<details><summary>clic</summary>
+<details><summary></summary>
 
 Comenzando en noviembre, en Puerto Rico se empezaron a hacer eventos de pruebas masivas gratis. En estos eventos se usan pruebas de antigenos.
 
-En estos eventos esperamos ver tasas de positividad mucho más bajas que lo que vemos con las pruebas moleculares. La razón es que para sintomático es mucho más probable hacerse una prueba molecular que esperar a uno de estos eventos.
+Bajo esta estrategia esperamos ver tasas de positividad mucho más bajas que lo que vemos con las pruebas moleculares. La razón es que para sintomático es mucho más probable hacerse una prueba molecular que esperar a uno de estos eventos.
 
-Al solo tener datos desde noviembre no nos permite calibrar tasas de positividad basad en antígenos como describimos en la sección anteriro para las moleculares.
+Al solo tener datos desde noviembre no nos permite calibrar tasas de positividad basad en antígenos como describimos en la sección anterior para las moleculares.
+
+Mezclar ambas pruebas, moleculares y de antigeno, empeora grandemente la tasa de positividad como métrica de monitoreo pues la tasa dependerá de cuando se hacen eventos de pruebas masiva. 
+
+En la siguiente gráfica vemos las muertes por día versus la tasa de positividad (por ciento de casos) definida con pruebas moleculares (izquierda) y combinando pruebas moleculares y de antigenos (derecha). Mostramos datos de noviembre 1 a enero 24.
+
+```{r}
+dat2 <- tests %>% 
+  filter(testType %in% c("Molecular","Molecular+Antigens")) %>%
+  left_join(hosp_mort, by = "date") %>% 
+  mutate(n =  people_total_week - people_positives_week + cases_week_avg * 7,
+         cases_rate = cases_week_avg * 7 / n,
+         cases_rate_daily = cases / (people_total - people_positives + cases)) %>%
+  rename(mort = IncMueSalud, hosp = HospitCOV19)
+
+tmp2 <- dat2 %>% 
+  mutate(x = lag(cases_rate, 14)) %>%
+  filter(date > make_date(2020, 11, 1) & date < latest_day - days(14)) %>% 
+  select(date, testType, x) %>%
+  left_join(select(dat2, date, mort, mort_week_avg), by = "date")
+
+tmp2 %>%
+  ggplot(aes(x, mort_week_avg)) +
+  geom_point() +
+  xlab("Tasa de positividad (promedio de 7 días)") +
+  ylab("Muertes por día dos semanas despues (promedio 7 días)") +
+  theme_bw() +
+  facet_wrap(~testType)
+
+#tmp %>% group_by(testType) %>% summarize(cor=round(cor(x, mort_week_avg),2))
+```
+
+</details>
+
+#### ¿La tasa de positividad estima la incidencia?
+
+<details><summary></summary>
+
+**No!**
+
+La incidencia para un periodo dado se define como el por ciento de personas en Puerto Rico que son casos nuevos para ese periodo. Para que la tasa de positividad sea un estimado de la incidencia tendríamos que hacerle pruebas a una muestra representativa de la población y esto no es lo que se hace. Es mucho más probable que un sintomático se haga una prueba molecular que una persona saludable sin síntomas.
+
+Noten que si tan solo 1% de los Puertorriqueños son casos activos, esto significa que hay alrededor de 30,000 casos activos! Con 30,000 casos nuevos al día los hospitales estarían abarrotados y sobre 500 personas estarían muriendo. Un umbral de 2% o 3%, no tiene sentido.
+
+Como hemos demostrado en secciones anteriores, la tasa de positividad pero no es un estimado directo de la incidencia.
 
 </details>
 
 
+#### ¿Cual es la incidencia en Puerto Rico?
 
-<details><summary>clic</summary>
+<details><summary></summary>
+
+No sabemos por las razones explicadas anteriormente: no detectamos todos los casos. 
+
+El mejor estimado que podemos dar está basado en las muertes. La mayoría de muertes por COVID-19 sí se detectan. Una forma de confirmar esto es que las muertes en exceso durante la pandemia se acercan a las muertes por COVID-19. La razón que no usamos las muertes como métrica de monitoreo es por que toma varios días entre el día de contagio y el día de muerte, además de hay rezagos de más de una semana en reportar.
+
+Para la siguiente gráfica ignoramos las últimas dos semanas dado el rezago en reportar y calculamos un promedio de 14 días
+
+```{r}
+with(dat, ma7(date, mort, k = 14)) %>%
+  ggplot(aes(date, moving_avg)) +
+  geom_line() +
+  xlab("Fecha") +
+  ylab("Muertes por día (promedio de 14 días)") +
+  theme_bw()
+```
+
+Dado que se ha reportado que entre 0.2% y 1% de las casos resultan en muertes,
+podemos estimar la incidencia para cada día multiplicando las muertes por día por 
+100 y 500 para darnos una rango. Las 6 muertes por día que estabamos viendo al final de enero 2021, resulta en estimado de 600 a 3,000 casos nuevos al día. Si suponemos que se es contagiosos por 10 días, esto se traduce a entre 6,000 y 30,000 personas contagiosas en Puerto Rico: una incidencia de entre 0.2% y 1%.
+
+
 </details>
 
+#### ¿Podemos comparar la tasa de positividad a la de otras juridicciones?
+
+<details><summary></summary>
+
+No siempre es recomendado hacer comparaciones directas. La tasa de positividad es afectada por varios factores que pueden ser únicos a cada jurisdicción. Para empezar hay que estar seguro que están usando la misma definición. El hecho que algunas jurisdicciones hacen muchísimas mas pruebas que en Puerto Rico hace que sus tasas sean más bajas. Por último, para la tasa basada en pruebas, el por ciento de personas que se hacen múltiples pruebas puede afectar la tasa de positividad.
+
 </details>
-
-
 
 
 
