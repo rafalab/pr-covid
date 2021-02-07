@@ -1,0 +1,136 @@
+---
+title: "Tasa de positividad FAQ"
+author: "Rafael Irizarry"
+date: "2/6/2021"
+output: 
+  html_document:
+    theme: readable
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### ¿Cuál es el objetivo de las métricas que monitoremos?
+<details><summary>clic</b></summary>
+
+Queremos saber **cuántos casos activos COVID-19 hay en un momento dado** (la incidencia) y si estás subiendo o bajando (la tendencia). 
+
+Recordemos que COVID-19 es una enfermedad infecciosa: mientras más casos hay hoy, más casos puede haber mañana. Sin estrategias de mitigación el crecimiento puede ser exponencial: hoy hay 100, la samana que viene 200, entonces, 400, 800, 1,600 y antes de que nos demos cuentas los hospitales están abarrotados y sufrimos cientos de muertes. Por suerte, medidas de mitigación como el distanciamiento físico, usar mascarillas, y prohibir aglomeraciones en espacios cerrados, ayudan a detener el crecimiento. Pero para saber cuándo hacen falta estas medidas, necesitamos saber cuántos casos activos hay **en el presente**.
+
+</details>
+
+### ¿Por qué no simplemente medir el número de casos detectados?
+
+<details><summary><b>click</b></summary>
+
+Caundo el Departamento de Salud reporta casos para un día, se refieren a los casos **detectados**. Este número es mucho menor al número de casos activos. ¿Por qué? 
+
+* La mayoría de los casos nunca los detectamos porque son asintomáticos o se recuperan sin hacerse la prueba.
+
+* Hay retrasos en reportar los resultados de las pruebas. Por ejemplo, hoy se reportan 50 casos, pero durante los próximos 14 días nos enteraremos de otros 450 que dieron positivo hoy.
+
+Otro problema con esta métrica es que depende de cuantas pruebas se hacen: **mientras más pruebas se hacen, más casos se detectan**. 
+
+**Ejemplos:**
+
+* En Massachussets ahora mismo se están haciendo alrededor de 100,000 pruebas moleculares al día, mientras que en Puerto Rico solo se hacen alrededor de 5,000. Por lo tanto el hecho que en Massachussets se detectan más casos no necesariamete quiere decir que hay más casos activos.
+
+* En los días feriados se reportan menos casos que otros días. La razón no es que hay menos casos, es que se hicieron menos pruebas.
+
+</details>
+
+
+### ¿Qué es la tasa de positividad?
+
+<details><summary>clic</summary>
+
+La tasa de positividad es una solución al problema de que los casos detectados depende de cuantas pruebas se hacen. Esto se logra reportando el **porciento** de casos positivos entre los que se hacen pruebas en vez de los casos absolutos. En una próxima sección damos definiciones exactas y explicamos que hay varias definiciones. Aquí ofrecemos un ejemplos para ayudarlos a enteder la ventaja de una tasa sobre un total absoluto.
+
+En diciembre 23 se detectaron 500 casos nuevos mientras que dos días más tarde 
+ el día de navidad, sólo se detectaron 40 casos. Al ver esto ¿no debemos concluir que mejoro la situación? La contestanción es **no** porque en diciembre 23 se hicieron alrededor de 5,000 preubas mientras que el día de navidad sólo se hicieron 400. La tasa de positividad es 10% en ambos días.
+ 
+En general, la tasa de positividad sube cuando los casos suben. Una excepción es cuando se hacen tan pocas pruebas que se comienza a priorizar a los sintomáticos y como resultado la tasa sube sin que los casos necesariamente suban. Pero igual esto es un problema: si se están haciendo tan pocas pruebas será más difícil detecetar y aislar los casos contagiosos.
+
+En general tasas de positividad alta son un problema y razón para tener suma cautela.
+
+### ¿Por qué se reportan distintas tasas de positividad?
+<details><summary>Clic</summary>
+
+Durante la pandemia se han están usando diferentes definiciones de tasa de positividad. De aquí emana mucha de la confusión. Aquí damos las definiciones y explicamos la diferencia. Pero es importante notar que lo más importante para monitoreo es mantener la definición fija. 
+
+La definicióm más sencilla es:
+
+$$\mbox{tasa de positividad (por ciento de pruebas)} = \frac{\mbox{Número de pruebas moleculares positivas}}{\mbox{Número de pruebas moleculares totales}}$$
+Aquí llamaremos esta versión _% pruebas_.
+
+Otra definición comumente usada es
+
+$$\mbox{tasa de positividad (por ciento de casos)} =\frac{\mbox{Casos único detectados con prueba molecular}}{\mbox{Número de personas que se hicieron la prueba molecular}}$$
+Aquí llamaremos esta versión _% casos_. La razón que la version % pruebas es más común es simplemente por qué es más fácil de calcular ya que no hay que descifrar que pruebas son de quién. El CDC, por ejemplo, usa está definición [aquí](https://covid.cdc.gov/covid-data-tracker/#testing_positivity7day).
+
+Otra diferencia emana de que todas las definiciones se pueden calcular para distintos periodos. El periodo más comúnmente usado es una semana pero otros periodos que hemos visto son 1 día, 3 días, y dos semanas. La ventaja de periodos largos es que la métrica es más estable ya que depende de la variabilidad aleatórea que resulta en cambios de día a día. La ventaja de periodos cortos es que son más representativos de la situación actual.
+
+Aunque ambas versiones pueden parecen lo mismo no lo son. La razón es que es común para una persona con prueba positiva volverse a hacerse la prueba una o dos semanas más tarde. Si sale positivo de nuevo se cuenta como positivo pero no como caso único. Salir positivo dos semanas más tarde es común ya que el DNA del virus continua en el cuerpo aún cuando ya no se es contagioso. 
+
+Como resultado:
+
+
+$$\mbox{% pruebas} > \mbox{% casos}$$
+
+Y mientras más personas se repiten la prueba más grande la diferencia. 
+
+Ahora bien, aunque los números no son iguales, en Puerto Rico ambas definiciones han seguido el mismo patrón desde el comienzo durante la pandemia.
+
+Notas técinca: 
+* En Puerto Rico también observamos duplicados que parecen ser errores de entrada.Esto es fácil de remover y siempre lo hacemos.
+* Otro factor que hace la diferencia entre las versiones aun mayor es que para calcular el % pruebas a veces se remueven los casos únicos anteriores pero solo si salen positivo. 
+
+</details>
+
+
+### ¿La tasa de positividad estima la incidencia?
+
+<details><summary>clic</summary>
+
+No!
+
+La incidencia para un perdiodo dado se define como el por ciento de personas en Puerto Rico que son casos nuevos para ese periodo.
+
+La tasa de positividad **no estima** la incidencia. Para que una tasa de positividad sea un estimado de la incidencia tendríamos que hacerle pruebas a una muestra representativa de la población y esto no es lo que se hace. Es mucho más probable que un sintomático se haga una prueba molecular que una persona saludable sin síntomas.
+
+Noten que si 5% de los Puertorriqueños son casos activos esto significa que hay alrededor de 150,000 casos activos! Con 150,000 casos los hospitales estarían abarroatados y sobre 1,000 personas estarían muriendo. Un estimado mucho más realista de la incidencia para los últimos 10 días en Puerto Rico, basado en las muertes que vemos, es 0.3% o 3 de cada 1,000 personas, que aun se considera algo alto dado la posibilidad de crecimiento exponencial.
+
+La tasa de positividad es útil pues nos permite saber si los casos están subiendo. Además como explicamos en una próxima sección, nos permite predecir otros resultados improtantes como el número de muertes.
+
+</details>
+
+## ¿ Cómo se escogen los umbrales?
+
+<details><summary>clic</summary>
+</details>
+
+
+## ¿Por qué no usamso las pruebas de antígenos?
+
+<details><summary>clic</summary>
+
+Comenzando en noviembre, en Puerto Rico se empezaron a hacer eventos de pruebas masivas gratis. En estos eventos se usan pruebas de antigenos.
+
+En estos eventos esperamos ver tasas de positividad mucho más bajas que lo que vemos con las pruebas moleculares. La razón es que para sintomático es mucho más probable hacerse una prueba molecular que esperar a uno de estos eventos.
+
+Al solo tener datos desde noviembre no nos permite calibrar tasas de positividad basad en antígenos como describimos en la sección anteriro para las moleculares.
+
+</details>
+
+
+
+<details><summary>clic</summary>
+</details>
+
+</details>
+
+
+
+
+
