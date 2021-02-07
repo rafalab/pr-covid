@@ -45,9 +45,9 @@ dat <- tests %>% filter(testType == "Molecular") %>%
 #### ¿Cuál es el objetivo de las métricas de monitoreo? 
 <details><summary></summary>
 
-El COVID-19 es una enfermedad infecciosa con el número de casos activos contagiosos cambiando a través del tiempo. Mientras más casos hay hoy, más casos puede haber mañana. Sin estrategias de mitigación el crecimiento puede ser exponencial: hoy hay 100, la semana que viene 200, entonces, 400, 800, 1,600, y antes de que nos demos cuenta los hospitales están abarrotados y cientos de personas mueren. Por suerte, medidas de mitigación, como el distanciamiento físico, el uso de mascarillas, y la prohibición de aglomeraciones en espacios cerrados, ayudan a detener el crecimiento. Pero para saber cuándo hacen falta estas medidas, necesitamos saber cuántos casos activos hay **en el presente**.
+El COVID-19 es una enfermedad infecciosa con el número de casos infectados con el virus SARS-CoV-2 cambiando a través del tiempo. Mientras más infectados hay hoy, más casos infectados puede haber mañana. Sin estrategias de mitigación el crecimiento puede ser exponencial: hoy hay 100 infectados, la semana que viene 200, entonces, 400, 800, 1,600, y antes de que nos demos cuenta los hospitales están abarrotados y cientos de personas mueren. Por suerte, medidas de mitigación, como el distanciamiento físico, el uso de mascarillas, y la prohibición de aglomeraciones en espacios cerrados, ayudan a detener el crecimiento. Pero para saber cuándo hacen falta estas medidas, necesitamos saber cuántos casos activos hay **en el presente**.
 
-Queremos saber **cuántos casos activos COVID-19 hay en un momento dado** (la incidencia) y si están subiendo o bajando (la tendencia). Monitoreamos métricas que nos informan sobre la incidencia y la tendencia.
+Queremos saber **cuántos contagiados con el virus SARS-CoV-2 hay en un momento dado** (la incidencia) y si están subiendo o bajando (la tendencia). Monitoreamos métricas que nos informan sobre la incidencia y la tendencia.
 
 </details>
 
@@ -67,13 +67,13 @@ Otro problema con esta métrica es que depende de cuantas pruebas se hacen: **mi
 #dat %>% group_by(wd = wday(date)) %>% summarize(cases = mean(cases, na.rm=TRUE))
 ```
 
-* Los domingos se reportan casi 10 veces menos casos que los lunes, no por que hay menos contagios sino por que algunos laboratorios cierran ese día. Por lo tanto se hacen menos pruebas.
+* Los domingos se reportan casi 10 veces menos casos que los lunes, no por que hay menos contagios sino por que algunos laboratorios cierran ese día. Por lo tanto se hacen menos pruebas el domingo.
 
-* Durante los días feriados en Puerto Rico se reportan mucho menos casos que en otros días. La razón no es que hay menos casos, es que se hicieron menos pruebas.
+* Durante los días feriados en Puerto Rico se reportan muchos menos casos que en otros días. La razón no es que hay menos casos, es que se hicieron menos pruebas.
 
-* En Massachussets se están haciendo alrededor de 100,000 pruebas moleculares al día, mientras que en Puerto Rico solo se hacen alrededor de 5,000. Por lo tanto, aunque reporten muchos más casos, Massachussets no necesariamente tiene muchos más, si no que están haciendo muchas más pruebas.
+* En Massachussets se están haciendo alrededor de 100,000 pruebas moleculares al día, mientras que en Puerto Rico solo se hacen alrededor de 5,000. Por lo tanto, aunque reporten muchos más casos, Massachussets no necesariamente tiene muchos más casos, si no que están haciendo muchas más pruebas.
 
-La siguiente gráfica muestra los casos nuevos de octubre 15 a enero 15. Pueden ver el bajón el día de las elecciones (nóviembre 3), fin de semana de acción de gracias (noviembre 26-29), y las navidades (diciembre 24-enero 6).
+La siguiente gráfica muestra los casos nuevos detectados de octubre 15 a enero 15. Pueden ver el bajón el día de las elecciones (nóviembre 3), fin de semana de acción de gracias (noviembre 26-29), y las navidades (diciembre 24-enero 6).
 ```{r}
 dat %>% filter(date >= make_date(2020, 10, 15) & date <= make_date(2021, 1, 15)) %>%
   ggplot(aes(date, cases_week_avg)) + 
@@ -116,6 +116,8 @@ La tasa de positividad es un **por ciento**, no un total. Específicamente, calc
 <details><summary></summary>
 
 Durante la pandemia se han usado diferentes definiciones de tasa de positividad. De aquí emana mucha de la confusión. Pero si entendemos las definiciones, y las mantenemos fijas, esto no es un problema. Aquí damos las definiciones y explicamos las diferencia. 
+
+
 La definición más sencilla es:
 
 $$\mbox{tasa de positividad (por ciento de pruebas)} = \frac{\mbox{Número de pruebas moleculares positivas}}{\mbox{Número de pruebas moleculares totales}}$$
@@ -126,7 +128,7 @@ Otra definición comúnmente usada es:
 $$\mbox{tasa de positividad (por ciento de casos)} =\frac{\mbox{Casos nuevos único detectados con prueba molecular}}{\mbox{Número de personas que se hicieron la prueba molecular}}$$
 **Aquí llamaremos esta versión _% casos_.**
 
-La versión % pruebas es más común y la razón es simplemente porque es más fácil de calcular ya que no hay que descifrar si la prueba viene de una persona que ya salió positivo. El CDC, por ejemplo, usa la definición basada en pruebas [cuando compara los estados](https://covid.cdc.gov/covid-data-tracker/#testing_positivity7day).
+La versión % pruebas es más comunmente usada y la razón es simplemente porque es más fácil de calcular ya que no hay que descifrar si la prueba viene de una persona que ya salió positivo. El CDC, por ejemplo, usa la definición basada en pruebas [cuando compara los estados](https://covid.cdc.gov/covid-data-tracker/#testing_positivity7day).
 
 Aunque ambas versiones pueden parecer lo mismo no lo son. La razón es que es común para una persona con prueba positiva volver a hacerse la prueba una o dos semanas más tarde y volver a salir positivo. Si sale positivo de nuevo se cuenta como prueba positiva pero no como caso único nuevo. Salir positivo dos semanas más tarde es común ya que el DNA viral continua en el cuerpo aún cuando ya no se es contagioso. Como resultado
 
