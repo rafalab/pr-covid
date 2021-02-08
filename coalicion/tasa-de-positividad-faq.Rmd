@@ -326,7 +326,7 @@ No siempre es recomendado hacer comparaciones directas ya que la tasa de positiv
 
 ----
 
-Los datos y el código que genero los análisis presentados en este documento se pueden ver [aquí](https://github.com/rafalab/pr-covid/blob/master/coalicion/tasa-de-positividad-faq.Rmd)
+Los datos y el código que generó los análisis presentados en este documento se pueden ver [aquí](https://github.com/rafalab/pr-covid/blob/master/coalicion/tasa-de-positividad-faq.Rmd)
 
 
 ----
