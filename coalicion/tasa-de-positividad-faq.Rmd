@@ -69,6 +69,8 @@ summary {
 }
 ```
 
+Este documento fue escrito para ayudar a aclarar la confusión que hay sobre la tasa de positividad y explicar como la [Coalición Científica de Puerto Rico](https://sites.google.com/view/coalicion-cientificapr/home) usa la métrica. Haga clic en la pregunta para ver la contestación.
+
 <details><summary>¿Cuál es el objetivo de las métricas de monitoreo? </summary>
 
 El COVID-19 es una enfermedad infecciosa, lo cual significa que mientras más infectados haya hoy, más casos infectados puede haber mañana. Sin estrategias de mitigación, el crecimiento puede ser exponencial: si hoy hubiesen 100 infectados, la semana que viene pudiesen haber 200, luego 400, 800, 1,600, etc..  Antes de que nos demos cuenta los hospitales pudiesen estar abarrotados. Por suerte, medidas de mitigación, como el distanciamiento físico, el uso de mascarillas, y la prohibición de aglomeraciones en espacios cerrados, ayudan a detener el crecimiento. Pero para saber cuándo hacen falta estas medidas, necesitamos tener métricas y estimados de casos activos en **el presente**.
@@ -337,9 +339,6 @@ La [CDC da estimados](https://covid.cdc.gov/covid-data-tracker/#national-lab) de
 </details>
 
 
-----
 
 Los datos y el código que generó los análisis presentados en este documento se pueden ver [aquí](https://github.com/rafalab/pr-covid/blob/master/coalicion/tasa-de-positividad-faq.Rmd)
 
-
-----
