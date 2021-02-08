@@ -164,11 +164,13 @@ Notas técnicas:
 
 <details><summary></summary>
 
+La tasa de positividad es la mejor métrica para predecir muertes y hospitalizaciones en el futuro.
+
 Empecemos con un ejemplo para ayudarlos a entender la ventaja que ofrece monitorear la tasa de positividad comparado a los casos únicos.
 
 En diciembre 23 se detectaron alrededor de 500 casos nuevos mientras que dos días más tarde, el día de navidad, sólo se detectaron alrededor de 40 casos. En estos dos días se hicieron alrededor de 5,000 y 400, respectivamente. Al ver que los casos bajaron de 500 a 40, ¿debemos concluir que mejoró la situación? La contestación es **no** ya que se hicieron menos pruebas el 23. El hecho de que la tasa de positividad es alrededor 10% en ambos días nos ayuda a evitar llegar a esta conclusión errónea.
 
-La razón principal que monitoreamos la tasa de positividad es que predice las muertes en el futuro. La siguiente gráfica, que incluye datos desde junio 1, muestra como la tasa de positividad predice las muertes que ocurrirán dos semanas más tarde:
+Para ver cómo la tasa de positividad predice las muertes en el futuro, gráficamos la tasa de positividad y las muertes que ocurren dos semanas más tarde para datos junio 1. 
 
 ```{r}
 tmp <- dat %>% 
@@ -191,7 +193,10 @@ tmp %>%
 #tmp %>% group_by(Version) %>% summarize(cor=round(cor(value, mort_week_avg),2))
 ```
 
-La correlación es alrededor de 0.9 para ambas definiciones de la tasa. Como sabemos que hay más muertes cuando hay más casos, esto implica que, en general, la tasa de positividad sube cuando los casos suben y baja cuando los casos bajan. Una excepción es cuando se hacen tan pocas pruebas que se comienza a priorizar a los sintomáticos y como resultado la tasa sube sin que los casos necesariamente suban. En este caso la tasa de positividad alta esta detectando otro problema: si se están haciendo tan pocas pruebas, será más difícil detectar y aislar los casos contagiosos. Este fenómeno lo vimos durante el comienzo de la pandemia en marzo y abril y las fiestas de navidad.
+La correlación es alrededor de 0.9 para ambas definiciones de la tasa. Como sabemos que hay más muertes cuando hay más casos en las dos semanas anteriores, esto también implica que, en general, la tasa de positividad sube cuando los casos suben y baja cuando los casos bajan. 
+
+La excepción a este patrón es cuando se hacen tan pocas pruebas que se comienza a priorizar a los sintomáticos y como resultado la tasa sube sin que los casos necesariamente suban. En este caso la tasa de positividad alta esta detectando otro problema: si se están haciendo tan pocas pruebas, será más difícil detectar y aislar los casos contagiosos. Este fenómeno lo vimos durante el comienzo de la pandemia en marzo y abril y las fiestas de navidad.
+
 
 
 #### ¿ Cómo se escogen los umbrales?
@@ -222,12 +227,11 @@ Importante notar que las recomendaciones de la Coalición Científica no están 
 
 Comenzando en noviembre, en Puerto Rico se empezaron a hacer eventos de pruebas masivas gratis. En estos eventos se usan pruebas de antígenos.
 
-Bajo esta estrategia esperamos ver tasas de positividad mucho más bajas que lo que vemos con las pruebas moleculares. La razón es que para un sintomático es mucho más probable hacerse una prueba molecular que esperar a uno de estos eventos. Además, el solo tener datos desde noviembre no nos permite calibrar tasas de positividad basad en antígenos como describimos en la sección anterior para las moleculares.
+Bajo esta estrategia esperamos ver tasas de positividad mucho más bajas que lo que vemos con las pruebas moleculares. Pero esto no implica que hay menos casos! La razón es que para un sintomático es mucho más probable hacerse una prueba molecular que esperar a uno de estos eventos. Para conectar valores de la tasa de positividad basada en pruebas de antígenos a hospitalizaciones y muertes necesitaríamos calibrar como hicimos en la sección anterior. Pero, desafortunádamente, no tenemos suficientes datos de pruebas de antígenos de marzo a octubre.
 
-Finalmente, notamos que mezclar ambas pruebas, moleculares y de las de antígeno, empeora grandemente la tasa de positividad como métrica de monitoreo pues la tasa dependerá de cuando se hacen eventos de pruebas masiva. 
+Finalmente, notamos que mezclar ambas pruebas, moleculares y de las de antígeno, empeora grandemente la tasa de positividad como métrica de monitoreo. Vemos esto comparando la relación de las muertes por día versus la tasa de positividad (por ciento de casos) definida con pruebas moleculares (izquierda) y combinando pruebas moleculares y de antígenos (derecha). Mostramos datos de noviembre 1 a enero 24.
 
-En la siguiente gráfica vemos las muertes por día versus la tasa de positividad (por ciento de casos) definida con pruebas moleculares (izquierda) y combinando pruebas moleculares y de antigenos (derecha). Mostramos datos de noviembre 1 a enero 24.
-
+ 
 ```{r}
 dat2 <- tests %>% 
   filter(testType %in% c("Molecular","Molecular+Antigens")) %>%
@@ -254,18 +258,24 @@ tmp2 %>%
 #tmp %>% group_by(testType) %>% summarize(cor=round(cor(x, mort_week_avg),2))
 ```
 
+pues la tasa dependerá de cuando se hacen eventos de pruebas masiva. 
+
+La correlación baja substancialmente al añadir los resultados de pruebas de antígenos. Una posible explicación razón para esto es que la tasa sube y baja dependiendo de cuantas de las pruebas incluidas son de antígeno, lo cual no tiene nada que ver con cuantos casos reales hay.
+
 </details>
 
-#### ¿La tasa de positividad estima la incidencia?
+#### ¿La tasa de positividad es lo mismo que la incidencia?
 
 <details><summary></summary>
 
 **No!**
 
-La incidencia para un periodo dado se define como el por ciento de personas en Puerto Rico que son casos nuevos para ese periodo. Para que la tasa de positividad sea un estimado de la incidencia tendríamos que hacerle pruebas a una grupo representativo de la población general y esto no es lo que se hace. Es mucho más probable que un sintomático se haga una prueba molecular que una persona saludable sin síntomas.
+La incidencia para un periodo dado se define como el por ciento de personas en Puerto Rico que son casos nuevos para ese periodo. Para que la tasa de positividad se aproxime a la incidencia tendríamos que hacerle pruebas a un grupo representativo de la población general y esto no es lo que se hace, ni se debe hacer. Es mucho más probable que un sintomático se haga una prueba molecular que una persona saludable sin síntomas.
 
 Noten que una tasa de positividad de 1% se considera bien baja, pero
-si 1% de los Puertorriqueños son casos activos, esto significa que hay alrededor de 30,000 casos activos! Con 30,000 casos nuevos al día los hospitales estarían abarrotados y sobre 500 personas estarían muriendo. Como hemos demostrado en secciones anteriores, la tasa de positividad es muy útil para monitorear el COVID-19, pero no es un estimado directo de la incidencia.
+una incidencia de 1% significa que hay alrededor de 30,000 casos activos! Con 30,000 casos nuevos al día los hospitales estarían abarrotados y sobre 500 personas estarían muriendo. 
+
+Como hemos demostrado en secciones anteriores, la tasa de positividad es muy útil para saber cuando los casos suben o bajan, pero no es lo mismo que la incidencia.
 
 </details>
 
@@ -276,9 +286,9 @@ si 1% de los Puertorriqueños son casos activos, esto significa que hay alrededo
 
 Por las razones explicadas anteriormente, no sabemos: no detectamos todos los casos. 
 
-El mejor estimado que podemos dar está basado en las muertes. La mayoría de muertes por COVID-19 sí se detectan. Una forma de confirmar esto es que las muertes en exceso durante la pandemia se acercan a las muertes por COVID-19. La razón que no usamos las muertes como métrica de monitoreo es por que toma varios días entre el día de contagio y el día de muerte, además de hay rezagos de más de una semana en reportar.
+El mejor estimado que podemos dar está basado en las muertes. La mayoría de muertes por COVID-19 sí se detectan. Una forma de confirmar esto es que las muertes en exceso durante la pandemia se acercan a las muertes reportadas por COVID-19. La razón que no usamos las muertes como métrica de monitoreo es por que toma varios días entre el día de contagio y el día de muerte, además de hay rezagos de más de una semana en reportar. Pero una vez tenemos los datos podemos usarlos para estimar incidencia en el pasado.
 
-Para la siguiente gráfica ignoramos las últimas dos semanas dado el rezago en reportar y calculamos un promedio de 14 días
+Para la siguiente gráfica ignoramos las últimas dos semanas dado el rezago en reportar y calculamos un promedio de 14 días:
 
 ```{r}
 with(dat, ma7(date, mort, k = 14)) %>%
@@ -289,9 +299,7 @@ with(dat, ma7(date, mort, k = 14)) %>%
   theme_bw()
 ```
 
-Dado que se ha reportado que entre 0.2% y 1% de las casos resultan en muertes,
-podemos estimar la incidencia para cada día multiplicando las muertes por día por 
-100 y 500 para darnos una rango. Las 6 muertes por día que estabamos viendo al final de enero 2021, resulta en estimado de 600 a 3,000 casos nuevos al día. Si suponemos que se es contagiosos por 10 días, esto se traduce a entre 6,000 y 30,000 personas contagiosas en Puerto Rico: una incidencia de entre 0.2% y 1%.
+Dado que se ha reportado que entre 0.2% y 1% de los casos resultan en muertes, podemos estimar la incidencia para cada día multiplicando las muertes por día por 100 y 500 para darnos una rango. Las 6 muertes por día que estábamos viendo al final de enero 2021, resulta en estimado de 600 a 3,000 casos nuevos al día. Si suponemos que se es contagiosos por 10 días, esto se traduce a entre 6,000 y 30,000 personas contagiosas en Puerto Rico: una incidencia de entre 0.2% y 1%.
 
 
 </details>
