@@ -89,13 +89,13 @@ $$\mbox{tasa de positividad (por ciento de pruebas)} = \frac{\mbox{Número de pr
 
 $$\mbox{tasa de positividad (por ciento de casos)} =\frac{\mbox{Casos nuevos único detectados con prueba molecular}}{\mbox{Número de personas que se hicieron la prueba molecular}}$$
 
-Aquí nos referimos a estas dos versiones como _% pruebas_ y _% casos_, respectivamente. En la sección _Por qué se reportan distintas tasas de positividad_ explicamos las diferencias, pero ambas son útiles. 
+Aquí nos referimos a estas dos versiones como _% pruebas_ y _% casos_, respectivamente. En la sección _¿Por qué se reportan distintas tasas de positividad?_ explicamos las diferencias, pero ambas son útiles. 
 
 Al ser un por ciento en vez de un total, en general, la tasa de positividad nos permiten comparar la tasa en periodos con pocas pruebas a la tasa en periodos con muchas pruebas. Para entender este punto consideren que en diciembre 23 se detectaron alrededor de 500 casos nuevos mientras que dos días más tarde, el día de navidad, sólo se detectaron alrededor de 40 casos. En estos dos días se hicieron alrededor de 5,000 y 400 pruebas, respectivamente. Al ver que los casos bajaron de 500 a 40, ¿debemos concluir que mejoró la situación? La contestación es **no** ya que se hicieron menos pruebas el 23. El hecho de que la tasa de positividad es alrededor 10% en ambos días nos ayuda a evitar llegar a esta conclusión errónea.
 
 Importante señalar que **la tasa de positividad no es lo mismo que la incidencia.** La incidencia para un periodo dado se define como el por ciento de personas en **todo** Puerto Rico que son casos nuevos para ese periodo. Para que la tasa de positividad se aproxime a la incidencia tendríamos que hacerle pruebas a un grupo representativo de la población general y esto no es lo que se hace, ni se debe hacer. Es mucho más probable que un sintomático se haga una prueba molecular que una persona saludable sin síntomas. Noten, por ejemplo, que un día con tasa de positividad de 1% se considera bien baja, pero una incidencia de 1% se considera altísimo ya que significa que se añadieron alrededor de 30,000 casos activos. Con 30,000 casos nuevos al día los hospitales estarían abarrotados. **Nuestro estimado actual es que a finales de enero entre 0.1% y 0.5% de la población estaba infectada**. En la sección sobre _la incidencia en Puerto Rico_ damos los detalles de cómo llegamos a este estimado. 
 
-No obstante moniteorear la tasa de positividad es una manera práctica y útil de estimar la incidencia y predecir muertes y hospitalizaciones futuras. En la próxima sección explicamos cómo usamos la tasa de positividad para monitorear cuándo los casos suben o bajan, pero recuerden: **no es lo mismo que la incidencia**. 
+No obstante moniteorear la tasa de positividad es una manera práctica y útil de tener un idea de cuánto es la incidencia y predecir muertes y hospitalizaciones futuras. En la próxima sección explicamos cómo usamos la tasa de positividad para monitorear cuándo los casos suben o bajan, pero recuerden: **no es lo mismo que la incidencia**. 
 
 </details>
 
@@ -142,13 +142,13 @@ tmp %>%
 
 Como sabemos que hay más muertes cuando hay más casos, y que por lo general estas ocurren alrededor de 1-2 semanas luego de la infección, estos resultados implican que en el pasado la tasa de positividad ha subido cuando los casos suben y bajado cuando los casos bajan. 
 
-Note técnica: La excepción a este patrón es cuando se hacen tan pocas pruebas que se comienza a priorizar a los sintomáticos y como resultado la tasa sube sin que los casos necesariamente suban. En este caso la tasa de positividad alta esta detectando otro problema: se están haciendo muy pocas pruebas. Cuando se hacen muy pocas pruebas es más difícil detectar y aislar los casos contagiosos. Este fenómeno lo vimos durante el comienzo de la pandemia en marzo y abril y durante las fiestas de navidad.
+Nota técnica: La excepción a este patrón es cuando se hacen tan pocas pruebas que se comienza a priorizar a los sintomáticos y como resultado la tasa sube sin que los casos necesariamente suban. En este caso la tasa de positividad alta esta detectando otro problema: se están haciendo muy pocas pruebas. Cuando se hacen muy pocas pruebas es más difícil detectar y aislar los casos contagiosos. Este fenómeno lo vimos durante el comienzo de la pandemia en marzo y abril y durante las fiestas de navidad.
 
 </details>
 
 <details><summary>¿Cómo se escogen los umbrales?</summary>
 
-La Coalición Científica ha seleccionado los umbrales de 3% y 2% para la tasa de positividad (por ciento de pruebas) y la tasas de positividad (por ciento de casos), respectivamente. Estos por cientos se escogen estudiando los datos de los pasados meses. Específicamente, calculamos el número de muertes por día que ocurren dos semanas después de días con tasas de positividad por debajo y por encima de estos umbrales. Entonces, notamos que la tasa de positividad necesitamos estar bajo estos umbrales para volver a la normalidad:menos de una muerte por COVID-19 por día.
+La Coalición Científica ha seleccionado los umbrales de 3% y 2% para la tasa de positividad (por ciento de pruebas) y la tasas de positividad (por ciento de casos), respectivamente. Estos por cientos se escogen estudiando los datos de los pasados meses. Específicamente, calculamos el número de muertes por día que ocurren dos semanas después de días con tasas de positividad por debajo y por encima de estos umbrales. Entonces, notamos cuán baja tiene que ser la tasa de positividad para volver a la normalidad: menos de una muerte por COVID-19 por día.
 
 ```{r}
 tmp %>% mutate(below = (Version == "% pruebas" & value < 0.03) |
@@ -161,19 +161,19 @@ tmp %>% mutate(below = (Version == "% pruebas" & value < 0.03) |
   knitr::kable(digit = 1, caption = "Muertes por día para días debajo y encima del umbral.")
 ```
 
-Aunque que no hay garantía de que los datos continuarán siguiendo el mismo patrón en el futuro, este es el mejor estimado con la información que tenemos ahora. Continuaremos estudiando los datos cuidadosamente.
+Este es el mejor estimado con la información que tenemos ahora y continuaremos estudiando los datos cuidadosamente.
 
-Importante notar que las recomendaciones de la Coalición Científica no están basadas exclusivamente en la tasa de positividad y estos umbrales. Se consideran otros factores. Esto es particularmente cierto para recomendaciones relacionadas a decisiones para las cuales hay muchos otros factores que considerara, como la reapertura de escuelas.
+Importante notar que las recomendaciones de la Coalición Científica no están basadas exclusivamente en la tasa de positividad y estos umbrales. Se consideran otros factores. Esto es particularmente cierto para recomendaciones relacionadas a decisiones para las cuales hay muchos otros factores que considerar, como la reapertura de escuelas.
 </details>
 
 
 <details><summary>¿Por qué no usamos las pruebas de antígenos?</summary>
 
-Comenzando en noviembre, en Puerto Rico se empezaron a hacer eventos de pruebas masivas gratis. En estos eventos se usan pruebas de antígenos.
+Comenzando en noviembre, en Puerto Rico se empezaron a hacer eventos de pruebas masivas gratis. En estos eventos se usan pruebas de antígenos. Estos eventos son muy importantes, pues nos permiten detectar casos y recomendar aislamiento. Pero aquí explicamos por qué no incluimos estos datos en el cálculo de tasa de positividad. 
 
-Bajo esta estrategia esperamos ver tasas de positividad mucho más bajas que lo que vemos con las pruebas moleculares. Pero esto no implica que hay menos casos! La razón es que para un sintomático es mucho más probable hacerse una prueba molecular que esperar a uno de estos eventos. Para conectar valores de la tasa de positividad basada en pruebas de antígenos a casos, hospitalizaciones y muertes necesitaríamos calibrar como hicimos en la sección sobre _cómo es útil la tasa de positividad_. Pero, desafortunadamente, no tenemos suficientes datos de pruebas de antígenos de marzo a octubre.
+Bajo esta estrategia esperamos ver tasas de positividad mucho más bajas que lo que vemos con las pruebas moleculares. ¡Pero esto no implica que hay menos casos! La razón es que para un sintomático es mucho más probable hacerse una prueba molecular que esperar a uno de estos eventos. Para conectar valores de la tasa de positividad basada en pruebas de antígenos a casos, hospitalizaciones y muertes necesitaríamos calibrar como hicimos en la sección sobre _¿Cómo es útil la tasa de positividad?_ Pero, desafortunadamente, no tenemos suficientes datos de pruebas de antígenos de marzo a octubre.
 
-Finalmente, notamos que mezclar ambas pruebas, moleculares y de las de antígeno, empeora grandemente la tasa de positividad como métrica de monitoreo. Vemos esto comparando la relación de las muertes por día versus la tasa de positividad (por ciento de casos) definida con pruebas moleculares (izquierda) y combinando pruebas moleculares y de antígenos (derecha). Mostramos datos de noviembre 1 a enero 24:
+Finalmente, notamos que mezclar datos de ambas pruebas, moleculares y de las de antígeno, empeora grandemente la tasa de positividad como métrica de monitoreo. Vemos esto comparando la relación de las muertes por día versus la tasa de positividad (por ciento de casos) definida con pruebas moleculares (izquierda) y combinando pruebas moleculares y de antígenos (derecha). Mostramos datos de noviembre 1 a enero 24:
 
  
 ```{r}
@@ -205,7 +205,7 @@ tmp2 %>%
 
 El poder de predicción baja substancialmente al añadir los resultados de pruebas de antígenos. Una posible explicación para esto es que la tasa sube y baja dependiendo de cuantas de las pruebas incluidas son de antígeno, lo cual no tiene nada que ver con cuantos casos reales hay.
 
-Nota técnica: Otra razón por la cual la tasa de positividad es menor cuando se usan pruebas de antígeno es que estas pruebas tienen menos sensitividad que las pruebas moleculares. Esto quiere decir que cuando una persona infectada se hace una prueba de antígeno es más probable salir negativo por error que si se la hace con prueba molecular.
+Nota técnica: Otra razón por la cual la tasa de positividad es menor cuando se usan pruebas de antígeno es que estas pruebas tienen menos sensitividad que las pruebas moleculares. Esto quiere decir que cuando una persona infectada se hace una prueba de antígeno es más probable salir negativo por error que si se hace una prueba molecular.
 
 </details>
 
@@ -213,7 +213,7 @@ Nota técnica: Otra razón por la cual la tasa de positividad es menor cuando se
 
 <details><summary>¿Podemos comparar la tasa de positividad a la de otras jurisdicciones?</summary>
 
-No siempre es recomendado hacer comparaciones directas ya que la tasa de positividad es afectada por varios factores que pueden ser únicos a cada jurisdicción. Para empezar hay que estar seguro que se está usando la misma definición en ambas jurisdicciones ya que varía. El hecho que algunas jurisdicciones hacen muchísimas mas pruebas que en Puerto Rico hace que sus tasas sean más bajas. Por último, para la tasa basada en pruebas, el por ciento de personas que se hacen múltiples pruebas puede afectar la tasa de positividad.
+No es recomendado hacer comparaciones directas ya que la tasa de positividad es afectada por varios factores que pueden ser únicos a cada jurisdicción. Para empezar hay que estar seguro que se está usando la misma definición en ambas jurisdicciones ya que varía. El hecho que algunas jurisdicciones hacen muchísimas mas pruebas que en Puerto Rico hace que sus tasas sean más bajas. Por último, para la tasa basada en pruebas, el por ciento de personas que se hacen múltiples pruebas puede afectar la tasa de positividad.
 
 </details>
 
@@ -313,10 +313,6 @@ dat %>% filter(date >= make_date(2020, 10, 15) & date <= make_date(2021, 1, 15))
 </details>
 
 
-
-
-
-
 <details><summary>¿Cuál es la incidencia en Puerto Rico?</summary>
 
 Por las razones explicadas anteriormente, no sabemos exactamente cuál es la incidencia: no detectamos todos los casos. 
@@ -338,7 +334,7 @@ La [CDC da estimados](https://covid.cdc.gov/covid-data-tracker/#national-lab) de
 
 </details>
 
+-----
 
-
-Los datos y el código que generó los análisis presentados en este documento se pueden ver [aquí](https://github.com/rafalab/pr-covid/blob/master/coalicion/tasa-de-positividad-faq.Rmd)
+Los datos y el código que generó los análisis presentados en este documento se pueden ver [aquí](https://github.com/rafalab/pr-covid/blob/master/coalicion/tasa-de-positividad-faq.Rmd).
 
