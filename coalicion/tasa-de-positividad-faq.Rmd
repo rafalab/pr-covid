@@ -69,7 +69,7 @@ summary {
 }
 ```
 
-Este documento fue escrito para ayudar a aclarar la confusión que hay sobre la tasa de positividad y explicar como la [Coalición Científica de Puerto Rico](https://sites.google.com/view/coalicion-cientificapr/home) usa la métrica. Haga clic en la pregunta para ver la contestación.
+Este documento fue escrito para ayudar a aclarar la confusión que hay sobre la tasa de positividad y explicar cómo la [Coalición Científica de Puerto Rico](https://sites.google.com/view/coalicion-cientificapr/home) usa la métrica. Haga clic en la pregunta para ver la contestación.
 
 <details><summary>¿Cuál es el objetivo de las métricas de monitoreo? </summary>
 
