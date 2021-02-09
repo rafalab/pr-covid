@@ -93,7 +93,7 @@ Aquí nos referimos a estas dos versiones como _% pruebas_ y _% casos_, respecti
 
 Al ser un por ciento en vez de un total, en general, la tasa de positividad nos permiten comparar la tasa en periodos con pocas pruebas a la tasa en periodos con muchas pruebas. Para entender este punto consideren que en diciembre 23 se detectaron alrededor de 500 casos nuevos mientras que dos días más tarde, el día de navidad, sólo se detectaron alrededor de 40 casos. En estos dos días se hicieron alrededor de 5,000 y 400 pruebas, respectivamente. Al ver que los casos bajaron de 500 a 40, ¿debemos concluir que mejoró la situación? La contestación es **no** ya que se hicieron menos pruebas el 23. El hecho de que la tasa de positividad es alrededor 10% en ambos días nos ayuda a evitar llegar a esta conclusión errónea.
 
-Importante señalar que **la tasa de positividad no es lo mismo que la incidencia.** La incidencia para un periodo dado se define como el por ciento de personas en **todo** Puerto Rico que son casos nuevos para ese periodo. Para que la tasa de positividad se aproxime a la incidencia tendríamos que hacerle pruebas a un grupo representativo de la población general y esto no es lo que se hace, ni se debe hacer. Es mucho más probable que un sintomático se haga una prueba molecular que una persona saludable sin síntomas. Noten, por ejemplo, que un día con tasa de positividad de 1% se considera bien baja, pero una incidencia de 1% se considera altísimo ya que significa que se añadieron alrededor de 30,000 casos activos. Con 30,000 casos nuevos al día los hospitales estarían abarrotados. **Nuestro estimado actual es que a finales de enero entre 0.1% y 0.5% de la población estaba infectada**. En la sección sobre _la incidencia en Puerto Rico_ damos los detalles de cómo llegamos a este estimado. 
+Importante señalar que **la tasa de positividad no es lo mismo que la incidencia.** La incidencia para un periodo dado se define como el por ciento de personas en **todo** Puerto Rico que son casos nuevos para ese periodo. Para que la tasa de positividad se aproxime a la incidencia tendríamos que hacerle pruebas a un grupo representativo de la población general y esto no es lo que se hace, ni se debe hacer. Es mucho más probable que un sintomático se haga una prueba molecular que una persona saludable sin síntomas. Noten, por ejemplo, que un día con tasa de positividad de 1% se considera bien baja, pero una incidencia de 1% se considera altísimo ya que significa que se añadieron alrededor de 30,000 casos activos. Con 30,000 casos nuevos al día, los hospitales estarían abarrotados. **Nuestro estimado actual es que a finales de enero entre 0.1% y 0.5% de la población estaba infectada**. En la sección sobre _la incidencia en Puerto Rico_ damos los detalles de cómo llegamos a este estimado. 
 
 No obstante moniteorear la tasa de positividad es una manera práctica y útil de tener un idea de cuánto es la incidencia y predecir muertes y hospitalizaciones futuras. En la próxima sección explicamos cómo usamos la tasa de positividad para monitorear cuándo los casos suben o bajan, pero recuerden: **no es lo mismo que la incidencia**. 
 
@@ -140,7 +140,7 @@ tmp %>%
   knitr::kable(digits = 1, align = c('c', 'c', 'c'))
 ```
 
-Como sabemos que hay más muertes cuando hay más casos, y que por lo general estas ocurren alrededor de 1-2 semanas luego de la infección, estos resultados implican que en el pasado la tasa de positividad ha subido cuando los casos suben y bajado cuando los casos bajan. 
+Como sabemos que hay más muertes cuando hay más casos, y que por lo general estas ocurren alrededor de 1-2 semanas luego de la infección, estos resultados implican que hasta ahora la tasa de positividad ha subido cuando los casos suben y bajado cuando los casos bajan. 
 
 Nota técnica: La excepción a este patrón es cuando se hacen tan pocas pruebas que se comienza a priorizar a los sintomáticos y como resultado la tasa sube sin que los casos necesariamente suban. En este caso la tasa de positividad alta esta detectando otro problema: se están haciendo muy pocas pruebas. Cuando se hacen muy pocas pruebas es más difícil detectar y aislar los casos contagiosos. Este fenómeno lo vimos durante el comienzo de la pandemia en marzo y abril y durante las fiestas de navidad.
 
@@ -235,9 +235,9 @@ $$\mbox{tasa de positividad (por ciento de casos)} =\frac{\mbox{Casos nuevos ún
 La versión % pruebas es más comúnmente usada y la razón es simplemente porque es más fácil de calcular ya que no hay que descifrar si la prueba viene de una persona que ya salió positivo. El CDC, por ejemplo, usa la definición basada en pruebas [cuando compara los estados](https://covid.cdc.gov/covid-data-tracker/#testing_positivity7day). Gracias al BioPortal del Departamento de Salud, en Puerto Rico podemos calcular la versión basada en casos también.
 
 Aunque ambas versiones pueden parecer lo mismo no lo son. La razón es que es común para una persona con prueba positiva volver a hacerse la prueba una o dos semanas más tarde y volver a salir positivo. Si sale positivo de nuevo se cuenta como prueba positiva pero no como caso único nuevo. Salir positivo dos semanas más tarde es común ya que el DNA viral continua en el cuerpo aún cuando ya no se es contagioso. Como resultado % pruebas $>$ % casos
-y mientras más personas se repiten la prueba más grande la diferencia. 
+y mientras más personas que ya salieron positivos se repiten la prueba más grande la diferencia. 
 
-Ahora bien, aunque los números no son iguales, en Puerto Rico **ambas definiciones han seguido el mismo patrón** desde el comienzo durante de la pandemia. Esta gráfica muestra ambas definiciones y pueden ver como suben y bajan juntas. 
+Ahora bien, aunque los números no son iguales, en Puerto Rico **ambas definiciones han seguido el mismo patrón**  durante la pandemia. Esta gráfica muestra ambas definiciones y pueden ver como suben y bajan juntas. 
 
 ```{r}
 dat %>% select(date, fit, cases_rate) %>% 
@@ -253,6 +253,7 @@ dat %>% select(date, fit, cases_rate) %>%
 ```
 
 Siguen el mismo patrón porque el factor principal que determina el valor de estas métricas es el número de casos. 
+
 Notas técnicas:
 
 * En Puerto Rico también observamos duplicados que parecen ser errores de entrada. Estos son fáciles de remover y siempre lo hacemos.
@@ -268,9 +269,9 @@ Notas técnicas:
 
 Cuando el Departamento de Salud reporta casos confirmados para un día, se refieren a los casos **detectados**. Este número es mucho menor al número de personas contagiadas en Puerto Rico. ¿Por qué? 
 
-* La mayoría de los casos no se detectan porque son asintomáticos o se recuperan sin hacerse la prueba. Aun así pueden transmitir el virus.
+* La mayoría de los contagiados no se detectan porque son asintomáticos o se recuperan sin hacerse la prueba. Aun así pueden transmitir el virus.
 
-* Hay retrasos en reportar los resultados de las pruebas. Por ejemplo, es posible que hoy se reporten 50 casos, pero, 14 días más tardes, cuando tenemos datos completos, nos enteraremos de otros 450 que dieron positivo ese día.
+* Hay retrasos en reportar los resultados de las pruebas. Por ejemplo, es posible que hoy se reporten 50 casos, pero, 14 días más tarde, cuando tenemos datos completos, nos enteraremos de otros 450 que dieron positivo ese día.
 
 Otro problema con esta métrica es que depende de cuantas pruebas se hacen: **mientras más pruebas se hacen, más casos se detectan**. Aquí dos ejemplos basados en observaciones recientes:
 
@@ -282,9 +283,9 @@ Otro problema con esta métrica es que depende de cuantas pruebas se hacen: **mi
 
 * Durante los días feriados en Puerto Rico se reportan muchos menos casos que en otros días. La razón no es que hay menos casos, es que se hicieron menos pruebas.
 
-* En Massachusetts se están haciendo alrededor de 100,000 pruebas moleculares al día, mientras que en Puerto Rico solo se hacen alrededor de 5,000. Por lo tanto, aunque reporten muchos más casos, Massachusetts no necesariamente tiene muchos más casos, si no que están haciendo muchas más pruebas.
+* En Massachusetts se están haciendo alrededor de 100,000 pruebas moleculares al día, mientras que en Puerto Rico solo se hacen alrededor de 5,000. Por lo tanto, aunque reporten muchos más casos, Massachusetts no necesariamente tiene muchos más contagiados, si no que están haciendo muchas más pruebas.
 
-La siguiente gráfica muestra los casos nuevos detectados de octubre 15 a enero 15. Pueden ver el bajón el día de las elecciones (noviembre 3), fin de semana de acción de gracias (noviembre 26-29), y las navidades (diciembre 24-enero 6).
+Para ilustrar el problema, la siguiente gráfica muestra los casos nuevos detectados de octubre 15 a enero 15. Pueden ver el bajón el día de las elecciones (noviembre 3), fin de semana de acción de gracias (noviembre 26-29), y las navidades (diciembre 24-enero 6).
 ```{r}
 dat %>% filter(date >= make_date(2020, 10, 15) & date <= make_date(2021, 1, 15)) %>%
   ggplot(aes(date, cases_week_avg)) + 
@@ -336,5 +337,5 @@ La [CDC da estimados](https://covid.cdc.gov/covid-data-tracker/#national-lab) de
 
 -----
 
-Los datos y el código que generó los análisis presentados en este documento se pueden ver [aquí](https://github.com/rafalab/pr-covid/blob/master/coalicion/tasa-de-positividad-faq.Rmd).
+Los datos y el código que generó los análisis presentados en este documento se pueden ver [aquí](https://github.com/rafalab/pr-covid/blob/master/coalicion/tasa-de-positividad-faq.Rmd). Si tienen preguntas la mejor forma es hacerlas a [\@rafalab](https://twitter.com/rafalab) en Twitter.
 
