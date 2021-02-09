@@ -34,15 +34,14 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular", day = last_com
     sign(pos$fit[i] - pos$fit[i+1]) * signif 
   })
   
-  casespos <- pos %>%
-    mutate(n =  people_total_week - people_positives_week + cases_week_avg * 7,
-           cases_rate = cases_week_avg * 7 / n)
+  casespos <- pos 
   
   change_casespos <- sapply(1:(nrow(casespos)-1), function(i){
     p1 <- casespos$cases_rate[i] 
     p0 <- casespos$cases_rate[i+1]
     d <- p1 - p0
-    se <- sqrt(p1*(1-p1) / casespos$n[i] + p0*(1-p0) / casespos$n[i+1])
+    se <- sqrt(p1*(1-p1) / casespos$cases_plus_negatives[i] + 
+                 p0*(1-p0) / casespos$cases_plus_negatives[i+1])
     signif <- abs(d/se) > qnorm(0.975)
     sign(casespos$cases_rate[i] - casespos$cases_rate[i+1]) * signif 
   })

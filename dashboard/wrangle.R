@@ -79,10 +79,6 @@ get_bioportal <- function(url){
   )
 }
 
-imputation_delay  <- 2
-
-alpha <- 0.05
-
 # Reading and wrangling test data from database ----------------------------------------------
 
 all_tests <- get_bioportal(test_url)
@@ -172,7 +168,6 @@ mol_anti <- all_tests_with_id %>%
 
 
 ## compute daily totals
-
 tests <- all_tests_with_id %>%
   bind_rows(mol_anti) %>%
   filter(date >= first_day & 
@@ -246,11 +241,11 @@ all_cases <- all_tests_with_id %>%
 # compute daily new cases
 cases <- all_cases %>%
   group_by(testType, date) %>% 
-  summarize(cases = n(), .groups = "drop")
+  summarize(cases = n(), .groups = "drop") 
 
 # Make sure all dates are included
 cases <-  left_join(select(tests, testType, date), cases, by = c("testType", "date")) %>%
-  replace_na(list(cases = 0))
+  replace_na(list(cases = 0)) 
 
 # compute daily weekly average and add to cases data frame
 fits <- cases %>% 
@@ -260,8 +255,12 @@ fits <- cases %>%
 cases <- left_join(cases, fits, by = c("testType", "date"))
 
 ## add new cases and weekly average to tests data frame
-tests <- left_join(tests, cases, by = c("testType", "date"))
-
+tests <- left_join(tests, cases, by = c("testType", "date")) %>%
+  mutate(cases_plus_negatives = (people_total_week - people_positives_week + cases_week_avg * 7),
+         cases_rate = cases_week_avg * 7 / cases_plus_negatives,
+         cases_plus_negatives_daily = people_total - people_positives + cases,
+         cases_rate_daily = cases / cases_plus_negatives_daily)
+         
 ## Compute unique negatives
 
 # compute unique negative cases ------------------------------------------------------------
@@ -327,7 +326,6 @@ mol_anti <-  all_tests %>%
   filter(date >= first_day & testType %in% c("Molecular", "Antigens") & 
            result %in% c("positive", "negative")) %>%
   mutate(testType = "Molecular+Antigens") 
-
 
 tests_by_strata <- all_tests %>%  
   bind_rows(mol_anti) %>%

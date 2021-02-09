@@ -17,9 +17,9 @@ plot_positivity <- function(tests,
   
   if(version == "casos"){
     dat <- dat %>%
-      mutate(n = people_total_week - people_positives_week + cases_week_avg * 7,
-             fit =cases_week_avg * 7 / n,
-             rate = cases / (people_total - people_positives + cases),
+      mutate(n = cases_plus_negatives,
+             fit = cases_rate,
+             rate = cases_rate_daily,
              lower = qbinom(0.025, n, fit) / n,
              upper = qbinom(0.975, n, fit) / n)
     the_title <- paste("% de personas que se hicieron prueba\n" , 
@@ -434,8 +434,7 @@ make_table <- function(tests, hosp_mort,
              people_total = cumsum(replace_na(people_total, 0)),
              rate = people_positives/people_total,
              cases = cumsum(replace_na(cases, 0)),
-             IncMueSalud = cumsum(replace_na(IncMueSalud, 0))
-      )
+             IncMueSalud = cumsum(replace_na(IncMueSalud, 0)))
   }
   
   
@@ -445,10 +444,8 @@ make_table <- function(tests, hosp_mort,
                         paste0(format(round(100*fit, 1), nsmall = 1), "% ",
                                "(", trimws(format(round(100*lower, 1), nsmall = 1)),"%" , ", ",
                                format(round(100*upper, 1), nsmall=1),"%", ")")),
-           n = people_total_week - people_positives_week + cases_week_avg * 7,
-           cases_rate = cases_week_avg * 7 / n,
-           cases_lower = qbinom(0.025, n, cases_rate) / n,
-           cases_upper = qbinom(0.975, n, cases_rate) / n,
+           cases_lower = qbinom(0.025, cases_plus_negatives, cases_rate) / cases_plus_negatives,
+           cases_upper = qbinom(0.975, cases_plus_negatives, cases_rate) / cases_plus_negatives,
            cases_rate = ifelse(is.na(cases_rate), "", 
                                paste0(format(round(100*cases_rate, 1), nsmall = 1), "% ",
                                       "(", trimws(format(round(100*cases_lower, 1), nsmall = 1)),"%" , ", ",
@@ -491,7 +488,7 @@ make_positivity_table <- function(tests, hosp_mort,
   
   ret <- ret %>%
     mutate(fit = make_pct(fit),
-           cases_rate = make_pct(cases_week_avg * 7 / (people_total_week - people_positives_week + cases_week_avg * 7)),
+           cases_rate = make_pct(cases_rate),
            cdc_rate = make_pct(tests_positives_week / tests_total_week), 
            people_positives_week = make_pretty(people_positives_week),
            people_total_week = make_pretty(people_total_week),
