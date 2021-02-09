@@ -83,7 +83,7 @@ en esta página explicamos cómo se calibran e interpreta para hacer recomendaci
 
 <details><summary>¿Qué es y qué no es la tasa de positividad?</summary>
 
-La tasa de positividad se define de dos formas:
+La tasa de positividad se define para un periodo dado (como una semana) de dos formas:
 
 $$\mbox{tasa de positividad (por ciento de pruebas)} = \frac{\mbox{Número de pruebas moleculares positivas}}{\mbox{Número de pruebas moleculares totales}}$$
 
