@@ -67,6 +67,10 @@ the_years <- seq(2020, year(today()))
 age_levels <-  c("0 to 9", "10 to 19", "20 to 29", "30 to 39", "40 to 49", "50 to 59", "60 to 69", 
                  "70 to 79", "80 to 89", "90 to 99", "100 to 109", "110 to 119", "120 to 129")
 
+imputation_delay  <- 2
+
+alpha <- 0.05
+
 test_url <- "https://bioportal.salud.gov.pr/api/administration/reports/minimal-info-unique-tests"
 
 cases_url <- "https://bioportal.salud.gov.pr/api/administration/reports/orders/basic"
