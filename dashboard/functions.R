@@ -551,7 +551,7 @@ make_pretty_table <- function(tab, the_caption){
         th( 'Casos únicos', colspan = 2, style = "border-bottom: none;text-align:center;"),
         th('', colspan = 1, style = "border-bottom: none;"),#,  style = "vertical-align: bottom;"),
         th('', colspan = 1, style = "border-bottom: none;"),#,  style = "vertical-align: bottom;"),
-        th('Tasa de positividad (1 día)', colspan = 2, style = "border-bottom: none;text-align:center;"),
+        th('Tasa de positividad diaria', colspan = 2, style = "border-bottom: none;text-align:center;"),
         th('Vacunas', colspan = 4, style = "text-align:center;"),#, style = "border-bottom: none;"),
         th('dataorder', colspan = 1, style = "border-bottom: none;")),
       tr(
