@@ -1,6 +1,16 @@
 # helpers
 make_pct <- function(x, digit = 1) ifelse(is.na(x), "", paste0(format(round(100*x, digit = digit), nsmall = digit), "%"))
 make_pretty <- function(x) prettyNum(replace_na(x, " "), big.mark = ",")
+get_ci_lower <- function(n, p, alpha = 0.05) qbinom(alpha/2, n, p) / n
+get_ci_upper <- function(n, p, alpha = 0.05) qbinom(1-alpha/2, n, p) / n
+make_pretty_ci <- function(p, lower, upper, nsmall = 1){
+ifelse(is.na(p), "", 
+       paste0(format(round(100*p, 1), nsmall = nsmall), "% ",
+              "(", trimws(format(round(100*lower, 1), nsmall = nsmall)),"%" , ", ",
+              format(round(100*upper, 1), nsmall = nsmall),"%", 
+              ")"
+       ))
+}
 
 # positivity plot ---------------------------------------------------------
 plot_positivity <- function(tests, 
@@ -20,8 +30,8 @@ plot_positivity <- function(tests,
       mutate(n = cases_plus_negatives,
              fit = cases_rate,
              rate = cases_rate_daily,
-             lower = qbinom(0.025, n, fit) / n,
-             upper = qbinom(0.975, n, fit) / n)
+             lower = get_ci_lower(n, fit),
+             upper = get_ci_upper(n, fit))
     the_title <- paste("% de personas que se hicieron prueba\n" , 
                        case_when(type == "Molecular" ~ "molecular", 
                                  type == "Serological" ~ "serológica",
@@ -418,7 +428,8 @@ make_table <- function(tests, hosp_mort,
                        cumm = FALSE){
   
   tmp <- select(hosp_mort, date, HospitCOV19, IncMueSalud, CamasICU,
-                total_distributed, total_vaccinations, people_vaccinated, people_fully_vaccinated)
+                total_distributed, total_vaccinations, 
+                people_vaccinated, people_fully_vaccinated)
 
   ## last_day is a global variable 
   #cases$moving_avg[cases$date > last_day] <- NA
@@ -426,51 +437,141 @@ make_table <- function(tests, hosp_mort,
   ret <- tests %>%
     filter(testType == type) %>%
     left_join(tmp, by = "date") %>%
-    filter(date >= start_date & date <= end_date)
-  
+    filter(date >= start_date & date <= end_date) %>%
+    rename(tests_rate = fit,
+           tests_rate_lower = lower,
+           tests_rate_upper = upper,
+           tests_rate_daily = rate,
+           mort = IncMueSalud,
+           icu = CamasICU,
+           hosp = HospitCOV19,
+           tests = people_total,
+           positives = people_positives) %>%
+    mutate(tests_rate_daily_lower = get_ci_lower(tests, tests_rate_daily),
+            tests_rate_daily_upper = get_ci_upper(tests, tests_rate_daily),
+            cases_rate_lower = get_ci_lower(cases_plus_negatives, cases_rate),
+            cases_rate_upper = get_ci_upper(cases_plus_negatives, cases_rate),
+            cases_rate_daily_lower = get_ci_lower(cases_plus_negatives_daily, cases_rate_daily),
+            cases_rate_daily_upper = get_ci_upper(cases_plus_negatives_daily, cases_rate_daily)) %>%
+  select(date, 
+         tests_rate, 
+         tests_rate_lower, 
+         tests_rate_upper, 
+         tests_rate_daily,
+         tests_rate_daily_lower,
+         tests_rate_daily_upper,
+         cases_rate,
+         cases_rate_lower, 
+         cases_rate_upper, 
+         cases_rate_daily,
+         cases_rate_daily_lower,
+         cases_rate_daily_upper,
+         mort, icu, hosp, 
+         cases, cases_week_avg,
+         positives, tests, negative_cases,
+         people_vaccinated, people_fully_vaccinated, 
+         total_vaccinations, total_distributed)
+          
   if(cumm){
     ret <- ret %>% 
-      mutate(people_positives = cumsum(replace_na(people_positives, 0)),
-             people_total = cumsum(replace_na(people_total, 0)),
-             rate = people_positives/people_total,
+      mutate(positives = cumsum(replace_na(positives, 0)),
+             tests = cumsum(replace_na(tests, 0)),
+             negative_cases = cumsum(replace_na(negative_cases, 0)),
+             tests_rate = positives / tests, 
              cases = cumsum(replace_na(cases, 0)),
-             IncMueSalud = cumsum(replace_na(IncMueSalud, 0)))
+             mort = cumsum(replace_na(mort, 0)),
+             cases_rate = cases / (cases + negative_cases),
+             tests_rate_lower = get_ci_lower(tests, tests_rate),
+             tests_rate_upper = get_ci_upper(tests, tests_rate),
+             tests_rate_daily = NA,
+             tests_rate_daily_lower = NA,
+             tests_rate_daily_upper = NA,
+             cases_rate_lower = get_ci_lower(negative_cases + cases, cases_rate),
+             cases_rate_upper = get_ci_upper(negative_cases + cases, cases_rate),
+             cases_rate_daily = NA,
+             cases_rate_daily_lower = NA,
+             cases_rate_daily_upper = NA,
+             icu = NA, hosp = NA, 
+             cases_week_avg = NA)
   }
   
+  ret <- select(ret, -negative_cases)
   
-  ret <- ret  %>%
-    mutate(rate = format(round(rate, 2), nsmall = 2),
-           fit = ifelse(is.na(fit), "", 
-                        paste0(format(round(100*fit, 1), nsmall = 1), "% ",
-                               "(", trimws(format(round(100*lower, 1), nsmall = 1)),"%" , ", ",
-                               format(round(100*upper, 1), nsmall=1),"%", ")")),
-           cases_lower = qbinom(0.025, cases_plus_negatives, cases_rate) / cases_plus_negatives,
-           cases_upper = qbinom(0.975, cases_plus_negatives, cases_rate) / cases_plus_negatives,
-           cases_rate = ifelse(is.na(cases_rate), "", 
-                               paste0(format(round(100*cases_rate, 1), nsmall = 1), "% ",
-                                      "(", trimws(format(round(100*cases_lower, 1), nsmall = 1)),"%" , ", ",
-                                      format(round(100*cases_upper, 1), nsmall=1),"%", ")")),
-           cases_week_avg = round(cases_week_avg),
-           dummy = date) %>%
-    mutate(positives = make_pretty(people_positives),
-           tests = make_pretty(people_total),
+  return(ret)
+}
+  
+make_pretty_table <- function(tab, the_caption){
+  ret <- tab %>%
+  arrange(desc(date)) %>%
+    mutate(dummy = date,
+           date = format(date, "%B %d"),
+           tests_rate = make_pct(tests_rate),#, tests_rate_lower, tests_rate_upper),
+           tests_rate_daily = make_pretty_ci(tests_rate_daily, tests_rate_daily_lower, tests_rate_daily_upper),
+           cases_rate = make_pct(cases_rate), #cases_rate_lower, cases_rate_upper),
+           cases_rate_daily = make_pretty_ci(cases_rate_daily, cases_rate_daily_lower, cases_rate_daily_upper),
            cases = make_pretty(cases),
-           IncMueSalud = make_pretty(IncMueSalud),
+           cases_week_avg = round(cases_week_avg),
+           positives = make_pretty(positives),
+           tests = make_pretty(tests),
+           mort = make_pretty(mort),
            total_distributed = make_pretty(total_distributed), 
            total_vaccinations = make_pretty(total_vaccinations),
            people_vaccinated = make_pretty(people_vaccinated),
-           people_fully_vaccinated = make_pretty(people_fully_vaccinated)) %>% 
-    select(date, fit, cases, cases_week_avg, IncMueSalud, CamasICU, HospitCOV19, 
-           positives, tests, rate, cases_rate, 
+           people_fully_vaccinated = make_pretty(people_fully_vaccinated)) %>%
+    select(date, tests_rate, cases_rate, 
+           mort, icu, hosp, cases, cases_week_avg, positives, tests,  
+           tests_rate_daily, cases_rate_daily,
            people_vaccinated, people_fully_vaccinated, total_vaccinations, total_distributed, 
-           dummy) %>%
-    arrange(desc(date)) %>%
-    mutate(date = format(date, "%B %d")) %>%
-    setNames(c("Fecha", "% pruebas positivas", "Casos únicos", "Promedio de 7 días",
-               "Muertes", "ICU", "Hospital", "Positivos", "Pruebas", 
-               "Positivos/ Pruebas", "% casos nuevos", "Vacunados", "Ambas dosis", 
-               "Vacunas", "Distribuidas", "dateorder"))
+           dummy) 
   
+  col_names <- c("Fecha", 
+                 "Pruebas", 
+                 "Casos",
+                 "Muertes",
+                 "ICU",
+                 "Total",
+                 "Nuevos",
+                 "Media móvil",
+                 "Positivos", 
+                 "Pruebas", 
+                 "Pruebas", 
+                 "Casos",
+                 "Vacunados", "Ambas dosis", 
+                 "Administradas", "Distribuidas", 
+                 "dateorder")
+  
+  the_header <- htmltools::withTags(table(
+    class = 'display nowrap',
+    thead(style = "padding-bottom: 0em; padding-top: 0em",
+          tr(
+        th('', colspan = 1, style = "border-bottom: none;"),
+        th('Tasa de positividad', colspan = 2, style = "border-bottom: none;text-align:center;"),
+        th('', rowspan = 1, style = "border-bottom: none;"),
+        th('Hospitalizaciones', colspan = 2, style = "border-bottom: none;text-align:center;"),
+        th( 'Casos únicos', colspan = 2, style = "border-bottom: none;text-align:center;"),
+        th('', colspan = 1, style = "border-bottom: none;"),#,  style = "vertical-align: bottom;"),
+        th('', colspan = 1, style = "border-bottom: none;"),#,  style = "vertical-align: bottom;"),
+        th('Tasa de positividad (1 día)', colspan = 2, style = "border-bottom: none;text-align:center;"),
+        th('Vacunas', colspan = 4, style = "text-align:center;"),#, style = "border-bottom: none;"),
+        th('dataorder', colspan = 1, style = "border-bottom: none;")),
+      tr(
+        lapply(col_names, th)
+      ))))
+    
+  
+  ret <- DT::datatable(ret, container = the_header,
+                       caption = htmltools::tags$caption(
+                         style = 'caption-side: top; text-align: Left;',
+                         htmltools::withTags(htmltools::div(htmltools::HTML(the_caption)))),
+                       rownames = FALSE,
+                       options = list(dom = 't', pageLength = -1,
+                                      columnDefs = list(
+                                        list(targets = 0, orderData = ncol(ret)-1),
+                                        list(targets = ncol(ret)-1, visible = FALSE),
+                                        list(className = 'dt-center', targets = c(1:2, 10:11)),
+                                        list(className = 'dt-right', targets = c(3:9, 12:(ncol(ret)-2)))))) %>%
+    DT::formatStyle(c(1:3, 11:12), "white-space"="nowrap")
+
   return(ret)
 }
 

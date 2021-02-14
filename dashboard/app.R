@@ -109,7 +109,10 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                     
                 
                       tabPanel("Datos diarios",
-                               DT::dataTableOutput("tabla")),
+                               DT::dataTableOutput("tabla"),
+                               br(),
+                               downloadButton("downloadTable", "Download",
+                                              style = button_style)),
                       
                       tabPanel("Positividad",
                                radioButtons("pos_version", 
@@ -288,38 +291,32 @@ server <- function(input, output, session) {
                       input$testType == "Antigens" ~ "de antígenos.",
                       input$testType == "Molecular+Antigens" ~ "moleculares y de antígenos.")
     
-    DT::datatable(ret, #class = 'white-space: nowrap',
-                  caption = htmltools::tags$caption(
-                    style = 'caption-side: top; text-align: Left;',
-                    htmltools::withTags(
-                      div(HTML(paste0("Datos basados en pruebas ", type,
-                                      " La métrica en la columna <b>% pruebas positiva</b> se calcula para la semana acabando en la fecha de la primera columna. ",
-                                      "Esta métrica es parecida a la definición de <b>tasa de positividad</b> que usa el CDC excepto que se remueven pruebas duplicadas dentro de la semana. ",
-                                      "En paréntesis vemos un intervalo de confianza del ", (1-alpha)*100,"%. ", 
-                                      "Los <b>casos único</b> son el número de personas con su primera prueba positiva ese día. ",
-                                      "El <b>promedio de 7 días</b> es el número de casos únicos por día durante la semana acabando ese día. ",
-                                      "Noten que los datos de las pruebas toman ", lag_to_complete, " días en estar aproximadamente completos, por lo tanto, ",
-                                      "los casos están incompletos para días después de ", format(last_day, "%B %d. "),
-                                      "La columna de <b>positivos</b> muestra el número de personas que tuvieron una prueba positiva ese día (no necesariamente son casos únicos). ",
-                                      "La columna de <b>pruebas</b> es el número de personas que se hicieron una prueba ese día. ",
-                                      "La métrica <b>% casos nuevos</b> se calcula para la semana acabando ese día y ",
-                                      "se define como el por ciento de personas que salieron positivo por primera vez entre los que se hicieron la prueba esa semana, luego de remover los que han salid positivo antes. ",
-                                      "Esta es una de las definiciones de <b>tasa de positividad</b> recomendadas <a href=\"https://coronavirus.jhu.edu/testing/differences-in-positivity-rates\">aquí</a>. ",
-                                      "En paréntesis vemos un intervalo de confianza del ", (1-alpha)*100,"%. ", 
-                                      "Tengan en cuenta que los fines de semana se hacen menos pruebas y por lo tanto se reportan menos casos. ",
-                                      "Las muertes, casos en el ICU y hospitalizaciones vienen del informe oficial del Departamento de Salud y toman un día en ser reportados.",
-                                      "Vea más información sobre las distintas definiciones de tasa de positividad en la pestaña <b>POSITIVIDAD</b>.",
-                                      "<b>Vacunados</b> son el total de personas con por lo menos una dosis. <b>Ambas dosis</b> son el total de personas que han recibido ambas dosis. <b>Vacunas</b> son el total de vacunas administradas. <b>Distribuidas</b> son el total de vacunas distribuidas."
-                      ))))),
-                  rownames = FALSE,
-                  options = list(dom = 't', pageLength = -1,
-                                 columnDefs = list(
-                                   list(targets = 0, orderData = ncol(ret)-1),
-                                   list(targets = ncol(ret)-1, visible = FALSE),
-                                   list(className = 'dt-right', targets = 2:(ncol(ret)-2))))) %>%
-      DT::formatStyle(c(1, 2, 11), "white-space"="nowrap")
-    },
-    server = FALSE
+  the_period <- ifelse(input$acumulativo, paste("calculadas desde ",format(input$range[1], "%B %d"), "hasta la fecha de la primera columna. "),
+                                                "calculadas para la semana acabando en la fecha de la primera columna. ")
+   the_caption <- paste0(
+     "Datos basados en pruebas ", type,
+     " Mostramos dos versiones de la tasa de positividad ",
+     "(explicación <a href=\"https://rafalab.github.io/pr-covid/tasa-de-positividad-faq.html\">aquí</a>) ",
+     the_period,
+     "Las muertes y datos de hospitalizaciones vienen del informe oficial del Departamento de Salud. ",
+     "Los <b>casos único nuevos</b> son el número de personas con su primera prueba positiva ese día. ",
+     "La <b>media móvil</b> son los casos únicos por día durante la semana acabando ese día. ",
+     "La columna de <b>positivos</b> muestra el número de personas que tuvieron una prueba positiva ese día (no necesariamente son casos únicos). ",
+     "La columna de <b>pruebas</b> es el número de personas que se hicieron una prueba ese día. ",
+     "Tengan en cuenta que los fines de semana se hacen menos pruebas y por lo tanto se reportan menos casos. ",
+     "Las columnas bajo <b>tasa de positividad (1 día)</b> muestran las tasas usando solo datos de ese día en vez de una ",
+     "semana. En paréntesis vemos un intervalo de confianza del ", (1-alpha)*100,"%. ", 
+     "Noten que los datos de las pruebas toman ", lag_to_complete, " días en estar aproximadamente completos, por lo tanto, ",
+     "los casos están incompletos para días después de ", format(last_day, "%B %d. "),
+     "Los datos de <b> Vacunas </b> incluyen cuatro medidas: ",
+     "<b>Vacunados</b> son el total de personas con por lo menos una dosis, ",
+     "<b>Ambas dosis</b> son el total de personas que han recibido ambas dosis, ",
+     "<b>Administradas</b> son el total de vacunas administradas y ",
+     "<b>Distribuidas</b> son el total de vacunas distribuidas.<p> Para descargar esta tabla, hay un boton al final de la página.")
+  
+   make_pretty_table(ret, the_caption)
+  },
+  server = FALSE
   )
   
   
@@ -371,8 +368,6 @@ server <- function(input, output, session) {
     }, 
     server = FALSE
   )
-  
-  
   
   # -- This creates the hospitalization figure
   output$hospitalizaciones <- renderPlot(
@@ -584,6 +579,23 @@ server <- function(input, output, session) {
     },
     contentType = "txt/csv"
   )
+  output$downloadTable <- downloadHandler(
+    filename = function() {
+      paste0("datos_diarios", "-", format(the_stamp, "%Y-%m-%d_%H:%M:%S"),".csv")
+    },
+    content = function(file) {
+      
+      ret <- make_table(tests, hosp_mort, 
+                        start_date = input$range[1], 
+                        end_date = input$range[2], 
+                        type = input$testType,
+                        cumm = input$acumulativo)
+
+      write.csv(ret, file = file, row.names = FALSE)  
+    },
+    contentType = "txt/csv"
+  )
+  
 }
 
 shinyApp(ui = ui, server = server)
