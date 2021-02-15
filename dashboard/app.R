@@ -298,13 +298,13 @@ server <- function(input, output, session) {
      " Mostramos dos versiones de la <b>tasa de positividad</b> ",
      "(explicación <a href=\"https://rafalab.github.io/pr-covid/tasa-de-positividad-faq.html\">aquí</a>) ",
      the_period,
-     "Las columnas bajo <b>tasas diarias</b> muestran las tasas de positividad calculadas usando solo datos de un día. ",
      "En paréntesis mostramos intervalos de confianza del ", (1-alpha)*100,"%. ",
      "Los <b>casos únicos</b> son el número de personas con su primera prueba positiva el día ",
      "en la primera columna. Mostramos datos <b>diarios</b> y ",
      "el <b>promedio de 7 días</b>. ",
      "Las <b>muertes</b> y datos de <b>hospitalizaciones</b> vienen del informe oficial del Departamento de Salud. ",
       "La columna de <b>pruebas</b> es el número de personas que se hicieron una prueba ese día. ",
+     "Las columnas bajo <b>tasas diarias</b> muestran las tasas de positividad calculadas usando datos de un día. ",
      "Tengan en cuenta que los fines de semana se hacen menos pruebas y por lo tanto se reportan menos casos y ",
      "que los datos de las pruebas toman ", lag_to_complete, " días en estar aproximadamente completos ",
      "(los casos están incompletos para días después de ", format(last_day, "%B %d). "),
@@ -312,7 +312,8 @@ server <- function(input, output, session) {
      "el total de <b>vacunados</b> con por lo menos una dosis, ",
      "el total de personas que han recibido  <b>ambas dosis</b>, ",
      "el total de <b>vacunas</b> admin<istradas y ",
-     "el total de vacunas <b>distribuidas</b>.<p> Para descargar los datos mostrados en esta tabla, haga clic en el botón de <em>Download</em> al final de la página.")
+     "el total de vacunas <b>distribuidas</b>.",
+     "<p> Para <b>descargar los datos</b> mostrados en esta tabla, haga clic en el botón de <em>Download</em> al final de la página.")
   
    make_pretty_table(ret, the_caption)
   },

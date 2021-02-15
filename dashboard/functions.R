@@ -521,15 +521,13 @@ make_pretty_table <- function(tab, the_caption = ""){
            people_vaccinated = make_pretty(people_vaccinated),
            people_fully_vaccinated = make_pretty(people_fully_vaccinated)) %>%
     select(date, tests_rate, cases_rate, 
-           tests_rate_daily, cases_rate_daily,
            cases, cases_week_avg, 
            mort, icu, hosp,  tests,  
+           tests_rate_daily, cases_rate_daily,
            people_vaccinated, people_fully_vaccinated, total_vaccinations, total_distributed, 
            dummy) 
   
   col_names <- c("Fecha", 
-                 "pruebas", 
-                 "casos",
                  "pruebas", 
                  "casos",
                  "diarios",
@@ -538,6 +536,8 @@ make_pretty_table <- function(tab, the_caption = ""){
                  "ICU",
                  "total",
                  "Pruebas", 
+                 "pruebas", 
+                 "casos",
                  "Vacunados", "Ambas dosis", 
                  "Vacunas", "Distribuidas", 
                  "dateorder")
@@ -548,12 +548,12 @@ make_pretty_table <- function(tab, the_caption = ""){
           tr(
             th('', colspan = 1, style = "border-bottom: none;"),
             th('Tasas de positividad', colspan = 2, style = "border-bottom: none;text-align:center;"),
-            th('Tasas diarias', colspan = 2, style = "border-bottom: none;text-align:center;"),
             th( 'Casos únicos', colspan = 2, style = "border-bottom: none;text-align:center;"),
             th('', rowspan = 1, style = "border-bottom: none;"),
             th('Hospitalizaciones', colspan = 2, style = "border-bottom: none;text-align:center;"),
             th('', colspan = 1, style = "border-bottom: none;"),#,  style = "vertical-align: bottom;"),
-            th('Vacunas', colspan = 4, style = "text-align:center; border-bottom: none;"),
+            th('Tasas diarias', colspan = 2, style = "border-bottom: none;text-align:center;"),
+             th('Vacunas', colspan = 4, style = "text-align:center; border-bottom: none;"),
             th('', colspan = 1, style = "border-bottom: none;")),
           tr(
             lapply(col_names, th)
@@ -570,9 +570,9 @@ make_pretty_table <- function(tab, the_caption = ""){
                                       columnDefs = list(
                                         list(targets = 0, orderData = ncol(ret)-1),
                                         list(targets = ncol(ret)-1, visible = FALSE),
-                                        list(className = 'dt-center', targets = c(1:4)),
-                                        list(className = 'dt-right', targets = c(5:(ncol(ret)-2)))))) %>%
-    DT::formatStyle(c(1:5), "white-space"="nowrap")
+                                        list(className = 'dt-center', targets = c(1:2, 9:10)),
+                                        list(className = 'dt-right', targets = c(3:8,11:(ncol(ret)-2)))))) %>%
+    DT::formatStyle(c(1:3, 10,11), "white-space"="nowrap")
 
   return(ret)
 }
