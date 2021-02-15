@@ -33,14 +33,11 @@ Actualización: `r the_stamp`
 
 
 ```{r}
-title <- paste0("Resument basado en datos hasta ",
-  format(last_complete_day - days(lag_to_complete), "%B %d, "), 
-  "cuando estaban más completos:")
+title <- "Calculamos las tasas de positividad y número de pruebas con pruebas moleculares. Los casos son detectados con pruebas moleculares y de antígeno."
 
 knitr::kable(res$tab, escape = FALSE, align = c("l", "l", "r", "r", "r"), caption = title)
 ```
 
-Calculamos las tasas de positividad y número de pruebas con pruebas moleculares. Los casos son detectados con pruebas moleculares y de antígeno.
 
 ### Explicación
 
@@ -51,7 +48,7 @@ Las tasas se calculan usando los siguientes totales semanales:**",
 * **Personas** = personas que se hicieron pruebas.
 * **Positivos** = personas que salieron positivo.
 * **Negativos** = personas que salieron negativo.
-* **Casos** = casos nuevos únicos, o sea personas que salieron positivo por primera vez esa semana. Comenzando el 15 de febrero de 2020 incluimos casos detectados con pruebas de antígenos.
+* **Casos** = casos nuevos únicos, o sea personas que salieron positivo por primera vez esa semana. 
 
 Usamos totales semanales en vez de diarios, para evitar el efecto que tiene el día de la semana. Por ejemplo, los domingos se hacen muchas menos pruebas. Las tasas entonces se definen así:
 
