@@ -3,11 +3,13 @@ make_pct <- function(x, digit = 1) ifelse(is.na(x), "", paste0(format(round(100*
 make_pretty <- function(x) prettyNum(replace_na(x, " "), big.mark = ",")
 get_ci_lower <- function(n, p, alpha = 0.05) qbinom(alpha/2, n, p) / n
 get_ci_upper <- function(n, p, alpha = 0.05) qbinom(1-alpha/2, n, p) / n
-make_pretty_ci <- function(p, lower, upper, nsmall = 1){
+make_pretty_ci <- function(p, lower, upper, nsmall = 1, bounds_nsmall = 1){
+  floor_dec <- function(x, level=1) round(x - 5*10^(-level-1), level)
+  ceiling_dec <- function(x, level=1) round(x + 5*10^(-level-1), level)
 ifelse(is.na(p), "", 
-       paste0(format(round(100*p, 1), nsmall = nsmall), "% ",
-              "(", trimws(format(round(100*lower, 1), nsmall = nsmall)),"%" , ", ",
-              format(round(100*upper, 1), nsmall = nsmall),"%", 
+       paste0(format(round(100*p, nsmall), nsmall = nsmall), " ",
+              "(", trimws(format(floor_dec(100*lower, bounds_nsmall), nsmall = bounds_nsmall)),"" , ", ",
+              format(ceiling_dec(100*upper, bounds_nsmall), nsmall = bounds_nsmall),"", 
               ")"
        ))
 }
@@ -500,14 +502,14 @@ make_table <- function(tests, hosp_mort,
   return(ret)
 }
   
-make_pretty_table <- function(tab, the_caption){
+make_pretty_table <- function(tab, the_caption = ""){
   ret <- tab %>%
   arrange(desc(date)) %>%
     mutate(dummy = date,
            date = format(date, "%B %d"),
-           tests_rate = make_pct(tests_rate),#, tests_rate_lower, tests_rate_upper),
+           tests_rate = make_pretty_ci(tests_rate, tests_rate_lower, tests_rate_upper),
            tests_rate_daily = make_pretty_ci(tests_rate_daily, tests_rate_daily_lower, tests_rate_daily_upper),
-           cases_rate = make_pct(cases_rate), #cases_rate_lower, cases_rate_upper),
+           cases_rate = make_pretty_ci(cases_rate, cases_rate_lower, cases_rate_upper),
            cases_rate_daily = make_pretty_ci(cases_rate_daily, cases_rate_daily_lower, cases_rate_daily_upper),
            cases = make_pretty(cases),
            cases_week_avg = round(cases_week_avg),
@@ -519,45 +521,45 @@ make_pretty_table <- function(tab, the_caption){
            people_vaccinated = make_pretty(people_vaccinated),
            people_fully_vaccinated = make_pretty(people_fully_vaccinated)) %>%
     select(date, tests_rate, cases_rate, 
-           mort, icu, hosp, cases, cases_week_avg, positives, tests,  
            tests_rate_daily, cases_rate_daily,
+           cases, cases_week_avg, 
+           mort, icu, hosp,  tests,  
            people_vaccinated, people_fully_vaccinated, total_vaccinations, total_distributed, 
            dummy) 
   
   col_names <- c("Fecha", 
-                 "Pruebas", 
-                 "Casos",
+                 "pruebas", 
+                 "casos",
+                 "pruebas", 
+                 "casos",
+                 "diarios",
+                 "promedio de 7 dias",
                  "Muertes",
                  "ICU",
-                 "Total",
-                 "Nuevos",
-                 "Media móvil",
-                 "Positivos", 
+                 "total",
                  "Pruebas", 
-                 "Pruebas", 
-                 "Casos",
                  "Vacunados", "Ambas dosis", 
-                 "Administradas", "Distribuidas", 
+                 "Vacunas", "Distribuidas", 
                  "dateorder")
   
   the_header <- htmltools::withTags(table(
-    class = 'display nowrap',
-    thead(style = "padding-bottom: 0em; padding-top: 0em",
+    class = 'display',
+    thead(style = "border-collapse: collapse;",
           tr(
-        th('', colspan = 1, style = "border-bottom: none;"),
-        th('Tasa de positividad', colspan = 2, style = "border-bottom: none;text-align:center;"),
-        th('', rowspan = 1, style = "border-bottom: none;"),
-        th('Hospitalizaciones', colspan = 2, style = "border-bottom: none;text-align:center;"),
-        th( 'Casos únicos', colspan = 2, style = "border-bottom: none;text-align:center;"),
-        th('', colspan = 1, style = "border-bottom: none;"),#,  style = "vertical-align: bottom;"),
-        th('', colspan = 1, style = "border-bottom: none;"),#,  style = "vertical-align: bottom;"),
-        th('Tasa de positividad diaria', colspan = 2, style = "border-bottom: none;text-align:center;"),
-        th('Vacunas', colspan = 4, style = "text-align:center;"),#, style = "border-bottom: none;"),
-        th('dataorder', colspan = 1, style = "border-bottom: none;")),
-      tr(
-        lapply(col_names, th)
-      ))))
-    
+            th('', colspan = 1, style = "border-bottom: none;"),
+            th('Tasas de positividad', colspan = 2, style = "border-bottom: none;text-align:center;"),
+            th('Tasas diarias', colspan = 2, style = "border-bottom: none;text-align:center;"),
+            th( 'Casos únicos', colspan = 2, style = "border-bottom: none;text-align:center;"),
+            th('', rowspan = 1, style = "border-bottom: none;"),
+            th('Hospitalizaciones', colspan = 2, style = "border-bottom: none;text-align:center;"),
+            th('', colspan = 1, style = "border-bottom: none;"),#,  style = "vertical-align: bottom;"),
+            th('Vacunas', colspan = 4, style = "text-align:center; border-bottom: none;"),
+            th('', colspan = 1, style = "border-bottom: none;")),
+          tr(
+            lapply(col_names, th)
+          )))
+    )
+  
   
   ret <- DT::datatable(ret, container = the_header,
                        caption = htmltools::tags$caption(
@@ -568,9 +570,9 @@ make_pretty_table <- function(tab, the_caption){
                                       columnDefs = list(
                                         list(targets = 0, orderData = ncol(ret)-1),
                                         list(targets = ncol(ret)-1, visible = FALSE),
-                                        list(className = 'dt-center', targets = c(1:2, 10:11)),
-                                        list(className = 'dt-right', targets = c(3:9, 12:(ncol(ret)-2)))))) %>%
-    DT::formatStyle(c(1:3, 11:12), "white-space"="nowrap")
+                                        list(className = 'dt-center', targets = c(1:4)),
+                                        list(className = 'dt-right', targets = c(5:(ncol(ret)-2)))))) %>%
+    DT::formatStyle(c(1:5), "white-space"="nowrap")
 
   return(ret)
 }
@@ -632,13 +634,11 @@ make_municipio_table <- function(tests_by_strata,
       ungroup() %>%
       left_join(children, by = "patientCity") %>%
       left_join(poblacion_municipios, by = "patientCity") %>%
-      mutate(lower = qbinom(alpha/2, tests, rate) / tests,
-             upper = qbinom(1 - alpha/2, tests, rate) / tests,
+      mutate(lower = get_ci_lower(tests, rate),
+             upper = get_ci_upper(tests, rate),
              ppc = round(positives/poblacion * 100000 / ndays, 1)) %>%
       arrange(desc(rate)) %>%
-      mutate(rate = paste0(format(round(100*rate,1), nsmall=1),"% ", "(",
-                           format(round(100*lower, 1), nsmall=1),"%", ", ",
-                           format(round(100*upper, 1), nsmall=1),"%", ")"),
+      mutate(rate = make_pretty_ci(rate, lower, upper),
              poblacion_text = make_pretty(poblacion))%>%
       select(patientCity, rate, positives, tests, ppc, poblacion_text, `0 to 9`, `10 to 19`, poblacion) %>%
       setNames(c("Municipio", "% Pruebas positivas (IC)", "Positivos", "Pruebas",  
