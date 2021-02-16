@@ -152,6 +152,13 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                plotOutput("mapa_positividad")),
                       
                       tabPanel("Por Edad",
+                               radioButtons("age_plot_version", 
+                                            label = "",
+                                            choices = list("histograma" = "hist",
+                                                           "tendencia" = "tendencia"),
+                                            selected = "hist",
+                                            inline = TRUE),
+                               
                                plotOutput("age")),
                       
                       tabPanel("Rezago",
@@ -468,7 +475,8 @@ server <- function(input, output, session) {
     plot_agedist(tests_by_strata, start_date =input$range[1], 
                  end_date =input$range[2], 
                  type = input$testType,
-                 yscale = input$yscale)
+                 yscale = input$yscale,
+                 version = input$age_plot_version)
   )
   
   output$rezago <- renderPlot({

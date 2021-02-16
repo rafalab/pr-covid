@@ -21,6 +21,7 @@ plot_positivity <- function(tests,
                             type = "Molecular", 
                             yscale = FALSE,
                             version = c("pruebas", "casos")){
+  
   version <- match.arg(version)
   
   dat <- tests %>%
@@ -651,63 +652,74 @@ plot_agedist <- function(tests_by_strata,
                          start_date = first_day, 
                          end_date = last_complete_day, 
                          type = "Molecular",
-                         yscale = FALSE){
+                         yscale = FALSE,
+                         version = c("hist", "tendencia")){
+  
+  version <- match.arg(version)
   
   age_levels <- levels(tests_by_strata$ageRange)
-  ret <- tests_by_strata %>%
+  dat <- tests_by_strata %>%
     filter(testType == type & date >= start_date & date <= end_date) %>%
     filter(ageRange != "No reportado") %>%
     mutate(ageRange = age_levels[ifelse(as.numeric(ageRange) >= 9, 9, as.numeric(ageRange))]) %>%
     mutate(ageRange = ifelse(ageRange == "80 to 89", "80+", ageRange)) %>%
-    group_by(ageRange) %>%
-    summarize(positives = sum(positives), .groups = "drop") %>%
-    ungroup() %>%
-    mutate(percent = positives/sum(positives)) %>%
-    ggplot(aes(ageRange, percent)) +
-    geom_bar(stat = "identity") +
-    scale_y_continuous(labels = scales::percent) +
-    xlab("Edad") +
-    ylab("por ciento") +
-    ggtitle(paste("Distribución de pruebas",  
-                  case_when(type == "Molecular" ~ "moleculares", 
-                            type == "Serological" ~ "serológicas",
-                            type == "Antigens" ~ "de antígenos",
-                            type == "Molecular+Antigens" ~ "moleculares y de antígenos"),
-                  "positivas por edad",
-                  format(start_date, "%B %d"),
-                  "a",
-                  format(end_date, "%B %d."))) +
-    theme_bw()
+    mutate(ageRange = str_replace(ageRange, "to", "a"))
   
-  if(yscale) ret <- ret+ coord_cartesian(ylim = c(0, 0.23))
-  
+  if(version == "hist"){
+    ret <- dat %>%
+      group_by(ageRange) %>%
+      summarize(positives = sum(positives), .groups = "drop") %>%
+      ungroup() %>%
+      mutate(percent = positives/sum(positives)) %>%
+      ggplot(aes(ageRange, percent)) +
+      geom_bar(stat = "identity") +
+      scale_y_continuous(labels = scales::percent) +
+      xlab("Edad") +
+      ylab("por ciento") +
+      ggtitle(paste("Distribución de pruebas",  
+                    case_when(type == "Molecular" ~ "moleculares", 
+                              type == "Serological" ~ "serológicas",
+                              type == "Antigens" ~ "de antígenos",
+                              type == "Molecular+Antigens" ~ "moleculares y de antígenos"),
+                    "positivas por edad",
+                    format(start_date, "%B %d"),
+                    "a",
+                    format(end_date, "%B %d."))) +
+      theme_bw() 
+    
+    if(yscale) ret <- ret + coord_cartesian(ylim = c(0, 0.23))
+  } else{
+    age_levels <- levels(tests_by_strata$ageRange)
+    ret <- dat %>%
+      group_by(ageRange, week = round_date(date, "week")) %>%
+      summarize(positives = sum(positives), .groups = "drop") %>%
+      ungroup() %>%
+      group_by(week) %>%
+      mutate(percent = positives/sum(positives)) %>%
+      ungroup() %>%
+      ggplot(aes(week, percent)) +
+      geom_line(stat = "identity") +
+      scale_x_date(date_labels = "%b %d") +
+      scale_y_continuous(labels = scales::percent) +
+      xlab("Fecha") +
+      ylab("por ciento") +
+      ggtitle(paste("Distribución de pruebas",  
+                    case_when(type == "Molecular" ~ "moleculares", 
+                              type == "Serological" ~ "serológicas",
+                              type == "Antigens" ~ "de antígenos",
+                              type == "Molecular+Antigens" ~ "moleculares y de antígenos"),
+                    "positivas cada semana por edad.")) +
+      theme_bw()
+    
+    if(yscale){
+      ret <- ret + facet_wrap(~ageRange, ncol = 3) + coord_cartesian(ylim = c(0, 0.23))
+    } else{
+      ret <- ret + facet_wrap(~ageRange, ncol = 3, scale = "free") 
+    }
+  }
   return(ret)
 }
 
-plot_rezago <- function(rezago,
-                        start_date = first_day, 
-                        end_date = last_complete_day, 
-                        type = "Molecular"){
-  
-  if(type == "Molecular+Antigens") return(NULL) else{
-    rezago %>%
-      filter(date >= start_date &  date <= end_date & testType == type) %>%
-      filter(diff<20 & diff>=0) %>%
-      ggplot(aes(x=diff, color = Resultado)) +
-      stat_ecdf(alpha = 0.75) + 
-      xlab("Días") + 
-      ylab("por ciento de pruebas") +
-      labs(title = paste("Rezago entre toma de muestra y día en que se reporta prueba",  
-                         case_when(type == "Molecular" ~ "moleculares", 
-                                   type == "Serological" ~ "serológicas",
-                                   type == "Antigens" ~ "de antígenos")),
-           subtitle = paste("Fechas:", format(start_date, "%B %d"), "a", format(end_date, "%B %d."))) +
-      scale_y_continuous(labels=scales::percent) +
-      xlim(0, 21) +
-      theme_bw()
-  }
-}
-  
 make_lab_tab <- function(lab_tab,
                          start_date = first_day, 
                          end_date = last_complete_day, 
