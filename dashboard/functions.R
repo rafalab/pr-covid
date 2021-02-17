@@ -720,6 +720,30 @@ plot_agedist <- function(tests_by_strata,
   return(ret)
 }
 
+plot_rezago <- function(rezago,
+                        start_date = first_day, 
+                        end_date = last_complete_day, 
+                        type = "Molecular"){
+  
+  if(type == "Molecular+Antigens") return(NULL) else{
+    rezago %>%
+      filter(date >= start_date &  date <= end_date & testType == type) %>%
+      filter(diff<20 & diff>=0) %>%
+      ggplot(aes(x=diff, color = Resultado)) +
+      stat_ecdf(alpha = 0.75) + 
+      xlab("Días") + 
+      ylab("por ciento de pruebas") +
+      labs(title = paste("Rezago entre toma de muestra y día en que se reporta prueba",  
+                         case_when(type == "Molecular" ~ "moleculares", 
+                                   type == "Serological" ~ "serológicas",
+                                   type == "Antigens" ~ "de antígenos")),
+           subtitle = paste("Fechas:", format(start_date, "%B %d"), "a", format(end_date, "%B %d."))) +
+      scale_y_continuous(labels=scales::percent) +
+      xlim(0, 21) +
+      theme_bw()
+  }
+}
+
 make_lab_tab <- function(lab_tab,
                          start_date = first_day, 
                          end_date = last_complete_day, 
