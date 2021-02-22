@@ -720,45 +720,52 @@ plot_agedist <- function(tests_by_strata,
   return(ret)
 }
 
-plot_rezago <- function(rezago,
+plot_rezago <- function(rezago, rezago_mort,
                         start_date = first_day, 
                         end_date = last_complete_day, 
-                        type = "Molecular"){
+                        type = "Molecular", 
+                        n_points =  600,
+                        max_days = 30){
   
-  if(type == "Molecular+Antigens") return(NULL) else{
-    rezago %>%
+  diff_mort <- rezago_mort %>%
+    filter(new > 0 & diff >=0 & date >= start_date &  date <= end_date) %>%
+    pull(diff)
+  
+  dias <- seq(0, max_days, length.out = n_points)
+  
+  dat <- data.frame(Resultado = "Muertes", dias = dias, props = ecdf(diff_mort)(dias))
+  the_title <- "Rezago entre día de muerte y día en que se reporta en informe oficial"
+  
+  if(type != "Molecular+Antigens"){
+    dat_tests <- rezago %>%
       filter(date >= start_date &  date <= end_date & testType == type) %>%
-      filter(diff>=0) %>%
-      ggplot(aes(x=diff, color = Resultado)) +
-      stat_ecdf(alpha = 0.75) + 
-      xlab("Días") + 
-      ylab("Por ciento de pruebas") +
-      labs(title = paste("Rezago entre toma de muestra y día en que se reporta prueba",  
-                         case_when(type == "Molecular" ~ "moleculares", 
-                                   type == "Serological" ~ "serológicas",
-                                   type == "Antigens" ~ "de antígenos")),
-           subtitle = paste("Fechas:", format(start_date, "%B %d"), "a", format(end_date, "%B %d."))) +
-      scale_y_continuous(labels=scales::percent) +
-      xlim(0, 21) +
-      theme_bw()
+      filter(diff >= 0) %>%
+      select(diff, Resultado) 
+    
+    diff_pos <- filter(dat_tests, Resultado == "Positivos") %>% pull(diff)
+    dat_pos <- data.frame(Resultado = "Positivos", dias = dias, props = ecdf(diff_pos)(dias))
+    
+    diff_neg <- filter(dat_tests, Resultado == "Negativos") %>% pull(diff)
+    dat_neg <- data.frame(Resultado = "Negativos", dias = dias, props = ecdf(diff_neg)(dias))
+    
+    dat <- bind_rows(dat, bind_rows(dat_neg, dat_pos))
+    the_title <- paste(the_title, "\ny entre toma de muestra y día en que se reporta prueba",  
+                       case_when(type == "Molecular" ~ "moleculares", 
+                                 type == "Serological" ~ "serológicas",
+                                 type == "Antigens" ~ "de antígenos"))
   }
-}
-
-plot_rezago_mort <- function(rezago_mort,
-                        start_date = first_day, 
-                        end_date = last_complete_day){
-  
-  rezago_mort %>%
-    filter(new > 0) %>%
-    filter(date >= start_date &  date <= end_date) %>%
-    ggplot(aes(x = diff)) +
-    stat_ecdf(alpha = 0.75) + 
-    xlab("Días") + 
-    ylab("Por ciento de muertes") +
-    labs(title = "Rezago entre día de muerte y día en que se reporta en informe oficial",  
+    
+    
+  dat %>%
+    ggplot(aes(x = dias, y = props, color = Resultado)) +
+    geom_step(alpha = 0.75) + 
+    xlab("Días de rezago") + 
+    ylab("Por ciento reportados") +
+    labs(title = the_title,
          subtitle = paste("Fechas:", format(start_date, "%B %d"), "a", format(end_date, "%B %d."))) +
-    scale_y_continuous(labels=scales::percent) +
-    xlim(0, 21) +
+    scale_y_continuous(labels=scales::percent, limits = c(0,1)) + 
+    scale_color_manual(values=c("#000000", "#00BFC4", "#F8766D")) + 
+    xlim(0, max_days) +
     theme_bw()
 }
 

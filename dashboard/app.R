@@ -162,9 +162,7 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                plotOutput("age")),
                       
                       tabPanel("Rezago",
-                              plotOutput("rezago"),
-                              hr(),
-                              plotOutput("rezago_mort")),
+                              plotOutput("rezago")),
                       
                       tabPanel("Labs",
                                br(),
@@ -483,17 +481,11 @@ server <- function(input, output, session) {
   
   output$rezago <- renderPlot({
     load(file.path(rda_path,"rezago.rda"))
-    plot_rezago(rezago, 
+    load(file.path(rda_path,"rezago_mort.rda"))
+    plot_rezago(rezago, rezago_mort, 
                 start_date = input$range[1], 
                  end_date = input$range[2], 
                  type = input$testType)
-  })
-  
-  output$rezago_mort <- renderPlot({
-    load(file.path(rda_path,"rezago_mort.rda"))
-    plot_rezago_mort(rezago_mort, 
-                start_date = input$range[1], 
-                end_date = input$range[2])
   })
   
   output$labs <- DT::renderDataTable({
