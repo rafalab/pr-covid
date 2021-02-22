@@ -589,3 +589,28 @@ all_tests <- all_tests %>%  filter(testType == "Molecular")
 saveRDS(all_tests, file = file.path(rda_path, "all_tests.rds"), compress = "xz")
 saveRDS(all_tests_with_id, file = file.path(rda_path, "all_tests_with_id.rds"), compress = "xz")
 
+## Adding rezago computation for deaths
+dat <- read_csv("https://raw.githubusercontent.com/sacundim/covid-19-puerto-rico/master/assets/data/cases/PuertoRico-bitemporal.csv",
+                col_types = cols(bulletin_date = col_date(),
+                                 datum_date = col_date(),
+                                 confirmed_and_suspect_cases = col_integer(),
+                                 confirmed_cases = col_integer(),
+                                 probable_cases = col_integer(),
+                                 suspect_cases = col_integer(),
+                                 deaths = col_integer()))
+
+rezago_mort <- dat %>% 
+  rename(date = datum_date) %>%
+  filter(!is.na(deaths)) %>%
+  arrange(date, bulletin_date) %>%
+  filter(!is.na(deaths)) %>%
+  group_by(date) %>%
+  mutate(new = diff(c(0,deaths))) %>%
+  ungroup() %>%
+  filter(new != 0) %>%
+  mutate(diff = (as.numeric(bulletin_date) - as.numeric(date)))
+
+save(rezago_mort, file = file.path(rda_path, "rezago_mort.rda"))
+
+
+

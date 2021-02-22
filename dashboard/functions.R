@@ -728,11 +728,11 @@ plot_rezago <- function(rezago,
   if(type == "Molecular+Antigens") return(NULL) else{
     rezago %>%
       filter(date >= start_date &  date <= end_date & testType == type) %>%
-      filter(diff<20 & diff>=0) %>%
+      filter(diff>=0) %>%
       ggplot(aes(x=diff, color = Resultado)) +
       stat_ecdf(alpha = 0.75) + 
       xlab("Días") + 
-      ylab("por ciento de pruebas") +
+      ylab("Por ciento de pruebas") +
       labs(title = paste("Rezago entre toma de muestra y día en que se reporta prueba",  
                          case_when(type == "Molecular" ~ "moleculares", 
                                    type == "Serological" ~ "serológicas",
@@ -743,6 +743,25 @@ plot_rezago <- function(rezago,
       theme_bw()
   }
 }
+
+plot_rezago_mort <- function(rezago_mort,
+                        start_date = first_day, 
+                        end_date = last_complete_day){
+  
+  rezago_mort %>%
+    filter(new > 0) %>%
+    filter(date >= start_date &  date <= end_date) %>%
+    ggplot(aes(x = diff)) +
+    stat_ecdf(alpha = 0.75) + 
+    xlab("Días") + 
+    ylab("Por ciento de muertes") +
+    labs(title = "Rezago entre día de muerte y día en que se reporta en informe oficial",  
+         subtitle = paste("Fechas:", format(start_date, "%B %d"), "a", format(end_date, "%B %d."))) +
+    scale_y_continuous(labels=scales::percent) +
+    xlim(0, 21) +
+    theme_bw()
+}
+
 
 make_lab_tab <- function(lab_tab,
                          start_date = first_day, 
