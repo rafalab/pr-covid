@@ -107,7 +107,8 @@ ui <- fixedPage(
                      <LI><b>Muertes por día</b> = Promedio diario de muertes reportadas por salud esa semana. </LI>
                      <LI><b>% población vacunada</b> = Por ciento de la población de Puerto Rico que ha recibido ambas dosis de la vacuna. </LI>
                      <LI><b>Días para alcanzar 70%</b> = Basado en la tasa de crecimiento de la última semana, el número de días que tardará llegar a la meta de 70% de la población vacunada con amabas dosis.</LI>
-                    </UL>",
+                     <LI><b>% por lo menos 1 dosis</b> = Por ciento de la población de Puerto Rico que ha recibido por lo menos una dosis de la vacuna.</LI>
+                     </UL>",
                      "<p> Importante notar que no se detectan todos los casos y que cuántos detectamos depende de cuántas pruebas se hacen."                 )))
         ),
         tabPanel("Disclaimer",
@@ -162,7 +163,8 @@ server <- function(input, output, session) {
             "<tr><td>% casos nuevos:</td><td align=\"right\">&emsp;", res()$casos_positividad, "</td></tr>", #, "&emsp;", 
             "<tr><td>Hospitalizaciones:</td><td align=\"right\">&emsp;", res()$hosp, "</td></tr>",
             "<tr><td>% población vacunada:</td><td align=\"right\">&emsp;", res()$vacunas, "</td></tr>",
-            "<tr><td>Días para alcanzar 70%:</td><td align=\"right\">&emsp;", res()$dias_hasta_meta_vacunas,"</td></tr></table>")
+            "<tr><td>Días para alcanzar 70%:</td><td align=\"right\">&emsp;", res()$dias_hasta_meta_vacunas, "</td></tr>",
+            "<tr><td>% por lo menos 1 dosis:</td><td align=\"right\">&emsp;", res()$una_dosis, "</td></tr></table>")
     })
     
     output$tab_title <- renderText({

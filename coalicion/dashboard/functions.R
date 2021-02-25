@@ -161,12 +161,14 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular", day = last_com
   })
   
   ## Vacunas
-  vac <- hosp_mort %>% select(date,  people_fully_vaccinated) %>% 
+  vac <- hosp_mort %>% 
+    select(date,  people_fully_vaccinated, people_vaccinated) %>% 
     filter(!is.na(people_fully_vaccinated)) %>%
     filter(date %in% the_dates) %>%
     arrange(desc(date)) 
   
-  latest <- hosp_mort %>% select(date,  people_fully_vaccinated) %>% 
+  latest <- hosp_mort %>% 
+    select(date,  people_fully_vaccinated, people_vaccinated) %>% 
     filter(!is.na(people_fully_vaccinated) & date <= day & date > max(the_dates)) %>%
     arrange(desc(date)) %>% 
     slice(1)
@@ -174,7 +176,8 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular", day = last_com
   if(nrow(latest) > 0) vac <- bind_rows(latest, vac) else vac <- bind_rows(slice(vac, 1), vac)
   
   vac <- vac %>%
-    mutate(pct_fully_vaccinated = people_fully_vaccinated/pr_pop)
+    mutate(pct_fully_vaccinated = people_fully_vaccinated/pr_pop,
+           pct_one_dose = people_vaccinated/pr_pop)
   
   ### Definir tendencia y recomendación automatica
   tendencia <- case_when(change_pos[1] == 1 ~ 1,
@@ -244,6 +247,7 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular", day = last_com
   change_hos <- change_hos[-1]
   
   vacunas <- paste(make_pct(vac$pct_fully_vaccinated[1]),  no_arrow)
+  una_dosis <- paste(make_pct(vac$pct_one_dose[1]),  no_arrow)
   
   vacs_per_day <- diff(vac$people_fully_vaccinated[1:2])/diff(as.numeric(vac$date[1:2]))
   dias_hasta_meta_vacunas <- paste(
@@ -283,7 +287,7 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular", day = last_com
                      
   return(list(tab = tab, riesgo = riesgo, nivel = nivel, tendencia = tendencia, 
               positividad = positividad, casos_positividad = casos_positividad, 
-              hosp = hosp, vacunas = vacunas,
+              hosp = hosp, una_dosis = una_dosis, vacunas = vacunas,
               dias_hasta_meta_vacunas = dias_hasta_meta_vacunas))
   
 }
