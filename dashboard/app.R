@@ -247,11 +247,13 @@ server <- function(input, output, session) {
   
   output$positividad <-  renderText({
     paste0(
-      "<p>% pruebas positivas: ", res()$positividad, " &emsp;", 
-      "% casos nuevos: ", res()$casos_positividad, "&emsp;", 
-      "Hospitalizaciones: ", res()$hosp, "&emsp;",
-      "% población vacunada: ", res()$vacunas, "&emsp;",
-      "Días para alcanzar 70%: ", res()$dias_hasta_meta_vacunas,"</p>")
+      "<table cellpadding=\"100\" cellspacing=\"100\">",
+      "<tr><td>% pruebas positivas:</td><td align=\"right\">&emsp;", res()$positividad, "</td></tr>", 
+      "<tr><td>% casos nuevos:</td><td align=\"right\">&emsp;", res()$casos_positividad, "</td></tr>", #, "&emsp;", 
+      "<tr><td>Hospitalizaciones:</td><td align=\"right\">&emsp;", res()$hosp, "</td></tr>",
+      "<tr><td>% población vacunada:</td><td align=\"right\">&emsp;", res()$vacunas, "</td></tr>",
+      "<tr><td>Días para alcanzar 70%:</td><td align=\"right\">&emsp;", res()$dias_hasta_meta_vacunas, "</td></tr>",
+      "<tr><td>% por lo menos 1 dosis:</td><td align=\"right\">&emsp;", res()$una_dosis, "</td></tr></table>")
   })
   
   output$resumen_table <- DT::renderDataTable({

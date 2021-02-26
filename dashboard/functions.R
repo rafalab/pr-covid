@@ -384,7 +384,8 @@ plot_map <- function(tests_by_strata,
                      start_date = first_day, 
                      end_date = last_complete_day, 
                      type = "Molecular",
-                     max_rate = 0.25){
+                     min_rate = 0.03,
+                     max_rate = 0.12){
     
   ret <- tests_by_strata %>%
     filter(date >= start_date &  date <= end_date & testType == type) %>%
@@ -397,7 +398,7 @@ plot_map <- function(tests_by_strata,
               tests      = sum(tests),
               rate       = positives / tests, .groups = "drop") %>%
     ungroup() %>%
-    mutate(rate = 100*pmin(max_rate, rate)) %>%
+    mutate(rate = 100*pmin(pmax(rate, min_rate), max_rate)) %>%
     na.omit() %>%
       {merge(map, .,by.x = "ADM1_ES", by.y = "patientCity", all.y = T)} %>%
       ggplot() +
@@ -409,7 +410,7 @@ plot_map <- function(tests_by_strata,
                 fontface = "bold") +
       scale_fill_gradientn(colors = RColorBrewer::brewer.pal(9, "Reds"),
                            name = "Por ciento de pruebas positivas:",
-                           limits= c(0, 100*max_rate)) +
+                           limits= c(100*min_rate, 100*max_rate)) +
       theme_void() +
       theme(legend.position = "bottom") +
       ggtitle(paste("Por ciento de pruebas positivas por municipio para el period de",
