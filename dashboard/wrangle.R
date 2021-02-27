@@ -707,6 +707,9 @@ pop_by_region <- read_csv("data/poblacion-region.csv", skip = 1, col_names = c("
   select(region, poblacion) %>%
   mutate(region = factor(region, levels = region[order(poblacion, decreasing = TRUE)]))
 
+tests_by_region$region <- factor(as.character(tests_by_region$region), 
+                                 levels = c(levels(pop_by_region$region), "No reportada"))
+
 save(tests_by_region, pop_by_region, file = file.path(rda_path, "regions.rda"))
 
 
