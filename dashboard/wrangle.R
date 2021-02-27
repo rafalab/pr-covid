@@ -703,7 +703,8 @@ negative_cases_by_region <- left_join(negative_cases_by_region, fits, by = c("te
 ## add new cases and weekly average to tests data frame
 tests_by_region <- left_join(tests_by_region, negative_cases_by_region, by = c("testType", "region", "date"))
 
-pop_by_region <- read_csv("data/poblacion-region.csv", skip = 1, col_names = c("rn", "region", "poblacion")) %>% 
+pop_by_region <- read_csv("https://raw.githubusercontent.com/rafalab/pr-covid/master/dashboard/data/poblacion-region.csv",
+                          skip = 1, col_names = c("rn", "region", "poblacion")) %>% 
   select(region, poblacion) %>%
   mutate(region = factor(region, levels = region[order(poblacion, decreasing = TRUE)]))
 
