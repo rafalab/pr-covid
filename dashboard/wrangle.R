@@ -324,13 +324,13 @@ if(FALSE){
 }
 
 # -- summaries stratified by age group and patientID
-mol_anti <-  all_tests %>%
+mol_anti_2 <-  all_tests %>%
   filter(date >= first_day & testType %in% c("Molecular", "Antigens") & 
            result %in% c("positive", "negative")) %>%
   mutate(testType = "Molecular+Antigens") 
 
 tests_by_strata <- all_tests %>%  
-  bind_rows(mol_anti) %>%
+  bind_rows(mol_anti_2) %>%
   filter(date >= first_day & testType %in% c("Molecular", "Serological", "Antigens", "Molecular+Antigens") & 
            result %in% c("positive", "negative")) %>%
   filter(date>=first_day) %>%
