@@ -19,9 +19,9 @@ res <- compute_summary(tests, hosp_mort, day = last_complete_day, type = "Molecu
 ## for cases combine both antigen and molecular
 res2 <- compute_summary(tests, hosp_mort, day = last_complete_day, type = "Molecular+Antigens")
 res$tab[3,-2] <- res2$tab[3,-2]
-tab <- data.frame(Metrica = c("% pruebas positivas", "% casos nuevos", "Hospitalizaciones", "% población vacunada", 
-                              "Días para alcanzar 70%"),
-                  valor = c(res$positividad, res$casos_positividad, res$hosp, res$vacunas, res$dias_hasta_meta_vacuna))
+tab <- data.frame(
+  Metrica = c("% pruebas positivas", "% casos nuevos", "Hospitalizaciones", "% población vacunada", "Días para alcanzar 70%", "% por lo menos 1 dosis"),
+  valor = c(res$positividad, res$casos_positividad, res$hosp, res$vacunas, res$dias_hasta_meta_vacuna, res$una_dosis))
 knitr::kable(tab, escape = TRUE, align = c("l","r"), col.names = NULL)
 ```
 
