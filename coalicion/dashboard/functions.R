@@ -262,8 +262,8 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular", day = last_com
     meta <- c("", "",  "",  "",  "< 300", "< 1", "> 70%")
   }
   ## make the table
-  tab <- tibble(metrica = c("% pruebas positivas", 
-                            "% casos nuevos",
+  tab <- tibble(metrica = c("Tasa de positividad (pruebas)", 
+                            "Tasa de positividad (casos)",
                             "Casos nuevos por día", 
                             "Pruebas por día", 
                             "Hospitalizaciones",
