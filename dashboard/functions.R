@@ -126,7 +126,7 @@ plot_icu <- function(hosp_mort,
     annotate("text", end_date + days(2), 0.75, label = "Crítico") + #, color = "#FF0034") +
     geom_line(lwd = 1.5, color = "darkblue") +
     xlab("Fecha") +
-    ylab("por ciento") +
+    ylab("Por ciento") +
     labs(title = "Camas ICU disponibles usadas por pacientes COVID-19",
          caption = "Algunas pacientes en el ICU están ahí por otras causas.\nLa gráfica muestra el porcentaje de las camas restantes ocupadas por pacientes COVID-19.") +
     scale_x_date(date_labels = "%b", breaks = breaks_width("1 month"))  +
@@ -278,7 +278,7 @@ plot_test <- function(tests,
   if(cumm){
     tests %>%
       filter(testType == type) %>%
-      mutate(tests = cumsum(all_tests)) %>%
+      mutate(tests = cumsum(people_total)) %>%
       filter(date >= start_date & date <= end_date) %>%
       ggplot(aes(date, tests)) +
       geom_bar(stat = "identity", width = 0.75, fill = "#D1D1E8") +
@@ -288,21 +288,20 @@ plot_test <- function(tests,
                          case_when(type == "Molecular" ~ "moleculares", 
                                    type == "Serological" ~ "serológicas",
                                    type == "Antigens" ~ "de antígenos",
-                                   type == "Molecular+Antigens" ~ "moleculares y de antígenos")),
-           caption = "Incluye pruebas duplicadas.") + 
+                                   type == "Molecular+Antigens" ~ "moleculares y de antígenos"))) + 
       scale_x_date(date_labels = "%b", breaks = breaks_width("1 month"))  +
       scale_y_continuous(labels = scales::comma) +
       theme_bw() 
   } else{
     
     ## last_day is a global variable
-    tests$tests_total_week[tests$date > last_day] <- NA
+    tests$people_total_week[tests$date > last_day] <- NA
     
     tests %>%
       filter(testType == type & date >= start_date & date <= end_date) %>%
-      ggplot(aes(date, tests_total)) +
+      ggplot(aes(date, people_total)) +
       geom_bar(stat = "identity", width = 0.75, fill = "#D1D1E8") +
-      geom_line(aes(y = tests_total_week / 7), color = "#31347A", size = 1.25) +
+      geom_line(aes(y = people_total_week / 7), color = "#31347A", size = 1.25) +
       ylab("Pruebas") +
       xlab("Fecha") +
       labs(title = paste("Pruebas", 
@@ -838,10 +837,42 @@ plot_vaccines <- function(hosp_mort,
     xlab("Fecha") +
     theme_bw() +   
     theme(legend.position="bottom", legend.title=element_blank()) 
-    
 }
 
+ 
+table_vaccines <- function(hosp_mort,  
+                          start_date = first_day, 
+                          end_date = last_complete_day){
   
+  tab <- hosp_mort %>% 
+    filter(date >= start_date & date <= end_date & !is.na(people_fully_vaccinated)) %>% 
+    select(date, people_vaccinated,
+           people_fully_vaccinated, total_vaccinations, total_distributed) %>% 
+    mutate(people_vaccinated = make_pretty(people_vaccinated),
+           people_fully_vaccinated =  make_pretty(people_fully_vaccinated), 
+           total_vaccinations =  make_pretty(total_vaccinations), 
+           total_distributed =  make_pretty(total_distributed),
+      dummy = date) %>%
+    arrange(desc(dummy)) %>%
+    rename("Personas vacunadas" = people_vaccinated,
+           "Ambas dosis" =  people_fully_vaccinated,
+           "Dosis distribuidas" = total_distributed,
+           "Vacunaciones totales" = total_vaccinations,
+           Fecha = date) %>%
+    mutate(Fecha = format(Fecha, "%B %d"))
+    
+  tab <- DT::datatable(tab, 
+                       rownames = FALSE,
+                       class = "display nowrap",
+                       options = list(dom = 't', pageLength = -1,
+                                      columnDefs = list(
+                                        list(targets = 0, orderData = ncol(tab)-1),
+                                        list(targets = ncol(tab)-1, visible = FALSE),
+                                        list(className = 'dt-center', targets = c(1:(ncol(tab)-1))))))
+  
+  return(tab)
+}
+
 plot_fully_vaccinated <- function(hosp_mort,  
               start_date = first_day, 
               end_date = last_complete_day,
@@ -871,6 +902,131 @@ plot_fully_vaccinated <- function(hosp_mort,
       ylim(c(0, max(0.7, max(tmp$people_fully_vaccinated / pr_pop))))
     }
     return(ret)
+}
+
+
+summary_by_region <- function(tests_by_region, 
+                              pop_by_region,
+                              start_date = first_day, 
+                              end_date = last_complete_day, 
+                              type = "Molecular", 
+                              cumm = FALSE,
+                              yscale = FALSE,
+                              version = c("tp_pruebas", "tp_casos", "casos", "pruebas")){
+  
+  version <- match.arg(version)
+  
+  dat <- tests_by_region %>%
+    filter(testType == type &
+             date >= start_date & date <= end_date) %>%
+    mutate(cases_rate_lower = get_ci_lower(cases_plus_negatives, cases_rate),
+           cases_rate_upper = get_ci_upper(cases_plus_negatives, cases_rate)) %>%
+    left_join(pop_by_region, by = "region") 
+  
+  if(cumm){
+    dat <- dat %>% 
+      group_by(region) %>%
+      mutate(people_positives = cumsum(replace_na(people_positives, 0)),
+             people_total = cumsum(replace_na(people_total, 0)),
+             negative_cases = cumsum(replace_na(negative_cases, 0)),
+             fit = people_positives / people_total, 
+             cases = cumsum(replace_na(cases, 0)),
+             cases_rate = cases / (cases + negative_cases),
+             lower = get_ci_lower(people_total, fit),
+             upper = get_ci_upper(people_total, fit),
+             cases_rate_lower = get_ci_lower(negative_cases + cases, cases_rate),
+             cases_rate_upper = get_ci_upper(negative_cases + cases, cases_rate),
+             cases_week_avg = cases,
+             people_total_week = people_total) %>%
+      ungroup()
+    
+    
+    yscale = FALSE
+  }
+  
+  type_char <- case_when(type == "Molecular" ~ "molecular", 
+                         type == "Serological" ~ "serológica",
+                         type == "Antigens" ~ "de antígeno",
+                         type == "Molecular+Antigens" ~ "moleculares o de antígenos")
+  
+  pct <- FALSE
+  if(version == "tp_pruebas"){
+    tab <- dat %>% 
+      mutate(the_stat = make_pretty_ci(fit, lower, upper)) %>%
+      select(date, region, the_stat)
+    dat <- dat %>% rename(the_stat = fit)
+    var_title <- "Tasa de positividad (pruebas)"
+    the_ylim <- c(0, 0.2)
+    pct <- TRUE
+  }
+  if(version == "tp_casos"){
+    tab <- dat %>% 
+      mutate(the_stat = make_pretty_ci(cases_rate, cases_rate_lower, cases_rate_upper)) %>%
+      select(date, region, the_stat)
+    dat <- dat %>% rename(the_stat = cases_rate)
+    var_title <- "Tasa de positividad (casos)"
+    the_ylim <- c(0, 0.15)
+    pct <- TRUE
+  }
+  if(version == "casos"){
+    tab <- dat %>% 
+      mutate(the_stat = cases_week_avg/poblacion*10^5) %>%
+      mutate(the_stat = ifelse(is.na(the_stat), "", format(round(the_stat, 1), nsmall = 1))) %>%
+      select(date, region, the_stat)
+    dat <- dat %>% 
+      mutate(cases_week_avg = cases_week_avg/poblacion*10^5) %>%
+      rename(the_stat = cases_week_avg) 
+    var_title <- "Casos únicos por día por 100,000 habitantes"
+    the_ylim <- c(0, 40)
+  }
+  if(version ==  "pruebas"){
+    tab <- dat %>% 
+      mutate(the_stat = make_pretty(round(people_total_week/poblacion*10^5))) %>%
+      select(date, region, the_stat)
+    dat <- dat %>% 
+      mutate(people_total_week = people_total_week/poblacion*10^5) %>%
+      rename(the_stat = people_total_week)
+    var_title <- "Pruebas por día por 100,000 habitantes"
+    the_ylim <- c(0, 3000)
+  }
+  
+  tab <- tab %>%
+    pivot_wider(names_from = region, values_from = the_stat) %>% 
+    arrange(desc(date)) %>%
+    select(date, all_of(levels(dat$region))) %>%
+    rename(Fecha = date)
+  
+  the_title <- paste0(var_title, " basado en pruebas ", type_char)
+  
+  pretty_tab <- tab %>% 
+    mutate(dummy = Fecha,
+           Fecha = format(Fecha, "%B %d")) 
+  
+  pretty_tab <- 
+    DT::datatable(pretty_tab, 
+      rownames = FALSE,
+      class = "display nowrap",
+      options = list(dom = 't', pageLength = -1,
+                     columnDefs = list(
+                       list(targets = 0, orderData = ncol(pretty_tab)-1),
+                       list(targets = ncol(pretty_tab)-1, visible = FALSE),
+                       list(className = 'dt-center', targets = c(1:(ncol(pretty_tab)-1))))))
+  
+  p <- dat %>% 
+    ggplot(aes(date, the_stat, color = region)) + 
+    geom_line() +
+    xlab("Fecha") +
+    ylab(var_title) +
+    labs(color = "Región") +
+    ggtitle(the_title) +
+    scale_x_date(date_labels = "%b", breaks = breaks_width("1 month")) +
+    theme_bw()
+
+  if(pct) p <- p + scale_y_continuous(labels = scales::percent) 
+  
+  if(yscale) p <- p + scale_y_continuous(limit = the_ylim)
+  
+return(list(p = p, tab = tab, pretty_tab = pretty_tab))
 }
 
 ### this is used to make the table in the front page
