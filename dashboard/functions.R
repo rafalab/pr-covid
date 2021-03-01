@@ -912,7 +912,7 @@ summary_by_region <- function(tests_by_region,
                               type = "Molecular", 
                               cumm = FALSE,
                               yscale = FALSE,
-                              version = c("tp_pruebas", "tp_casos", "casos", "pruebas")){
+                              version = c("tp_pruebas", "tp_casos", "casos", "pruebas", "prop")){
   
   version <- match.arg(version)
   
@@ -989,6 +989,18 @@ summary_by_region <- function(tests_by_region,
     var_title <- "Pruebas por día por 100,000 habitantes"
     the_ylim <- c(0, 3000)
   }
+  if(version ==  "prop"){
+    dat <- dat %>% group_by(date) %>%
+      mutate(the_stat = people_total_week/sum(people_total_week)) %>%
+      ungroup() 
+    tab <- dat %>% 
+      mutate(the_stat = make_pct(the_stat)) %>%
+      select(date, region, the_stat)
+   
+    var_title <- "Por ciento de pruebas"
+    the_ylim <- c(0, .35)
+    pct <- TRUE
+    }
   
   tab <- tab %>%
     pivot_wider(names_from = region, values_from = the_stat) %>% 
@@ -1022,9 +1034,13 @@ summary_by_region <- function(tests_by_region,
     scale_x_date(date_labels = "%b", breaks = breaks_width("1 month")) +
     theme_bw()
 
-  if(pct) p <- p + scale_y_continuous(labels = scales::percent) 
+  if(pct) the_labels <- scales::percent else the_labels <- waiver()
   
-  if(yscale) p <- p + scale_y_continuous(limit = the_ylim)
+  if(yscale){
+    p <- p + scale_y_continuous(limit = the_ylim, labels = the_labels)
+  } else{
+    p <- p + scale_y_continuous(labels = the_labels) 
+  }
   
 return(list(p = p, tab = tab, pretty_tab = pretty_tab))
 }
