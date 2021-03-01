@@ -14,7 +14,14 @@ Cuando comenzamos a reportar la tasa de positividad en junio era bien baja, pero
 
 <details><summary>¿Qué es la tasa de positividad? </summary>
 
-La tasa de positividad es la métrica que, hasta ahora, mejor nos permite estimar cuantas hospitalizaciones y muertes habrá en la próximas dos semanas. Para más detalles vean [este documento](https://rafalab.github.io/pr-covid/tasa-de-positividad-faq.html).
+La tasa de positividad se define para un periodo dado (como una semana) de dos f
+ormas:
+
+* tasa de positividad (pruebas) = Número de pruebas positivas / Número de pruebas totales
+
+* tasa de positividad (casos) = Casos nuevos único detectados con prueba / Número de personas que se hicieron la prueba 
+
+Al ser un por ciento en vez de un total, en general, la tasa de positividad nos permiten comparar la tasa en periodos con pocas pruebas a la tasa en periodos con muchas pruebas. La tasa de positividad es la métrica que, hasta ahora, mejor nos permite estimar cuantas hospitalizaciones y muertes habrá en dos semanas. Para más detalles vean [este documento](https://rafalab.github.io/pr-covid/tasa-de-positividad-faq.html).
 
 </details>
 
@@ -174,7 +181,7 @@ Pueden hacer preguntas por Twitter: [@rafalab](https://twitter.com/rafalab)
 
 <details><summary>Agradecimientos</summary>
 
-Muchos han contribuido a mejorar este dashboard. Gracias a:
+Muchos han contribuido a mejorar este dashboard con datos, críticas, sugerencias, y peticiones. Gracias a:
 
 * María-Eglée Pérez
 * Rolando Acosta
@@ -187,5 +194,6 @@ Muchos han contribuido a mejorar este dashboard. Gracias a:
 * Giovanna Guerrero
 * Joshua Villafañe
 * Elvis Nieves Miranda
-* Mónica Robles Fontan
+* Mónica Robles Fontán
+* Fabiola Cruz López
 * Arturo Portnoy

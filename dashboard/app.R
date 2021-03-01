@@ -166,8 +166,8 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                       tabPanel("Por Edad",
                                radioButtons("age_plot_version", 
                                             label = "",
-                                            choices = list("histograma" = "hist",
-                                                           "tendencia" = "tendencia"),
+                                            choices = list("Histograma" = "hist",
+                                                           "Tendencia" = "tendencia"),
                                             selected = "hist",
                                             inline = TRUE),
                                
@@ -254,7 +254,7 @@ server <- function(input, output, session) {
     
   output$table_caption <- renderText({
     paste0("<h5> <b> Tasa de positividad</b>, ",
-           "<b>casos</b>, y <b>pruebas</b> están basados en pruebas ",
+           "<b>casos</b> y <b>pruebas</b> están basados en pruebas ",
            case_when(input$testType == "Molecular" ~ "moleculares", 
                      input$testType == "Serological" ~ "serológicas",
                      input$testType == "Antigens" ~ "de antígenos",

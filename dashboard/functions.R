@@ -66,7 +66,7 @@ plot_positivity <- function(tests,
   }
   ret <- ret + 
     geom_point(size = 2, alpha = 0.65, show.legend = FALSE) +
-    ylab("Tasa") +
+    ylab("Tasa de positividad") +
     xlab("Fecha") +
     scale_x_date(date_labels = "%b", breaks = breaks_width("1 month")) +
     theme_bw() +
