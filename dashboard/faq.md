@@ -14,8 +14,7 @@ Cuando comenzamos a reportar la tasa de positividad en junio era bien baja, pero
 
 <details><summary>¿Qué es la tasa de positividad? </summary>
 
-La tasa de positividad se define para un periodo dado (como una semana) de dos f
-ormas:
+La tasa de positividad se define para un periodo dado (como una semana) de dos formas:
 
 * tasa de positividad (pruebas) = Número de pruebas positivas / Número de pruebas totales
 
