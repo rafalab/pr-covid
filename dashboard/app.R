@@ -32,7 +32,8 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                    min = first_day,
                                    format = "M-dd",
                                    max = today(),
-                                   language = "es"),
+                                   language = "es",
+                                   width = "100%"),
                     
                     actionButton("weeks", "Última semana", 
                                  style = button_style),
@@ -69,7 +70,7 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                             "Casos por día" = "casos", 
                                             "Muertes y hospitalizaciones" = "hosp-mort",
                                             "Casos, positivos y pruebas por día" = "positivos",
-                                            "Positivos y pruebas or municipio por día" = "municipios",
+                                            "Positivos y pruebas por municipio por día" = "municipios",
                                             "Positivos y pruebas por edad por día" = "edad",
                                             "Positivos y pruebas por municipio/edad por día" = "municipios-edad",
                                             "Positivos por laboratorio" = "labs",
@@ -91,18 +92,14 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                     tabsetPanel(
                       
                       tabPanel("Resumen",
-                               #htmlOutput("riesgo"),
+                               
                                h4("Niveles actuales: "),
                                htmlOutput("positividad"),
                                htmlOutput("fecha"),
-                               hr(),
+                               br(),
                                htmlOutput("table_title"),
                                DT::dataTableOutput("resumen_table"),
-                               HTML(paste0("<h5> <b> Por cientos</b>, ",
-                                           "<b>casos</b>, y <b>pruebas</b> están basados en un <b>promedio de siete días</b> para contrarrestar el efecto que tiene el día de la semana. ",
-                                           "La flechas de colores no dicen si hubo cambio estadísticamente singificative cuando comparamos a la semana anterior. ",
-                                           "Noten que los datos de las pruebas toman ", lag_to_complete, " días en estar aproximadamente completos, ",
-                                           "por lo tanto, calculamos los casos y pruebas para <b>", format(last_day, "%B %d</b>. "))),
+                               htmlOutput("table_caption"),
                                hr(),
                                h4("Resumen gráfico:"),
                                plotOutput("resumen_plots")),
@@ -115,8 +112,9 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                               style = button_style)),
                       
                       tabPanel("Positividad",
+                               h4("Tasa de positividad"),
                                radioButtons("pos_version", 
-                                            label = "Definición:",
+                                            label = "",
                                             choices = list("Pruebas sobre pruebas" = "pruebas",
                                                            "Casos sobre personas" = "casos"),
                                             selected = "pruebas",
@@ -142,8 +140,21 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                hr(),
                                plotOutput("numero_pruebas_por_lab")),
                       
+                      
                       tabPanel("Casos",
                                plotOutput("casos")),
+                      
+                      tabPanel("Regiones",
+                               radioButtons("by_region_version", 
+                                            label = "",
+                                            choices = list("Tasa de positividad (pruebas)" = "tp_pruebas",
+                                                           "Tasa de positividad (casos)" = "tp_casos",
+                                                           "Casos por 100,000" = "casos",
+                                                           "Pruebas por 100,000" = "pruebas"),
+                                            selected = "tp_pruebas",
+                                            inline = TRUE),
+                               plotOutput("plot_by_region"),
+                               DT::dataTableOutput("table_by_region")),
                       
                       tabPanel("Municipios",
                                DT::dataTableOutput("municipios")),
@@ -171,13 +182,16 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                DT::dataTableOutput("labs")),
                       
                       tabPanel("Vacunas",
-                               plotOutput("vaccines"))
+                               plotOutput("vaccines"),
+                               DT::dataTableOutput("vaccines_table")),
                       
-                    )
-                  )),
+                      tabPanel("FAQ",
+                               includeMarkdown("faq.md"))
+                      
+                    ), width = 9
+                  ), position = "left"),
                 hr(),
-                div(class = "footer", includeHTML("footer.html")
-                )
+                div(class = "footer", includeHTML("footer.html"))
 )
 
 server <- function(input, output, session) {
@@ -232,24 +246,31 @@ server <- function(input, output, session) {
   # Summary table title -----------------------------------------------------
 
   output$table_title <- renderText({
-      paste0("<h4>Resumen basado en datos de pruebas ",
-             case_when(input$testType == "Molecular" ~ "moleculares", 
-                       input$testType == "Serological" ~ "serológicas",
-                       input$testType == "Antigens" ~ "de antígenos",
-                       input$testType == "Molecular+Antigens" ~ "moleculares y de antígenos"),
-                       " hasta ", 
+      paste0("<h4>Resumen basado en datos hasta ", 
              format(last_day, "%B %d:"), 
              "</h4>")
   })
     
+  output$table_caption <- renderText({
+    paste0("<h5> <b> Tasa de positividad</b>, ",
+           "<b>casos</b>, y <b>pruebas</b> están basados en pruebas ",
+           case_when(input$testType == "Molecular" ~ "moleculares", 
+                     input$testType == "Serological" ~ "serológicas",
+                     input$testType == "Antigens" ~ "de antígenos",
+                     input$testType == "Molecular+Antigens" ~ "moleculares y de antígenos"),
+           
+           ". Para estos indicadores y las muertes usamos <b>promedio de siete días</b> para contrarrestar el efecto que tiene el día de la semana. ",
+           "Las flechas de colores no dicen si hubo cambio estadísticamente singificative cuando comparamos a la semana anterior. ",
+           "Noten que los datos de las pruebas toman ", lag_to_complete, " días en estar aproximadamente completos. Ver pestaña <em>FAQ</em> para explicaciones mas detalladas.")
+  })
   # -- This shows a summary
   res <- reactive(compute_summary(tests, hosp_mort, type = input$testType))
   
   output$positividad <-  renderText({
     paste0(
       "<table cellpadding=\"100\" cellspacing=\"100\">",
-      "<tr><td>% pruebas positivas:</td><td align=\"right\">&emsp;", res()$positividad, "</td></tr>", 
-      "<tr><td>% casos nuevos:</td><td align=\"right\">&emsp;", res()$casos_positividad, "</td></tr>", #, "&emsp;", 
+      "<tr><td>Tasa de positividad (pruebas):</td><td align=\"right\">&emsp;", res()$positividad, "</td></tr>", 
+      "<tr><td>Tasa de positividad (casos):</td><td align=\"right\">&emsp;", res()$casos_positividad, "</td></tr>", #, "&emsp;", 
       "<tr><td>Hospitalizaciones:</td><td align=\"right\">&emsp;", res()$hosp, "</td></tr>",
       "<tr><td>% población vacunada:</td><td align=\"right\">&emsp;", res()$vacunas, "</td></tr>",
       "<tr><td>Días para alcanzar 70%:</td><td align=\"right\">&emsp;", res()$dias_hasta_meta_vacunas, "</td></tr>",
@@ -303,7 +324,7 @@ server <- function(input, output, session) {
   the_period <- ifelse(input$acumulativo, paste("calculadas desde ",format(input$range[1], "%B %d"), "hasta la fecha de la primera columna. "),
                                                 "calculadas para la semana acabando en la fecha de la primera columna. ")
    the_caption <- paste0(
-     "<p>Datos basados en pruebas ", type,
+     "<p>Tasa de positividad y casos basados en pruebas ", type,
      " Mostramos dos versiones de la <b>tasa de positividad</b> ",
      "(explicación <a href=\"https://rafalab.github.io/pr-covid/tasa-de-positividad-faq.html\">aquí</a>) ",
      the_period,
@@ -440,6 +461,22 @@ server <- function(input, output, session) {
                yscale = input$yscale)
   )
   
+
+  # by region stats ---------------------------------------------------------
+
+  by_region <- reactive({load(file.path(rda_path,"regions.rda"));
+                              summary_by_region(tests_by_region, 
+                                                pop_by_region,
+                                                start_date = input$range[1], 
+                                                end_date = input$range[2], 
+                                                type =  input$testType,
+                                                cumm = input$acumulativo, 
+                                                yscale = input$yscale,
+                                                version = input$by_region_version)})
+  
+  output$plot_by_region <- renderPlot(by_region()$p)
+  output$table_by_region <- DT::renderDataTable(by_region()$pretty_tab, server = FALSE)
+  
   # -- This creates a geographical table of positivity rate
   output$municipios <- DT::renderDataTable({
     ret <- make_municipio_table(tests_by_strata,  
@@ -512,12 +549,16 @@ server <- function(input, output, session) {
   }, server = FALSE)
   
   output$vaccines <- renderPlot({
-    load(file.path(rda_path,"rezago.rda"))
     plot_vaccines(hosp_mort, 
                 start_date = input$range[1],
                 end_date =input$range[2])
   })
   
+  output$vaccines_table <- DT::renderDataTable({
+    table_vaccines(hosp_mort, 
+                  start_date = input$range[1],
+                  end_date =input$range[2])
+  }, server = FALSE)
   
   # -- This allows users to download data
   datasetInput <- reactive({

@@ -80,8 +80,8 @@ ui <- fixedPage(
                      "</UL><p>Usamos totales semanales en vez de diarios, para evitar el efecto que tiene el día de la semana. Por ejemplo, los domingos se hacen muchas menos pruebas. ",
                      "Las tasas entonces se definen así:</p>",
                      "<UL>",
-                     "<LI><b>% pruebas positivas</b> = <b>Positivos</b> / <b>Personas</b></LI>",
-                     "<LI><b>% casos nuevos = </b> <b>Casos</b> / (<b>Casos</b> + <b>Negativos</b>)</LI>",
+                     "<LI><b>Tasa de positividad (pruebas)</b> = <b>Positivos</b> / <b>Personas</b></LI>",
+                     "<LI><b>Tasa de positividad (casos)</b> = <b>Casos</b> / (<b>Casos</b> + <b>Negativos</b>)</LI>",
                      "</UL>",
                      "<p>La primera es parecida a la tasa de positividad que usa la CDC. La diferencia es que removemos duplicados dentro de cada semana para evitar el posible efecto de duplicados causados por errores de entrada de datos. ",
                      "Noten que la primera tasa es más alta que la segunda debido a que muchos se hacen pruebas en múltiples semanas y por lo tanto ",
@@ -159,8 +159,8 @@ server <- function(input, output, session) {
     output$positividad <-  renderText({
         paste0(
             "<table cellpadding=\"100\" cellspacing=\"100\">",
-            "<tr><td>% pruebas positivas:</td><td align=\"right\">&emsp;", res()$positividad, "</td></tr>", 
-            "<tr><td>% casos nuevos:</td><td align=\"right\">&emsp;", res()$casos_positividad, "</td></tr>", #, "&emsp;", 
+            "<tr><td>Tasa de positividad (pruebas):</td><td align=\"right\">&emsp;", res()$positividad, "</td></tr>", 
+            "<tr><td>Tasa de positividad (casos):</td><td align=\"right\">&emsp;", res()$casos_positividad, "</td></tr>", #, "&emsp;", 
             "<tr><td>Hospitalizaciones:</td><td align=\"right\">&emsp;", res()$hosp, "</td></tr>",
             "<tr><td>% población vacunada:</td><td align=\"right\">&emsp;", res()$vacunas, "</td></tr>",
             "<tr><td>Días para alcanzar 70%:</td><td align=\"right\">&emsp;", res()$dias_hasta_meta_vacunas, "</td></tr>",
