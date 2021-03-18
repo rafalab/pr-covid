@@ -32,7 +32,7 @@ El panel principal tiene 16 partes con una pestaña para cada una.
 
 La página de inició, bajo la pestaña _RESUMEN_, provee un resumen general de la situación. Nos enfocamos en 6 indicadores: la tasa de positividad, los casos detectados por día, pruebas diarias, las hospitalizaciones, las muertes, y el por ciento de la población vacunada. Esta página se divide en tres partes: 1) niveles actuales, 2) niveles de hace una semana y niveles meta y 3) resúmenes gráfico. Debido a que hay retrasos en reportar resultados de pruebas y muertes, los niveles actuales no reportan casos, pruebas ni muertes. Más detalles sobre estas métricas se incluyen en la sección _¿Qué indicadores se incluyen y por qué?_
 
-El panel de control te permite cambiar opciones de como ver los datos. Las opciones que pueden cambiar so las siguientes:
+El panel de control te permite cambiar opciones de como ver los datos. Las opciones que pueden cambiar son las siguientes:
 
 * Las fechas examinadas: Por defecto mostramos los últimos 90 días, pero pueden cambiarlo a cualquier intervalo. Incluimos tres botones que automaticamente permiten cambiar a la ultima semana, los últimos 90 días, o todas las fechas desde marzo 12.
 
@@ -125,6 +125,13 @@ Muchos de los indicadores diarios que mostramos son el resultado de tomar el pro
 Cuando tomamos promedios de 7 días todos los días, a la curva resultante se le llama una _media móvil_.
  </details>
 
+
+<details><summary>¿Qué representan las curvas entrecortadas? </summary>
+
+Cómo los datos de las pruebas tardan hasta una semana en completar, usamos curvas entrecortadas para representar la última semana y recordarnos de este hecho.
+
+</details>
+
 <details><summary>¿Por qué muestran intervalos de confianza? </summary>
 
 Los datos observados incluyen variabilidad aleatoria. Cuando se recopilan menos datos, esto afectará más los resultados. Por ejemplo los casos reportados en Culebra son menos fiables como estimado de cuantos casos hay que los de San Juan. El intervalo de confianza nos da una idea de cuanto es esta variabilidad.
@@ -173,7 +180,7 @@ Pueden usar las gráficas generadas para cualquier cosa. No hace falta, pero si 
 
 </details>
 
-<details><summary>¿Qué hago se tengo más preguntas?</summary>
+<details><summary>¿Qué hago si tengo más preguntas?</summary>
 
 Pueden hacer preguntas por Twitter: [@rafalab](https://twitter.com/rafalab)
 </details>

@@ -35,22 +35,17 @@ plot_positivity <- function(tests,
              rate = cases_rate_daily,
              lower = get_ci_lower(n, fit),
              upper = get_ci_upper(n, fit))
-    the_title <- paste("% de personas que se hicieron prueba\n" , 
-                       case_when(type == "Molecular" ~ "molecular", 
-                                 type == "Serological" ~ "serológica",
-                                 type == "Antigens" ~ "de antígeno",
-                                 type == "Molecular+Antigens" ~ "moleculares o de antígenos"),
-                       "que son casos únicos nuevos")
+    the_title <- "Tasa de positividad (casos)"
     bajo <- 0.02
   } else{
-    the_title <- paste("% de personas que se hicieron prueba\n" , 
-                       case_when(type == "Molecular" ~ "molecular", 
-                                 type == "Serological" ~ "serológica",
-                                 type == "Antigens" ~ "de antígeno",
-                                 type == "Molecular+Antigens" ~ "moleculares o de antígenos"),
-                       "con resultado positivo")
+    the_title <- "Tasa de positividad (pruebas)"
     bajo <- 0.03
   }
+  the_subtitle <- paste("Basado en pruebas", 
+                        case_when(type == "Molecular" ~ "moleculares", 
+                                  type == "Serological" ~ "serológicas",
+                                  type == "Antigens" ~ "de antígeno",
+                                  type == "Molecular+Antigens" ~ "moleculares y de antígenos"))
   
   ret <- dat %>%
     ggplot(aes(date, rate))
@@ -72,7 +67,7 @@ plot_positivity <- function(tests,
     theme_bw() +
     geom_line(aes(date, fit, lty = date > last_day), color = "blue", size = 0.80, show.legend = FALSE) +
     geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.35, show.legend = FALSE) +
-    labs(title = the_title,
+    labs(title = the_title, subtitle = the_subtitle,
          caption = "Los puntos son el por ciento diarios, la curva el porciento semanal.")
     
   the_ylim <- dat %>%
@@ -81,7 +76,7 @@ plot_positivity <- function(tests,
   the_ylim <- c(the_ylim$lower, the_ylim$upper)
   
   if(yscale){
-    ret <- ret + coord_cartesian(ylim = c(0, 0.25)) +
+    ret <- ret + coord_cartesian(ylim = c(0, 0.15)) +
       scale_y_continuous(labels = scales::percent) 
 
   } else{
@@ -105,7 +100,7 @@ plot_icu <- function(hosp_mort,
     mutate(icu = CamasICU / (CamasICU + CamasICU_disp))
   
   if(yscale){
-    lim  <- c(0,1)
+    lim  <- c(0, 0.4)
   } else
   {
     lim <- c(min(tmp$icu, na.rm = TRUE),
@@ -116,14 +111,14 @@ plot_icu <- function(hosp_mort,
   
   ret <- tmp %>% 
     ggplot(aes(date, icu)) +
-    geom_hline(yintercept = 0.50, lty=2, color = "gray") +
-    geom_hline(yintercept = 0.60, lty=2, color = "gray") +
-    geom_hline(yintercept = 0.70, lty=2, color = "gray") +
-    geom_hline(yintercept = 1.00, lty=2, color = "gray") +
-    annotate("text", end_date + days(2), 0.25, label = "Bajo") + #, color = "#01D474") +
-    annotate("text", end_date + days(2), 0.55, label = "Medio") + #, color = "#FFC900") +
-    annotate("text", end_date + days(2), 0.65, label = "Alto") + #, color = "#FF9600") +
-    annotate("text", end_date + days(2), 0.75, label = "Crítico") + #, color = "#FF0034") +
+    #geom_hline(yintercept = 0.50, lty=2, color = "gray") +
+    #geom_hline(yintercept = 0.60, lty=2, color = "gray") +
+    #geom_hline(yintercept = 0.70, lty=2, color = "gray") +
+    #geom_hline(yintercept = 1.00, lty=2, color = "gray") +
+    #annotate("text", end_date + days(2), 0.25, label = "Bajo") + #, color = "#01D474") +
+    #annotate("text", end_date + days(2), 0.55, label = "Medio") + #, color = "#FFC900") +
+    #annotate("text", end_date + days(2), 0.65, label = "Alto") + #, color = "#FF9600") +
+    #annotate("text", end_date + days(2), 0.75, label = "Crítico") + #, color = "#FF0034") +
     geom_line(lwd = 1.5, color = "darkblue") +
     xlab("Fecha") +
     ylab("Por ciento") +
@@ -167,7 +162,7 @@ plot_deaths <- function(hosp_mort,
       xlab("Fecha") +
       ggtitle("Muertes") +
       scale_x_date(date_labels = "%b", breaks = breaks_width("1 month"))  +
-      scale_y_continuous(breaks = seq(0, max(hosp_mort$IncMueSalud, na.rm=TRUE), 1)) +
+      #scale_y_continuous(breaks = seq(0, max(hosp_mort$IncMueSalud, na.rm=TRUE), 1)) +
       theme_bw()
     if(yscale){
       ret <- ret +  
@@ -230,7 +225,8 @@ plot_cases <- function(cases,
       filter(date >= start_date & date <= end_date) %>%
       ggplot(aes(date, cases)) +
       geom_bar(stat = "identity", fill = "#FBBCB2", width= 0.75) +
-      ggtitle(paste0("Casos acumulados basado en pruebas ", 
+      labs(title = "Casos acumulados",
+           subtitle= paste("Basado en pruebas", 
                      case_when(type == "Molecular" ~ "moleculares", 
                                type == "Serological" ~ "serológicas",
                                type == "Antigens" ~ "de antígenos",
@@ -242,19 +238,19 @@ plot_cases <- function(cases,
       theme_bw()
   } else{
     
-    cases$cases_week_avg[cases$date > last_day] <- NA
+    #cases$cases_week_avg[cases$date > last_day] <- NA
     
     ret <- cases %>%
       filter(testType == type & date >= start_date & date <= end_date) %>%
-      ggplot(aes(date, cases)) +
+      ggplot(aes(date, cases, lty = date > last_day)) +
       ylab("Casos únicos") +
       xlab("Fecha") +
-      ggtitle(paste0("Casos únicos basado en pruebas ", 
-                     case_when(type == "Molecular" ~ "moleculares", 
-                               type == "Serological" ~ "serológicas",
-                               type == "Antigens" ~ "de antígenos",
-                               type == "Molecular+Antigens" ~ "moleculares y de antígenos"))) +
-      
+      labs(title = "Casos únicos", 
+           subtitle = paste("Basado en pruebas",
+                            case_when(type == "Molecular" ~ "moleculares", 
+                                      type == "Serological" ~ "serológicas",
+                                      type == "Antigens" ~ "de antígenos",
+                                      type == "Molecular+Antigens" ~ "moleculares y de antígenos"))) +
       scale_x_date(date_labels = "%b", breaks = breaks_width("1 month"))  +
       theme_bw()
     
@@ -264,8 +260,10 @@ plot_cases <- function(cases,
         geom_line(aes(y = cases_week_avg), color = "#CC523A", size = 1.25) 
     } else{
       ret <- ret + 
+        geom_point(color = "#FBBCB2") +
         geom_line(aes(y = cases_week_avg), color = "#CC523A", size = 1.25) 
     }
+    ret <- ret + theme(legend.position = "none")
   }
   return(ret)
 }
@@ -295,13 +293,13 @@ plot_test <- function(tests,
   } else{
     
     ## last_day is a global variable
-    tests$people_total_week[tests$date > last_day] <- NA
+    #tests$people_total_week[tests$date > last_day] <- NA
     
     tests %>%
       filter(testType == type & date >= start_date & date <= end_date) %>%
       ggplot(aes(date, people_total)) +
       geom_bar(stat = "identity", width = 0.75, fill = "#D1D1E8") +
-      geom_line(aes(y = people_total_week / 7), color = "#31347A", size = 1.25) +
+      geom_line(aes(y = people_total_week / 7, lty = date > last_day), color = "#31347A", size = 1.25, show.legend = FALSE) +
       ylab("Pruebas") +
       xlab("Fecha") +
       labs(title = paste("Pruebas", 
@@ -309,8 +307,7 @@ plot_test <- function(tests,
                                    type == "Serological" ~ "serológicas",
                                    type == "Antigens" ~ "de antígenos",
                                    type == "Molecular+Antigens" ~ "moleculares y de antígenos"), 
-           "por día"),
-           caption = "Incluye pruebas duplicadas.") + 
+           "por día")) + 
       scale_x_date(date_labels = "%b", breaks = breaks_width("1 month"))  +
       scale_y_continuous(labels = scales::comma) +
       theme_bw()
@@ -334,19 +331,21 @@ plot_positivity_by_lab <- function(labs,
       ggplot(aes(date, fit)) + 
       geom_point(aes(y = positives/tests), alpha = 0.25) +
       geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.35) +
-      geom_line(col = "blue") +
+      geom_line(aes(lty = date > last_day), col = "blue", show.legend = FALSE) +
       scale_x_date(date_labels = "%b", breaks = scales::breaks_width("1 month"))  +
       xlab("Fecha") +
       ylab("Tasa") +
-      theme_bw() +
-      facet_wrap(~Laboratorio) +
+      theme_bw() 
+      
       labs(title = paste("Por ciento de pruebas positivas por laboratorio basada en pruebas" , 
                          case_when(type == "Molecular" ~ "moleculares", 
                                    type == "Serological" ~ "serológicas",
                                    type == "Antigens" ~ "de antígenos")))
     if(yscale){
-      ret <- ret + coord_cartesian(ylim = c(0, 0.5))
-    } 
+      ret <- ret + coord_cartesian(ylim = c(0, 0.5)) + facet_wrap(~Laboratorio)
+    } else{
+      ret <- ret + facet_wrap(~Laboratorio, scales = "free_y")
+    }
     return(ret)
   }
 }
@@ -539,7 +538,7 @@ make_pretty_table <- function(tab, the_caption = ""){
                  "Pruebas", 
                  "pruebas", 
                  "casos",
-                 "Vacunados", "Ambas dosis", 
+                 "Vacunados", "Dosis completa", 
                  "Vacunas", "Distribuidas", 
                  "dateorder")
   
@@ -593,18 +592,16 @@ make_positivity_table <- function(tests, hosp_mort,
   ret <- ret %>%
     mutate(fit = make_pct(fit),
            cases_rate = make_pct(cases_rate),
-           cdc_rate = make_pct(tests_positives_week / tests_total_week), 
+           neg = make_pretty(people_total_week - people_positives_week),
            people_positives_week = make_pretty(people_positives_week),
            people_total_week = make_pretty(people_total_week),
            cases = make_pretty(round(cases_week_avg*7)),
-           tests_positives_week = make_pretty(tests_positives_week),
-           tests_total_week = make_pretty(tests_total_week),
            dummy = date) %>%
-    select(date, tests_total_week, people_total_week, tests_positives_week, 
-           people_positives_week, cases, cdc_rate, fit, cases_rate, dummy) %>%
+    select(date,  people_total_week,  
+           people_positives_week, neg, cases, fit, cases_rate, dummy) %>%
     arrange(desc(date)) %>%
     mutate(date = format(date, "%b %d")) %>%
-    setNames(c("Fecha", "Pruebas", "Personas", "Pruebas+", "Personas+", "Casos",  "Pruebas+/ Pruebas", "Personas+/ Personas", "Casos/ (Casos+Neg)"))
+    setNames(c("Fecha", "Pruebas", "Positivos", "Negativos", "Casos", "Pruebas+/ Pruebas", "Casos/ (Casos+Neg)"))
   
    return(ret)
 }
@@ -818,10 +815,10 @@ plot_vaccines <- function(hosp_mort,
     rename("Dosis distribuidas" = total_distributed,
            "Vacunaciones totales" = total_vaccinations,
            "Personas vacunadas" = people_vaccinated,
-           "Personas vacunadas (ambas dosis)" =  people_fully_vaccinated) %>%
+           "Personas vacunadas (Dosis completa)" =  people_fully_vaccinated) %>%
     pivot_longer(-date) %>%
     mutate(name = factor(name, 
-                         levels = c("Personas vacunadas (ambas dosis)",
+                         levels = c("Personas vacunadas (Dosis completa)",
                                     "Personas vacunadas",
                                     "Vacunaciones totales",
                                     "Dosis distribuidas")))
@@ -855,7 +852,7 @@ table_vaccines <- function(hosp_mort,
       dummy = date) %>%
     arrange(desc(dummy)) %>%
     rename("Personas vacunadas" = people_vaccinated,
-           "Ambas dosis" =  people_fully_vaccinated,
+           "Dosis completa" =  people_fully_vaccinated,
            "Dosis distribuidas" = total_distributed,
            "Vacunaciones totales" = total_vaccinations,
            Fecha = date) %>%
@@ -890,7 +887,7 @@ plot_fully_vaccinated <- function(hosp_mort,
       geom_line() +
       scale_x_date(date_labels = "%b %d") +#, breaks = breaks_width("days")) +
       scale_y_continuous(labels = scales::percent) +
-      ggtitle("Por ciento de la población vacunada con ambas dosis") +
+      ggtitle("Por ciento de la población vacunada con dosis completa") +
       ylab("Por ciento") +
       xlab("Fecha") +
       theme_bw() 
@@ -1008,7 +1005,8 @@ summary_by_region <- function(tests_by_region,
     select(date, all_of(levels(dat$region))) %>%
     rename(Fecha = date)
   
-  the_title <- paste0(var_title, " basado en pruebas ", type_char)
+  the_title <- var_title
+  the_subtitle <- paste("Basado en pruebas", type_char)
   
   pretty_tab <- tab %>% 
     mutate(dummy = Fecha,
@@ -1025,12 +1023,13 @@ summary_by_region <- function(tests_by_region,
                        list(className = 'dt-center', targets = c(1:(ncol(pretty_tab)-1))))))
   
   p <- dat %>% 
-    ggplot(aes(date, the_stat, color = region)) + 
+    ggplot(aes(date, the_stat, color = region,  lty = date > last_day)) + 
     geom_line() +
+    guides(linetype = FALSE) +
     xlab("Fecha") +
     ylab(var_title) +
     labs(color = "Región") +
-    ggtitle(the_title) +
+    labs(title = the_title, subtitle = the_subtitle) +
     scale_x_date(date_labels = "%b", breaks = breaks_width("1 month")) +
     theme_bw()
 
