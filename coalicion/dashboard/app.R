@@ -105,7 +105,7 @@ ui <- fixedPage(
                      <LI><b>Pruebas por día</b> = Promedio diario de personas que se hicieron la prueba esa semana.</LI>
                      <LI><b>Hospitalizaciones</b> = Número de hospitalizaciones reportados por salud el último día de la semana. La tendencia se calcula para una media móvil de 7 días que no mostramos en la tabla.</LI>
                      <LI><b>Muertes por día</b> = Promedio diario de muertes reportadas por salud esa semana. </LI>
-                     <LI><b>% población vacunada</b> = Por ciento de la población de Puerto Rico que ha recibido ambas dosis de la vacuna. </LI>
+                     <LI><b>% población vacunada</b> = Por ciento de la población de Puerto Rico que ha recibido la dosis completa de la vacuna. </LI>
                      <LI><b>Días para alcanzar 70%</b> = Basado en la tasa de crecimiento de la última semana, el número de días que tardará llegar a la meta de 70% de la población vacunada con amabas dosis.</LI>
                      <LI><b>% por lo menos 1 dosis</b> = Por ciento de la población de Puerto Rico que ha recibido por lo menos una dosis de la vacuna.</LI>
                      </UL>",
