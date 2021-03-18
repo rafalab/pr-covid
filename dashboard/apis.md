@@ -45,3 +45,6 @@
 
 * Casos por region:
 ```/administration/reports/cases/dashboard-region```
+
+* Viajeros llegando al aeropuerto:
+```/administration/reports/travels/total-forms-by-reported-arrival-date```
