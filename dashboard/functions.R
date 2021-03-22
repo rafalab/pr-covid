@@ -47,29 +47,26 @@ plot_positivity <- function(tests,
                                   type == "Antigens" ~ "de antígeno",
                                   type == "Molecular+Antigens" ~ "moleculares y de antígenos"))
   
+  add <- days(ceiling(as.numeric(end_date - start_date) * 0.04))
+  
   ret <- dat %>%
     ggplot(aes(date, rate))
-  if(type == "Molecular"){
-    ret <- ret + 
-      geom_hline(yintercept = bajo, lty=2, color = "gray") +
-      ##geom_hline(yintercept = 0.10, lty=2, color = "gray") +
-      ##geom_hline(yintercept = 0.20, lty=2, color = "gray") +
-      annotate("text", end_date + days(2), bajo - 0.01, label = "Meta") #, color = "#01D474") +
-      ##annotate("text", end_date + days(2), 0.065, label = "Medio") + #, color = "#FFC900") +
-      ##annotate("text", end_date + days(2), 0.15, label = "Alto") + #, color = "#FF9600") +
-      ##annotate("text", end_date + days(2), 0.225, label = "Crítico") + #, color = "#FF0034") +
-  }
+  
+  the_label <- filter(dat, date == end_date) %>% pull(fit)
+  
   ret <- ret + 
     geom_point(size = 2, alpha = 0.65, show.legend = FALSE) +
     ylab("Tasa de positividad") +
     xlab("Fecha") +
-    scale_x_date(date_labels = "%b", breaks = breaks_width("1 month")) +
     theme_bw() +
     geom_line(aes(date, fit, lty = date > last_day), color = "blue", size = 0.80, show.legend = FALSE) +
     geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.35, show.legend = FALSE) +
+    annotate("label", x = end_date + add, y = the_label, label = make_pct(the_label)) +
     labs(title = the_title, subtitle = the_subtitle,
-         caption = "Los puntos son el por ciento diarios, la curva el porciento semanal.")
+         caption = "Los puntos son el por ciento diarios, la curva el porciento semanal.") +
+    scale_x_date(date_labels = "%b", breaks = breaks_width("1 month"))
     
+     
   the_ylim <- dat %>%
     summarize(lower = min(lower, na.rm = TRUE), upper = max(upper, na.rm = TRUE))
   
@@ -80,10 +77,22 @@ plot_positivity <- function(tests,
       scale_y_continuous(labels = scales::percent) 
 
   } else{
-    ret <- ret + 
+    ret <- ret  +
       scale_y_continuous(labels = scales::percent, 
-                         limits = c(the_ylim)) 
+                         limits = c(the_ylim))
   }
+  
+  if(type == "Molecular"){
+    ret <- ret + 
+      annotate("label", start_date, bajo - 0.01, label = paste("Meta =", make_pct(bajo)), hjust = 0) + #, color = "#01D474") +
+      geom_hline(yintercept = bajo, lty=2, color = "gray") 
+    ##geom_hline(yintercept = 0.10, lty=2, color = "gray") +
+    ##geom_hline(yintercept = 0.20, lty=2, color = "gray") +
+    ##annotate("text", end_date + days(2), 0.065, label = "Medio") + #, color = "#FFC900") +
+    ##annotate("text", end_date + days(2), 0.15, label = "Alto") + #, color = "#FF9600") +
+    ##annotate("text", end_date + days(2), 0.225, label = "Crítico") + #, color = "#FF0034") +
+  }
+  
   return(ret)
 }
 
@@ -601,7 +610,7 @@ make_positivity_table <- function(tests, hosp_mort,
            people_positives_week, neg, cases, fit, cases_rate, dummy) %>%
     arrange(desc(date)) %>%
     mutate(date = format(date, "%b %d")) %>%
-    setNames(c("Fecha", "Pruebas", "Positivos", "Negativos", "Casos", "Pruebas+/ Pruebas", "Casos/ (Casos+Neg)"))
+    setNames(c("Fecha", "Pruebas", "Positivos", "Negativos", "Casos", "Positivos / Pruebas", "Casos / (Casos+Neg)"))
   
    return(ret)
 }
