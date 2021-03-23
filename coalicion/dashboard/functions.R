@@ -5,6 +5,13 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular", day = last_com
     ifelse(is.na(x), "", paste0(format(round(100 * x, digits = digits), nsmall = digits), "%"))
   }
   
+  dynamic_round <- function(x){
+    if(round(x)>=10){
+      prettyNum(round(x), big.mark = ",")
+    } else{ 
+      format(round(x, digits = 1), nsmall = 1)
+    }
+  }
   ## dates that we will put in the table
   ## they are 4 entries, 1 week apart
   ## lag_to_complete is a global var
@@ -224,11 +231,9 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular", day = last_com
     c(make_pct(pos$fit[i]), 
       make_pct(casespos$cases_rate[i]), 
       round(cas$cases_week_avg[i]), 
-      prettyNum(round(tes$people_total_week[i] / 7), 
-                big.mark = ","),
-      prettyNum(round(hos$HospitCOV19[i]), 
-                big.mark = ","),
-      format(round(mor$mort_week_avg[i], digits = 1), nsmall = 1),
+      prettyNum(round(tes$people_total_week[i] / 7), big.mark = ","),
+      prettyNum(round(hos$HospitCOV19[i]), big.mark = ","),
+      dynamic_round(mor$mort_week_avg[i]),
       make_pct(vac$pct_fully_vaccinated[i]))
   }
   
