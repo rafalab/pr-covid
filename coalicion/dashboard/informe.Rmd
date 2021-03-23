@@ -43,7 +43,7 @@ knitr::kable(res$tab, escape = FALSE, align = c("l", "l", "r", "r", "r"), captio
 
 #### Tasas de Positividad
 
-Las tasas se calculan usando los siguientes totales semanales:**",
+Las tasas se calculan usando los siguientes totales semanales:
 
 * **Personas** = personas que se hicieron pruebas.
 * **Positivos** = personas que salieron positivo.

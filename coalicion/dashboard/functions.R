@@ -228,7 +228,7 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular", day = last_com
                 big.mark = ","),
       prettyNum(round(hos$HospitCOV19[i]), 
                 big.mark = ","),
-      round(mor$mort_week_avg[i]),
+      format(round(mor$mort_week_avg[i], digits = 1), nsmall = 1),
       make_pct(vac$pct_fully_vaccinated[i]))
   }
   
