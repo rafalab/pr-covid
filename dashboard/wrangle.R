@@ -124,7 +124,8 @@ if(FALSE){
 
 
 # Reading and wrangling cases data from database ---------------------------
-
+age_levels <-  paste(seq(0,125,5), "to", seq(4,129,5))
+  
 all_tests_with_id <- get_bioportal(cases_url)
 
 all_tests_with_id <- all_tests_with_id %>%  
@@ -135,6 +136,8 @@ all_tests_with_id <- all_tests_with_id %>%
          reportedDate = ymd_hms(reportedDate, tz = "America/Puerto_Rico"),
          orderCreatedAt = ymd_hms(orderCreatedAt, tz = "America/Puerto_Rico"),
          resultCreatedAt = ymd_hms(resultCreatedAt, tz = "America/Puerto_Rico"),
+         ageRange       = na_if(ageRange, "N/A"),
+         ageRange       = factor(ageRange, levels = age_levels),
          region = na_if(region, "N/A"),
          region = ifelse(region == "Bayamon", "Bayamón", region),
          region = ifelse(region == "Mayaguez", "Mayagüez", region),
@@ -672,37 +675,39 @@ tests_by_region <- left_join(tests_by_region, cases_by_region, by = c("testType"
          cases_plus_negatives_daily = people_total - people_positives + cases,
          cases_rate_daily = cases / cases_plus_negatives_daily)
 
+## Not using unique negatives so removed them to save time
 ## Compute unique negatives
 
 # compute unique negative cases ------------------------------------------------------------
-negative_cases_by_region <- all_tests_with_id %>%  
-  bind_rows(mol_anti) %>%
-  filter(date>=first_day & result == "negative" &
-           testType %in% c("Molecular", "Serological", "Antigens",  "Molecular+Antigens")) %>%
-  group_by(testType, region, patientId) %>%
-  arrange(date) %>%
-  slice(1) %>% 
-  ungroup() %>%
-  select(-patientId, -result) %>%
-  arrange(testType, date) %>%
-  group_by(testType, region, date) %>% 
-  summarize(negative_cases = n(), .groups = "drop")
-
-# Make sure all dates are included
-negative_cases_by_region <-  select(tests_by_region, testType, region, date) %>% 
-  left_join(negative_cases_by_region, by = c("testType", "region", "date")) %>%
-  replace_na(list(negative_cases = 0))
-
-# compute daily weekly average and add to negative_cases data frame
-fits <- negative_cases_by_region %>% 
-  group_by(testType, region) %>%
-  do(ma7(d = .$date, y = .$negative_cases)) %>%
-  rename(negative_cases_week_avg = moving_avg)
-negative_cases_by_region <- left_join(negative_cases_by_region, fits, by = c("testType", "region", "date"))
+# negative_cases_by_region <- all_tests_with_id %>%  
+#   bind_rows(mol_anti) %>%
+#   filter(date>=first_day & result == "negative" &
+#            testType %in% c("Molecular", "Serological", "Antigens",  "Molecular+Antigens")) %>%
+#   group_by(testType, region, patientId) %>%
+#   arrange(date) %>%
+#   slice(1) %>% 
+#   ungroup() %>%
+#   select(-patientId, -result) %>%
+#   arrange(testType, date) %>%
+#   group_by(testType, region, date) %>% 
+#   summarize(negative_cases = n(), .groups = "drop")
+# 
+# # Make sure all dates are included
+# negative_cases_by_region <-  select(tests_by_region, testType, region, date) %>% 
+#   left_join(negative_cases_by_region, by = c("testType", "region", "date")) %>%
+#   replace_na(list(negative_cases = 0))
+# 
+# # compute daily weekly average and add to negative_cases data frame
+# fits <- negative_cases_by_region %>% 
+#   group_by(testType, region) %>%
+#   do(ma7(d = .$date, y = .$negative_cases)) %>%
+#   rename(negative_cases_week_avg = moving_avg)
+# negative_cases_by_region <- left_join(negative_cases_by_region, fits, by = c("testType", "region", "date"))
 
 ## add new cases and weekly average to tests data frame
-tests_by_region <- left_join(tests_by_region, negative_cases_by_region, by = c("testType", "region", "date"))
+#tests_by_region <- left_join(tests_by_region, negative_cases_by_region, by = c("testType", "region", "date"))
 
+## add regions populations
 pop_by_region <- read_csv("https://raw.githubusercontent.com/rafalab/pr-covid/master/dashboard/data/poblacion-region.csv",
                           skip = 1, col_names = c("rn", "region", "poblacion")) %>% 
   select(region, poblacion) %>%
@@ -712,6 +717,95 @@ tests_by_region$region <- factor(as.character(tests_by_region$region),
                                  levels = c(levels(pop_by_region$region), "No reportada"))
 
 save(tests_by_region, pop_by_region, file = file.path(rda_path, "regions.rda"))
+
+
+# By age ------------------------------------------------------------------
+age_starts <- c(0, 10, 20,30,40,65,75,85)
+age_ends <- c(9, 19,29,39,64,74,84,Inf)
+## compute daily totals
+age_levels <- paste(age_starts, age_ends, sep = " a ")
+age_levels[length(age_levels)] <- paste0(age_starts[length(age_levels)],"+")
+
+tests_by_age <- all_tests_with_id %>% 
+  bind_rows(mol_anti) %>%
+  mutate(age_start = as.numeric(str_extract(ageRange, "^\\d+")), 
+         age_end = as.numeric(str_extract(ageRange, "\\d+$"))) %>%
+  mutate(ageRange = age_levels[as.numeric(cut(age_start, c(age_starts, Inf), right = FALSE))]) %>%
+  mutate(ageRange = factor(ageRange, levels = age_levels)) %>%
+  filter(date >= first_day & 
+           testType %in% c("Molecular", "Serological", "Antigens", "Molecular+Antigens") & 
+           result %in% c("positive", "negative")) %>%
+  group_by(testType, date, ageRange) %>% 
+  summarize(people_positives = n_distinct(patientId[result == "positive"]),
+            people_total = n_distinct(patientId),
+            tests_positives = sum(result == "positive"),
+            tests_total = n(),
+            .groups = "drop") %>%
+  mutate(rate = people_positives / people_total)
+         
+## run the function on each test type
+fits <- all_tests_with_id %>% 
+  bind_rows(mol_anti) %>%
+  mutate(age_start = as.numeric(str_extract(ageRange, "^\\d+")), 
+         age_end = as.numeric(str_extract(ageRange, "\\d+$"))) %>%
+  mutate(ageRange = age_levels[as.numeric(cut(age_start, c(age_starts, Inf), right = FALSE))]) %>%
+  mutate(ageRange = factor(ageRange, levels = age_levels)) %>%
+  mutate(entry_date = as_date(orderCreatedAt)) %>%
+  filter(date >= first_day & testType %in% c("Molecular", "Serological", "Antigens", "Molecular+Antigens") & 
+           result %in% c("positive", "negative")) %>%
+  nest_by(testType, ageRange) %>%
+  summarize(positivity(data), .groups = "drop")
+
+## add new variable to test data frame
+tests_by_age <- left_join(tests_by_age, fits, by = c("testType", "date", "ageRange")) 
+
+## compute weekly totals for positive tests and total tests
+tests_by_age <- tests_by_age %>% 
+  group_by(testType) %>%
+  mutate(tests_positives_week = sum7(d = date, y = tests_positives)$moving_sum) %>%
+  mutate(tests_total_week = sum7(d = date, y = tests_total)$moving_sum) %>%
+  ungroup()
+
+# compute daily new cases
+cases_by_age <- all_cases %>%
+  mutate(age_start = as.numeric(str_extract(ageRange, "^\\d+")), 
+         age_end = as.numeric(str_extract(ageRange, "\\d+$"))) %>%
+  mutate(ageRange = age_levels[as.numeric(cut(age_start, c(age_starts, Inf), right = FALSE))]) %>%
+  mutate(ageRange = factor(ageRange, levels = age_levels)) %>% 
+  group_by(testType, date, ageRange) %>% 
+  summarize(cases = n(), .groups = "drop") 
+
+# Make sure all dates are included
+cases_by_age <-  left_join(select(tests_by_age, testType, date, ageRange), cases_by_age, by = c("testType", "date", "ageRange")) %>%
+  replace_na(list(cases = 0)) 
+
+# compute daily weekly average and add to cases data frame
+fits <- cases_by_age %>% 
+  group_by(testType, ageRange) %>%
+  do(ma7(d = .$date, y = .$cases)) %>%
+  rename(cases_week_avg = moving_avg)
+cases_by_age <- left_join(cases_by_age, fits, by = c("testType", "date", "ageRange"))
+
+## add new cases and weekly average to tests data frame
+tests_by_age <- left_join(tests_by_age, cases_by_age, by = c("testType", "date", "ageRange")) %>%
+  mutate(cases_plus_negatives = (people_total_week - people_positives_week + cases_week_avg * 7),
+         cases_rate = cases_week_avg * 7 / cases_plus_negatives,
+         cases_plus_negatives_daily = people_total - people_positives + cases,
+         cases_rate_daily = cases / cases_plus_negatives_daily)
+
+## add regions populations
+pop_by_age <- read_csv("https://raw.githubusercontent.com/rafalab/pr-covid/master/dashboard/data/poblacion-por-edad.csv") %>%
+  rename(ageRange = agegroup, poblacion = population) %>%
+  mutate(age_start = as.numeric(str_extract(ageRange, "^\\d+")), 
+         age_end = as.numeric(str_extract(ageRange, "\\d+$"))) %>%
+  mutate(ageRange = age_levels[as.numeric(cut(age_start, c(age_starts, Inf), right = FALSE))]) %>%
+  mutate(ageRange = factor(ageRange, levels = age_levels)) %>% 
+  group_by(ageRange) %>%
+  summarize(poblacion = sum(poblacion), .groups = "drop") %>%
+  mutate(ageRange = str_replace(ageRange, "-", " to ")) %>%
+  mutate(ageRange = factor(ageRange, levels = levels(tests_by_age$ageRange)))
+  
+save(tests_by_age, pop_by_age, file = file.path(rda_path, "by-age.rda"))
 
 
 

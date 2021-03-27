@@ -654,77 +654,77 @@ make_municipio_table <- function(tests_by_strata,
     return(ret)
 }
 
-plot_agedist <- function(tests_by_strata,
-                         start_date = first_day, 
-                         end_date = last_complete_day, 
-                         type = "Molecular",
-                         yscale = FALSE,
-                         version = c("hist", "tendencia")){
-  
-  version <- match.arg(version)
-  
-  age_levels <- levels(tests_by_strata$ageRange)
-  dat <- tests_by_strata %>%
-    filter(testType == type & date >= start_date & date <= end_date) %>%
-    filter(ageRange != "No reportado") %>%
-    mutate(ageRange = age_levels[ifelse(as.numeric(ageRange) >= 9, 9, as.numeric(ageRange))]) %>%
-    mutate(ageRange = ifelse(ageRange == "80 to 89", "80+", ageRange)) %>%
-    mutate(ageRange = str_replace(ageRange, "to", "a"))
-  
-  if(version == "hist"){
-    ret <- dat %>%
-      group_by(ageRange) %>%
-      summarize(positives = sum(positives), .groups = "drop") %>%
-      ungroup() %>%
-      mutate(percent = positives/sum(positives)) %>%
-      ggplot(aes(ageRange, percent)) +
-      geom_bar(stat = "identity") +
-      scale_y_continuous(labels = scales::percent) +
-      xlab("Edad") +
-      ylab("por ciento") +
-      ggtitle(paste("Distribución de pruebas",  
-                    case_when(type == "Molecular" ~ "moleculares", 
-                              type == "Serological" ~ "serológicas",
-                              type == "Antigens" ~ "de antígenos",
-                              type == "Molecular+Antigens" ~ "moleculares y de antígenos"),
-                    "positivas por edad",
-                    format(start_date, "%B %d"),
-                    "a",
-                    format(end_date, "%B %d."))) +
-      theme_bw() 
-    
-    if(yscale) ret <- ret + coord_cartesian(ylim = c(0, 0.23))
-  } else{
-    age_levels <- levels(tests_by_strata$ageRange)
-    ret <- dat %>%
-      group_by(ageRange, week = round_date(date, "week")) %>%
-      summarize(positives = sum(positives), .groups = "drop") %>%
-      ungroup() %>%
-      group_by(week) %>%
-      mutate(percent = positives/sum(positives)) %>%
-      ungroup() %>%
-      ggplot(aes(week, percent)) +
-      geom_line(stat = "identity") +
-      scale_x_date(date_labels = "%b %d") +
-      scale_y_continuous(labels = scales::percent) +
-      xlab("Fecha") +
-      ylab("por ciento") +
-      ggtitle(paste("Distribución de pruebas",  
-                    case_when(type == "Molecular" ~ "moleculares", 
-                              type == "Serological" ~ "serológicas",
-                              type == "Antigens" ~ "de antígenos",
-                              type == "Molecular+Antigens" ~ "moleculares y de antígenos"),
-                    "positivas cada semana por edad.")) +
-      theme_bw()
-    
-    if(yscale){
-      ret <- ret + facet_wrap(~ageRange, ncol = 3) + coord_cartesian(ylim = c(0, 0.23))
-    } else{
-      ret <- ret + facet_wrap(~ageRange, ncol = 3, scale = "free") 
-    }
-  }
-  return(ret)
-}
+# plot_agedist <- function(tests_by_strata,
+#                          start_date = first_day, 
+#                          end_date = last_complete_day, 
+#                          type = "Molecular",
+#                          yscale = FALSE,
+#                          version = c("hist", "tendencia")){
+#   
+#   version <- match.arg(version)
+#   
+#   age_levels <- levels(tests_by_strata$ageRange)
+#   dat <- tests_by_strata %>%
+#     filter(testType == type & date >= start_date & date <= end_date) %>%
+#     filter(ageRange != "No reportado") %>%
+#     mutate(ageRange = age_levels[ifelse(as.numeric(ageRange) >= 9, 9, as.numeric(ageRange))]) %>%
+#     mutate(ageRange = ifelse(ageRange == "80 to 89", "80+", ageRange)) %>%
+#     mutate(ageRange = str_replace(ageRange, "to", "a"))
+#   
+#   if(version == "hist"){
+#     ret <- dat %>%
+#       group_by(ageRange) %>%
+#       summarize(positives = sum(positives), .groups = "drop") %>%
+#       ungroup() %>%
+#       mutate(percent = positives/sum(positives)) %>%
+#       ggplot(aes(ageRange, percent)) +
+#       geom_bar(stat = "identity") +
+#       scale_y_continuous(labels = scales::percent) +
+#       xlab("Edad") +
+#       ylab("por ciento") +
+#       ggtitle(paste("Distribución de pruebas",  
+#                     case_when(type == "Molecular" ~ "moleculares", 
+#                               type == "Serological" ~ "serológicas",
+#                               type == "Antigens" ~ "de antígenos",
+#                               type == "Molecular+Antigens" ~ "moleculares y de antígenos"),
+#                     "positivas por edad",
+#                     format(start_date, "%B %d"),
+#                     "a",
+#                     format(end_date, "%B %d."))) +
+#       theme_bw() 
+#     
+#     if(yscale) ret <- ret + coord_cartesian(ylim = c(0, 0.23))
+#   } else{
+#     age_levels <- levels(tests_by_strata$ageRange)
+#     ret <- dat %>%
+#       group_by(ageRange, week = round_date(date, "week")) %>%
+#       summarize(positives = sum(positives), .groups = "drop") %>%
+#       ungroup() %>%
+#       group_by(week) %>%
+#       mutate(percent = positives/sum(positives)) %>%
+#       ungroup() %>%
+#       ggplot(aes(week, percent)) +
+#       geom_line(stat = "identity") +
+#       scale_x_date(date_labels = "%b %d") +
+#       scale_y_continuous(labels = scales::percent) +
+#       xlab("Fecha") +
+#       ylab("por ciento") +
+#       ggtitle(paste("Distribución de pruebas",  
+#                     case_when(type == "Molecular" ~ "moleculares", 
+#                               type == "Serological" ~ "serológicas",
+#                               type == "Antigens" ~ "de antígenos",
+#                               type == "Molecular+Antigens" ~ "moleculares y de antígenos"),
+#                     "positivas cada semana por edad.")) +
+#       theme_bw()
+#     
+#     if(yscale){
+#       ret <- ret + facet_wrap(~ageRange, ncol = 3) + coord_cartesian(ylim = c(0, 0.23))
+#     } else{
+#       ret <- ret + facet_wrap(~ageRange, ncol = 3, scale = "free") 
+#     }
+#   }
+#   return(ret)
+# }
 
 plot_rezago <- function(rezago, rezago_mort,
                         start_date = first_day, 
@@ -1052,6 +1052,172 @@ summary_by_region <- function(tests_by_region,
   
 return(list(p = p, tab = tab, pretty_tab = pretty_tab))
 }
+
+summary_by_age <- function(tests_by_age, 
+                              pop_by_age,
+                              start_date = first_day, 
+                              end_date = last_complete_day, 
+                              type = "Molecular", 
+                              cumm = FALSE,
+                              yscale = FALSE,
+                              version = c("tp_pruebas", "tp_casos", "casos_per", "casos", "prop", "pruebas_per")){
+  
+  version <- match.arg(version)
+  
+  dat <- tests_by_age %>%
+    filter(testType == type & !is.na(ageRange) &
+             date >= start_date & date <= end_date ) %>%
+    mutate(cases_rate_lower = get_ci_lower(cases_plus_negatives, cases_rate),
+           cases_rate_upper = get_ci_upper(cases_plus_negatives, cases_rate)) %>%
+    left_join(pop_by_age, by = "ageRange") 
+  
+  if(cumm){
+    dat <- dat %>% 
+      group_by(ageRange) %>%
+      mutate(people_positives = cumsum(replace_na(people_positives, 0)),
+             people_total = cumsum(replace_na(people_total, 0)),
+             negative_cases = cumsum(replace_na(negative_cases, 0)),
+             fit = people_positives / people_total, 
+             cases = cumsum(replace_na(cases, 0)),
+             cases_rate = cases / (cases + negative_cases),
+             lower = get_ci_lower(people_total, fit),
+             upper = get_ci_upper(people_total, fit),
+             cases_rate_lower = get_ci_lower(negative_cases + cases, cases_rate),
+             cases_rate_upper = get_ci_upper(negative_cases + cases, cases_rate),
+             cases_week_avg = cases,
+             people_total_week = people_total) %>%
+      ungroup()
+    
+    yscale = FALSE
+  }
+  
+  type_char <- case_when(type == "Molecular" ~ "molecular", 
+                         type == "Serological" ~ "serológica",
+                         type == "Antigens" ~ "de antígeno",
+                         type == "Molecular+Antigens" ~ "moleculares o de antígenos")
+  
+  pct <- FALSE
+  if(version == "tp_pruebas"){
+    tab <- dat %>% 
+      mutate(the_stat = make_pretty_ci(fit, lower, upper)) %>%
+      select(date, ageRange, the_stat)
+    dat <- dat %>% rename(the_stat = fit)
+    var_title <- "Tasa de positividad (pruebas)"
+    the_ylim <- c(0, 0.25)
+    pct <- TRUE
+  }
+  if(version == "tp_casos"){
+    tab <- dat %>% 
+      mutate(the_stat = make_pretty_ci(cases_rate, cases_rate_lower, cases_rate_upper)) %>%
+      select(date, ageRange, the_stat)
+    dat <- dat %>% rename(the_stat = cases_rate)
+    var_title <- "Tasa de positividad (casos)"
+    the_ylim <- c(0, 0.2)
+    pct <- TRUE
+  }
+  if(version == "casos"){
+    tab <- dat %>% 
+      mutate(the_stat = cases) %>%
+      mutate(the_stat = make_pretty(cases)) %>%
+      select(date, ageRange, the_stat)
+    dat <- dat %>% 
+      rename(the_stat = cases_week_avg) 
+    var_title <- "Casos únicos por día"
+    the_ylim <- c(0, 200)
+  }
+  
+  if(version == "casos_per"){
+    tab <- dat %>% 
+      mutate(the_stat = cases_week_avg/poblacion*10^5) %>%
+      mutate(the_stat = ifelse(is.na(the_stat), "", format(round(the_stat, 1), nsmall = 1))) %>%
+      select(date, ageRange, the_stat)
+    dat <- dat %>% 
+      mutate(cases_week_avg = cases_week_avg/poblacion*10^5) %>%
+      rename(the_stat = cases_week_avg) 
+    var_title <- "Casos únicos por día por 100,000 habitantes"
+    the_ylim <- c(0, 30)
+  }
+  if(version ==  "pruebas_per"){
+    tab <- dat %>% 
+      mutate(the_stat = make_pretty(round(people_total_week/poblacion*10^5))) %>%
+      select(date, ageRange, the_stat)
+    dat <- dat %>% 
+      mutate(people_total_week = people_total_week/poblacion*10^5) %>%
+      rename(the_stat = people_total_week)
+    var_title <- "Pruebas por día por 100,000 habitantes"
+    the_ylim <- c(0, 3000)
+  }
+  if(version ==  "prop"){
+    dat <- dat %>% group_by(date) %>%
+      mutate(the_stat = cases_week_avg/sum(cases_week_avg)) %>%
+      ungroup() 
+    tab <- dat %>% 
+      mutate(the_stat = make_pct(the_stat)) %>%
+      select(date, ageRange, the_stat)
+    
+    var_title <- "Por ciento de casos"
+    the_ylim <- c(0, .35)
+    pct <- TRUE
+  }
+  
+  tab <- tab %>%
+    pivot_wider(names_from = ageRange, values_from = the_stat) %>% 
+    arrange(desc(date)) %>%
+    select(date, all_of(levels(dat$ageRange))) %>%
+    rename(Fecha = date)
+  
+  the_title <- var_title
+  the_subtitle <- paste("Basado en pruebas", type_char)
+  
+  pretty_tab <- tab %>% 
+    mutate(dummy = Fecha,
+           Fecha = format(Fecha, "%B %d")) 
+  
+  pretty_tab <- 
+    DT::datatable(pretty_tab, 
+                  rownames = FALSE,
+                  class = "display nowrap",
+                  options = list(dom = 't', pageLength = -1,
+                                 columnDefs = list(
+                                   list(targets = 0, orderData = ncol(pretty_tab)-1),
+                                   list(targets = ncol(pretty_tab)-1, visible = FALSE),
+                                   list(className = 'dt-center', targets = c(1:(ncol(pretty_tab)-1))))))
+  
+  if(pct) the_labels <- scales::percent else the_labels <- waiver()
+  
+  if(yscale==FALSE & version ==  "prop"){
+    p <- dat %>% 
+      ggplot(aes(date, the_stat, color = ageRange,  lty = date > last_day)) + 
+      geom_line(show.legend = FALSE) +
+      xlab("Fecha") +
+      ylab(var_title) +
+      labs(color = "Edad") +
+      labs(title = the_title, subtitle = the_subtitle) +
+      scale_x_date(date_labels = "%b", breaks = breaks_width("1 month")) +
+      facet_wrap(~ageRange, scales = "free_y") + 
+      scale_y_continuous(labels = the_labels) +
+      theme_bw()
+  } else{
+    p <- dat %>% 
+      ggplot(aes(date, the_stat, color = ageRange,  lty = date > last_day)) + 
+      geom_line() +
+      guides(linetype = FALSE) +
+      xlab("Fecha") +
+      ylab(var_title) +
+      labs(color = "Edad") +
+      labs(title = the_title, subtitle = the_subtitle) +
+      scale_x_date(date_labels = "%b", breaks = breaks_width("1 month")) +
+      theme_bw()
+    
+    if(yscale){
+      p <- p + scale_y_continuous(limit = the_ylim, labels = the_labels)
+    } else{
+      p <- p + scale_y_continuous(labels = the_labels) 
+    }
+  }
+  return(list(p = p, tab = tab, pretty_tab = pretty_tab))
+}
+
 
 ### this is used to make the table in the front page
 source("https://raw.githubusercontent.com/rafalab/pr-covid/master/coalicion/dashboard/functions.R")

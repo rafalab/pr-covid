@@ -164,14 +164,18 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                plotOutput("mapa_positividad")),
                       
                       tabPanel("Por Edad",
-                               radioButtons("age_plot_version", 
+                               radioButtons("by_age_version", 
                                             label = "",
-                                            choices = list("Histograma" = "hist",
-                                                           "Tendencia" = "tendencia"),
-                                            selected = "hist",
+                                            choices = list("Tasa de positividad (pruebas)" = "tp_pruebas",
+                                                           "Tasa de positividad (casos)" = "tp_casos",
+                                                           "Casos por 100,000" = "casos_per",
+                                                           "Casos" = "casos",
+                                                           "Por ciento de casos" = "prop",
+                                                           "Pruebas por 100,000" = "pruebas"),
+                                            selected = "tp_pruebas",
                                             inline = TRUE),
-                               
-                               plotOutput("age")),
+                               plotOutput("plot_by_age"),
+                               DT::dataTableOutput("table_by_age")),
                       
                       tabPanel("Rezago",
                               plotOutput("rezago")),
@@ -305,7 +309,7 @@ server <- function(input, output, session) {
                      start_date = input$range[1], end_date = input$range[2], 
                      yscale = input$yscale)
                      
-    p <- gridExtra::grid.arrange(p1, p2, p3, p4, ncol = 2)
+    p <- gridExtra::grid.arrange(p1, p2, p3, p4)
     return(p)
   })    
   
@@ -479,6 +483,19 @@ server <- function(input, output, session) {
   
   output$plot_by_region <- renderPlot(by_region()$p)
   output$table_by_region <- DT::renderDataTable(by_region()$pretty_tab, server = FALSE)
+  
+  by_age<- reactive({load(file.path(rda_path,"by-age.rda"));
+    summary_by_age(tests_by_age, 
+                      pop_by_age,
+                      start_date = input$range[1], 
+                      end_date = input$range[2], 
+                      type =  input$testType,
+                      cumm = input$acumulativo, 
+                      yscale = input$yscale,
+                      version = input$by_age_version)})
+  
+  output$plot_by_age <- renderPlot(by_age()$p)
+  output$table_by_age <- DT::renderDataTable(by_age()$pretty_tab, server = FALSE)
   
   # -- This creates a geographical table of positivity rate
   output$municipios <- DT::renderDataTable({
