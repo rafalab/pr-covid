@@ -823,6 +823,7 @@ fits <- negative_cases_by_age %>%
   group_by(testType, ageRange) %>%
   do(ma7(d = .$date, y = .$negative_cases)) %>%
   rename(negative_cases_week_avg = moving_avg)
+
 negative_cases_by_age <- left_join(negative_cases_by_age, fits, by = c("testType", "ageRange", "date"))
 
 ## add new cases and weekly average to tests data frame
