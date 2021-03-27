@@ -62,7 +62,7 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                     radioButtons("yscale", 
                                  label = "Rango del gráfico:",
                                  choices = list("Preescogido" = TRUE,
-                                                "Determinado por datos" = FALSE),
+                                             "Determinado por datos" = FALSE),
                                  selected = TRUE),
                     
                     selectInput("dataset", "Datos depurados:",
@@ -168,10 +168,9 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                             label = "",
                                             choices = list("Tasa de positividad (pruebas)" = "tp_pruebas",
                                                            "Tasa de positividad (casos)" = "tp_casos",
-                                                           "Casos por 100,000" = "casos_per",
                                                            "Casos" = "casos",
-                                                           "Por ciento de casos" = "prop",
-                                                           "Pruebas por 100,000" = "pruebas"),
+                                                           "Casos por 100,000" = "casos_per",
+                                                           "Por ciento de casos" = "prop"),
                                             selected = "tp_pruebas",
                                             inline = TRUE),
                                plotOutput("plot_by_age"),
@@ -297,17 +296,17 @@ server <- function(input, output, session) {
   output$resumen_plots <- renderPlot({
     p1 <- plot_positivity(tests, 
                           start_date = input$range[1],  end_date = input$range[2], 
-                          type = input$testType, yscale = input$yscale, version = "pruebas")
+                          type = input$testType, yscale = as.logical(input$yscale), version = "pruebas")
     p2 <- plot_deaths(hosp_mort, 
                     start_date = input$range[1], end_date = input$range[2],
-                    cumm = input$acumulativo, yscale = input$yscale)
+                    cumm = as.logical(input$acumulativo), yscale = as.logical(input$yscale))
     p3 <-  plot_cases(cases, 
                       start_date = input$range[1], end_date = input$range[2], 
-                      type =  input$testType, cumm = input$acumulativo,
-                      yscale = input$yscale)
+                      type =  input$testType, cumm = as.logical(input$acumulativo),
+                      yscale = as.logical(input$yscale))
     p4 <-  plot_hosp(hosp_mort, 
                      start_date = input$range[1], end_date = input$range[2], 
-                     yscale = input$yscale)
+                     yscale = as.logical(input$yscale))
                      
     p <- gridExtra::grid.arrange(p1, p2, p3, p4)
     return(p)
@@ -319,14 +318,14 @@ server <- function(input, output, session) {
                start_date = input$range[1], 
                end_date = input$range[2], 
                type = input$testType,
-               cumm = input$acumulativo)
+               cumm = as.logical(input$acumulativo))
     
     type <- case_when(input$testType == "Molecular" ~ "moleculares.", 
                       input$testType == "Serological" ~ "serológicas.",
                       input$testType == "Antigens" ~ "de antígenos.",
                       input$testType == "Molecular+Antigens" ~ "moleculares y de antígenos.")
     
-  the_period <- ifelse(input$acumulativo, paste("calculadas desde ",format(input$range[1], "%B %d"), "hasta la fecha de la primera columna. "),
+  the_period <- ifelse(as.logical(input$acumulativo), paste("calculadas desde ",format(input$range[1], "%B %d"), "hasta la fecha de la primera columna. "),
                                                 "calculadas para la semana acabando en la fecha de la primera columna. ")
    the_caption <- paste0(
      "<p>Tasa de positividad y casos basados en pruebas ", type,
@@ -361,7 +360,7 @@ server <- function(input, output, session) {
     plot_positivity(tests, start_date = input$range[1], 
                     end_date = input$range[2], 
                     type = input$testType, 
-                    yscale = input$yscale,
+                    yscale = as.logical(input$yscale),
                     version = input$pos_version)
   )
   
@@ -412,7 +411,7 @@ server <- function(input, output, session) {
     plot_hosp(hosp_mort, 
               start_date = input$range[1],
               end_date = input$range[2],
-              yscale = input$yscale)
+              yscale = as.logical(input$yscale))
   )
   
   # -- This creates the ICU figure
@@ -420,7 +419,7 @@ server <- function(input, output, session) {
     plot_icu(hosp_mort, 
              start_date = input$range[1],
              end_date = input$range[2],
-             yscale = input$yscale)
+             yscale = as.logical(input$yscale))
   )
   
   # -- This creates the hospitalization figure
@@ -428,8 +427,8 @@ server <- function(input, output, session) {
     plot_deaths(hosp_mort, 
                 start_date = input$range[1],
                 end_date = input$range[2],
-                cumm = input$acumulativo,
-                yscale = input$yscale)
+                cumm = as.logical(input$acumulativo),
+                yscale = as.logical(input$yscale))
   )
   
   # -- This creates the daily number of tests figure
@@ -438,7 +437,7 @@ server <- function(input, output, session) {
               start_date =input$range[1], 
               end_date =input$range[2], 
               type = input$testType, 
-              cumm = input$acumulativo)
+              cumm = as.logical(input$acumulativo))
   )
   
   # -- This creates positivity plot by lab
@@ -447,7 +446,7 @@ server <- function(input, output, session) {
               start_date =input$range[1], 
               end_date =input$range[2], 
               type = input$testType, 
-              yscale = input$yscale)
+              yscale = as.logical(input$yscale))
   )
   
   # -- This creates proportion of tests per labs
@@ -464,8 +463,8 @@ server <- function(input, output, session) {
                start_date = input$range[1], 
                end_date = input$range[2], 
                type =  input$testType,
-               cumm = input$acumulativo, 
-               yscale = input$yscale)
+               cumm = as.logical(input$acumulativo), 
+               yscale = as.logical(input$yscale))
   )
   
 
@@ -477,8 +476,8 @@ server <- function(input, output, session) {
                                                 start_date = input$range[1], 
                                                 end_date = input$range[2], 
                                                 type =  input$testType,
-                                                cumm = input$acumulativo, 
-                                                yscale = input$yscale,
+                                                cumm = as.logical(input$acumulativo), 
+                                                yscale = as.logical(input$yscale),
                                                 version = input$by_region_version)})
   
   output$plot_by_region <- renderPlot(by_region()$p)
@@ -486,13 +485,13 @@ server <- function(input, output, session) {
   
   by_age<- reactive({load(file.path(rda_path,"by-age.rda"));
     summary_by_age(tests_by_age, 
-                      pop_by_age,
-                      start_date = input$range[1], 
-                      end_date = input$range[2], 
-                      type =  input$testType,
-                      cumm = input$acumulativo, 
-                      yscale = input$yscale,
-                      version = input$by_age_version)})
+                   pop_by_age,
+                   start_date = input$range[1], 
+                   end_date = input$range[2], 
+                   type =  input$testType,
+                   cumm = as.logical(input$acumulativo), 
+                   yscale = as.logical(input$yscale),
+                   version = input$by_age_version)})
   
   output$plot_by_age <- renderPlot(by_age()$p)
   output$table_by_age <- DT::renderDataTable(by_age()$pretty_tab, server = FALSE)
@@ -534,7 +533,7 @@ server <- function(input, output, session) {
     plot_agedist(tests_by_strata, start_date =input$range[1], 
                  end_date =input$range[2], 
                  type = input$testType,
-                 yscale = input$yscale,
+                 yscale = as.logical(input$yscale),
                  version = input$age_plot_version)
   )
   
@@ -662,7 +661,7 @@ server <- function(input, output, session) {
                         start_date = input$range[1], 
                         end_date = input$range[2], 
                         type = input$testType,
-                        cumm = input$acumulativo)
+                        cumm = as.logical(input$acumulativo))
 
       write.csv(ret, file = file, row.names = FALSE)  
     },

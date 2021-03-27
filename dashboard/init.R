@@ -34,7 +34,7 @@ map <- cbind(map, st_coordinates(st_centroid(map)))
 
 load(file.path(rda_path,"data.rda"))
 
-lag_to_complete <- 7
+lag_to_complete <- 4
 last_day <- last_complete_day - days(lag_to_complete)
 
 

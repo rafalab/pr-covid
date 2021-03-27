@@ -55,7 +55,7 @@ plot_positivity <- function(tests,
   the_label <- filter(dat, date == end_date) %>% pull(fit)
   
   ret <- ret + 
-    geom_point(size = 2, alpha = 0.65, show.legend = FALSE) +
+    geom_point(alpha = 0.65, show.legend = FALSE) +
     ylab("Tasa de positividad") +
     xlab("Fecha") +
     theme_bw() +
@@ -179,7 +179,7 @@ plot_deaths <- function(hosp_mort,
         geom_line(aes(y = mort_week_avg), color="black", size = 1.25)
     } else{
       ret <- ret +  
-        geom_point(aes(y = IncMueSalud),width = 0.75, alpha = 0.65) +
+        geom_point(aes(y = IncMueSalud), width = 0.75, alpha = 0.65) +
         geom_line(aes(y = mort_week_avg), color="black", size = 1.25)
     }
   }
@@ -1060,7 +1060,7 @@ summary_by_age <- function(tests_by_age,
                               type = "Molecular", 
                               cumm = FALSE,
                               yscale = FALSE,
-                              version = c("tp_pruebas", "tp_casos", "casos_per", "casos", "prop", "pruebas_per")){
+                              version = c("tp_pruebas", "tp_casos", "casos_per", "casos", "prop")){
   
   version <- match.arg(version)
   
@@ -1088,7 +1088,7 @@ summary_by_age <- function(tests_by_age,
              people_total_week = people_total) %>%
       ungroup()
     
-    yscale = FALSE
+    yscale <- FALSE
   }
   
   type_char <- case_when(type == "Molecular" ~ "molecular", 
@@ -1101,7 +1101,7 @@ summary_by_age <- function(tests_by_age,
     tab <- dat %>% 
       mutate(the_stat = make_pretty_ci(fit, lower, upper)) %>%
       select(date, ageRange, the_stat)
-    dat <- dat %>% rename(the_stat = fit)
+    dat <- dat %>% rename(the_stat = fit, daily_stat = rate)
     var_title <- "Tasa de positividad (pruebas)"
     the_ylim <- c(0, 0.25)
     pct <- TRUE
@@ -1110,7 +1110,7 @@ summary_by_age <- function(tests_by_age,
     tab <- dat %>% 
       mutate(the_stat = make_pretty_ci(cases_rate, cases_rate_lower, cases_rate_upper)) %>%
       select(date, ageRange, the_stat)
-    dat <- dat %>% rename(the_stat = cases_rate)
+    dat <- dat %>% rename(the_stat = cases_rate, daily_stat = cases_rate_daily)
     var_title <- "Tasa de positividad (casos)"
     the_ylim <- c(0, 0.2)
     pct <- TRUE
@@ -1121,9 +1121,9 @@ summary_by_age <- function(tests_by_age,
       mutate(the_stat = make_pretty(cases)) %>%
       select(date, ageRange, the_stat)
     dat <- dat %>% 
-      rename(the_stat = cases_week_avg) 
+      rename(the_stat = cases_week_avg, daily_stat = cases) 
     var_title <- "Casos únicos por día"
-    the_ylim <- c(0, 200)
+    the_ylim <- c(0, 225)
   }
   
   if(version == "casos_per"){
@@ -1132,29 +1132,19 @@ summary_by_age <- function(tests_by_age,
       mutate(the_stat = ifelse(is.na(the_stat), "", format(round(the_stat, 1), nsmall = 1))) %>%
       select(date, ageRange, the_stat)
     dat <- dat %>% 
-      mutate(cases_week_avg = cases_week_avg/poblacion*10^5) %>%
-      rename(the_stat = cases_week_avg) 
+      mutate(cases_week_avg = cases_week_avg/poblacion*10^5, cases = cases/poblacion*10^5) %>%
+      rename(the_stat = cases_week_avg, daily_stat = cases) 
     var_title <- "Casos únicos por día por 100,000 habitantes"
     the_ylim <- c(0, 30)
   }
-  if(version ==  "pruebas_per"){
-    tab <- dat %>% 
-      mutate(the_stat = make_pretty(round(people_total_week/poblacion*10^5))) %>%
-      select(date, ageRange, the_stat)
-    dat <- dat %>% 
-      mutate(people_total_week = people_total_week/poblacion*10^5) %>%
-      rename(the_stat = people_total_week)
-    var_title <- "Pruebas por día por 100,000 habitantes"
-    the_ylim <- c(0, 3000)
-  }
   if(version ==  "prop"){
     dat <- dat %>% group_by(date) %>%
-      mutate(the_stat = cases_week_avg/sum(cases_week_avg)) %>%
+      mutate(the_stat = cases_week_avg/sum(cases_week_avg),
+             daily_stat = cases/sum(cases)) %>%
       ungroup() 
     tab <- dat %>% 
       mutate(the_stat = make_pct(the_stat)) %>%
       select(date, ageRange, the_stat)
-    
     var_title <- "Por ciento de casos"
     the_ylim <- c(0, .4)
     pct <- TRUE
@@ -1185,18 +1175,27 @@ summary_by_age <- function(tests_by_age,
   
   if(pct) the_labels <- scales::percent else the_labels <- waiver()
   
-  if(yscale==FALSE & version ==  "prop"){
+  if(!yscale & !cumm){
     p <- dat %>% 
-      ggplot(aes(date, the_stat, color = ageRange,  lty = date > last_day)) + 
-      geom_line(show.legend = FALSE) +
+      ggplot(aes(date, the_stat)) + 
       xlab("Fecha") +
       ylab(var_title) +
       labs(color = "Edad") +
       labs(title = the_title, subtitle = the_subtitle) +
       scale_x_date(date_labels = "%b", breaks = breaks_width("1 month")) +
-      facet_wrap(~ageRange, scales = "free_y") + 
       scale_y_continuous(labels = the_labels) +
-      theme_bw()
+      facet_wrap(~ageRange, nrow = 2,  scales = "free_y") + 
+      theme_bw() +
+      theme(text = element_text(size = 15))  
+    
+    if(version %in% c("casos", "casos_per")){
+      p <- p + 
+        geom_bar(aes(y = daily_stat), stat = "identity", color = "#FBBCB2", fill = "#FBBCB2", width= 0.2, alpha =0.5, show.legend = FALSE) +
+        geom_line(aes(lty = date > last_day), color = "#CC523A", show.legend = FALSE, size = 1.25) 
+    } else{
+      p <- p + 
+        geom_line(aes(lty = date > last_day), show.legend = FALSE) 
+    }
   } else{
     p <- dat %>% 
       ggplot(aes(date, the_stat, color = ageRange,  lty = date > last_day)) + 
@@ -1209,10 +1208,10 @@ summary_by_age <- function(tests_by_age,
       scale_x_date(date_labels = "%b", breaks = breaks_width("1 month")) +
       theme_bw()
     
-    if(yscale){
-      p <- p + scale_y_continuous(limit = the_ylim, labels = the_labels)
+    if(!cumm){
+      p <- p + scale_y_continuous(labels = the_labels, limits = the_ylim)
     } else{
-      p <- p + scale_y_continuous(labels = the_labels) 
+      p <- p + scale_y_continuous(labels = the_labels)
     }
   }
   return(list(p = p, tab = tab, pretty_tab = pretty_tab))
