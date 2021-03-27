@@ -615,7 +615,7 @@ save(rezago_mort, file = file.path(rda_path, "rezago_mort.rda"))
 
 # By Region ---------------------------------------------------------------
 
-## We now creat the tests data table but now by region
+## We now create the tests data table but by region
 ## The code is repetivie becuase this was added after we had the code for the global case
 
 tests_by_region <- all_tests_with_id %>%
@@ -763,7 +763,7 @@ tests_by_age <- left_join(tests_by_age, fits, by = c("testType", "date", "ageRan
 
 ## compute weekly totals for positive tests and total tests
 tests_by_age <- tests_by_age %>% 
-  group_by(testType) %>%
+  group_by(testType, ageRange) %>%
   mutate(tests_positives_week = sum7(d = date, y = tests_positives)$moving_sum) %>%
   mutate(tests_total_week = sum7(d = date, y = tests_total)$moving_sum) %>%
   ungroup()
