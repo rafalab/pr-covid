@@ -1156,7 +1156,7 @@ summary_by_age <- function(tests_by_age,
       select(date, ageRange, the_stat)
     
     var_title <- "Por ciento de casos"
-    the_ylim <- c(0, .35)
+    the_ylim <- c(0, .4)
     pct <- TRUE
   }
   
