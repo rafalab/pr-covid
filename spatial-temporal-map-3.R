@@ -10,12 +10,12 @@ map <- cbind(map, st_coordinates(st_centroid(map)))
 
 load("dashboard/rdas/data.rda")
 
-MAX <- 0.15 ## maximum positivity rate
+MAX <- 0.10 ## maximum positivity rate
 MIN <- 0.03
 municipio_tests <- 
   tests_by_strata %>%
-  filter(date > make_date(2020,3,11) & testType == "Molecular") %>%
-  filter(patientCity != "No reportado") %>%
+  filter(date > make_date(2020,3,11)) %>%
+  filter(testType == "Molecular+Antigens" & patientCity != "No reportado") %>%
   mutate(patientCity = droplevels(patientCity)) %>%
   group_by(date, patientCity, .drop=FALSE) %>%
   summarize(positives = sum(positives), tests=sum(tests)) %>%
@@ -30,7 +30,8 @@ municipio_tests <-
 
 dat <- right_join(map, municipio_tests, by = c("ADM1_ES"="patientCity")) 
 
-dates <- c(unique(dat$date), rep(max(dat$date), 7))
+first_day <- make_date(2021, 3, 1)
+dates <- c(seq(first_day, max(dat$date), by = "day"), rep(max(dat$date), 7))
 library(animation)
 saveGIF({
   for(i in seq_along(dates)){
@@ -40,14 +41,14 @@ saveGIF({
       geom_sf(data = map, size=0.15) +
       geom_sf(aes(fill = rate), color="black", size=0.15) +
       scale_fill_gradientn(colors = RColorBrewer::brewer.pal(9, "Reds"),
-                           name = "Basada en pruebas moleculares:",
+                           name = "Basada en pruebas diagnosticas:",
                            limits= c(3, MAX*100)) +
       theme_void() +
       theme(legend.position = "bottom") +
       labs(title = d,  
-           subtitle = "Tasa de positividad calculada en periodos de 14 días") + 
+           subtitle = "Por ciento de pruebas positivas calculada en periodos de 14 días") + 
       theme(plot.title = element_text(size = 30, hjust = 0.5, face = "bold"),
             plot.subtitle = element_text(hjust = 0.5))
     print(p)
-  }}, movie.name = "ani-2.gif", ani.height = 480, ani.width = 960, interval = 0.25)
+  }}, movie.name = "ani-3.gif", ani.height = 480, ani.width = 960, interval = 0.25)
   
