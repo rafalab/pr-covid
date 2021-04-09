@@ -721,8 +721,8 @@ save(tests_by_region, pop_by_region, file = file.path(rda_path, "regions.rda"))
 
 # By age ------------------------------------------------------------------
 
-age_starts <- c(0, 10, 20,30,40,65,75,85)
-age_ends <- c(9, 19,29,39,64,74,84,Inf)
+age_starts <- c(0, 10, 15, 20,30,40,65,75)
+age_ends <- c(9, 14, 19,29,39,64,74,Inf)
 
 ## compute daily totals
 age_levels <- paste(age_starts, age_ends, sep = " a ")
