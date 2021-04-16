@@ -84,9 +84,11 @@ get_bioportal <- function(url){
 }
 
 # Reading and wrangling test data from database ----------------------------------------------
-the_now <- now(tz = "America/Puerto_Rico")
+message("Reading test data.")
 
 all_tests <- get_bioportal(test_url)
+
+message("Processing test data.")
 
 all_tests <- all_tests %>%  
   rename(patientCity = city) %>%
@@ -127,8 +129,12 @@ if(FALSE){
 
 # Reading and wrangling cases data from database ---------------------------
 age_levels <-  paste(seq(0, 125, 5), "to", seq(4, 129, 5))
-  
+
+message("Reading case data.")
+
 all_tests_with_id <- get_bioportal(cases_url)
+
+message("Processing case data.")
 
 all_tests_with_id <- all_tests_with_id %>%  
   as_tibble() %>%
@@ -214,6 +220,8 @@ positivity <- function(dat){
   })
 }
 
+message("Computing positivity.")
+
 ## run the function on each test type
 fits <- all_tests_with_id %>% 
   bind_rows(mol_anti) %>%
@@ -272,6 +280,8 @@ tests <- left_join(tests, cases, by = c("testType", "date")) %>%
 ## Compute unique negatives
 
 # compute unique negative cases ------------------------------------------------------------
+message("Computing unique negatives.")
+
 negative_cases <- all_tests_with_id %>%  
   bind_rows(mol_anti) %>%
   filter(date>=first_day & result == "negative" &
@@ -369,11 +379,32 @@ fits <- with(hosp_mort,
              ma7(d = date, y = CamasICU))
 hosp_mort$icu_week_avg <- fits$moving_avg
 
+## Vaccine data
+## We will add it to hosp_mort data
+url <- "https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/vaccinations/us_state_vaccinations.csv"
+vaccines <- read_csv(url) %>% 
+  filter(location == "Puerto Rico") %>%
+  select(date, total_distributed, total_vaccinations, people_vaccinated, people_fully_vaccinated) %>%
+  arrange(date) 
+
+## fill in NAs
+for(j in which(names(vaccines)!="date")){
+  for(i in 2:nrow(vaccines)){
+    if(is.na(vaccines[[j]][i])) vaccines[[j]][i] <- max(vaccines[[j]][1:(i-1)], na.rm=TRUE)
+  }
+}
+
+## fill in the NAs
+hosp_mort <- left_join(hosp_mort, vaccines, by = "date") 
+
+
 if(FALSE){
   plot_deaths(hosp_mort)
 }
 
 # Compute time it takes tests to come in ----------------------------------
+
+message("Computing lag statistics.")
 
 rezago <- all_tests_with_id  %>% 
   filter(result %in% c("positive", "negative") & 
@@ -390,6 +421,8 @@ rezago <- all_tests_with_id  %>%
 # Computing positivity rate by lab ----------------------------------------
 
 url <- "https://bioportal.salud.gov.pr/api/administration/reports/tests-by-collected-date-and-entity"
+
+message("Reading lab data.")
 
 all_labs_data <- jsonlite::fromJSON(url)
 
@@ -410,6 +443,8 @@ if(FALSE){
     ungroup()
   freqs %>% View()
 }
+
+message("Processing lab data.")
 
 labs <- labs %>%
   mutate(Laboratorio = case_when(str_detect(Laboratorio, "toledo") ~ "Toledo",
@@ -550,25 +585,6 @@ lab_tab  <- lab_tab %>% group_by(Laboratorio, testType) %>%
   summarize(tests = sum(tests),.groups = "drop") 
 
 
-## Vaccine data
-## We will add it to hosp_mort data
-url <- "https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/vaccinations/us_state_vaccinations.csv"
-vaccines <- read_csv(url) %>% 
-  filter(location == "Puerto Rico") %>%
-  select(date, total_distributed, total_vaccinations, people_vaccinated, people_fully_vaccinated) %>%
-  arrange(date) 
-
-## fill in NAs
-for(j in which(names(vaccines)!="date")){
-  for(i in 2:nrow(vaccines)){
-   if(is.na(vaccines[[j]][i])) vaccines[[j]][i] <- max(vaccines[[j]][1:(i-1)], na.rm=TRUE)
-  }
-}
-
-## fill in the NAs
-hosp_mort <- left_join(hosp_mort, vaccines, by = "date") 
-
-
 ## Adding rezago computation for deaths
 dat <- read_csv("https://raw.githubusercontent.com/sacundim/covid-19-puerto-rico/master/assets/data/cases/PuertoRico-bitemporal.csv",
                 col_types = cols(bulletin_date = col_date(),
@@ -595,6 +611,8 @@ rezago_mort <- dat %>%
 
 ## We now create the tests data table but by region
 ## The code is repetivie becuase this was added after we had the code for the global case
+
+message("Computing by region statistics.")
 
 tests_by_region <- all_tests_with_id %>%
   bind_rows(mol_anti) %>%
@@ -697,6 +715,7 @@ tests_by_region$region <- factor(as.character(tests_by_region$region),
 
 
 # By age ------------------------------------------------------------------
+message("Computing by age statistics.")
 
 age_starts <- c(0, 10, 15, 20,30,40,65,75)
 age_ends <- c(9, 14, 19,29,39,64,74,Inf)
@@ -818,6 +837,8 @@ pop_by_age <- read_csv("https://raw.githubusercontent.com/rafalab/pr-covid/maste
   mutate(ageRange = str_replace(ageRange, "-", " to ")) %>%
   mutate(ageRange = factor(ageRange, levels = levels(tests_by_age$ageRange)))
   
+
+message("Saving data.")
 
 # -- Save data
 ## if on server, save with full path
