@@ -84,6 +84,7 @@ get_bioportal <- function(url){
 }
 
 # Reading and wrangling test data from database ----------------------------------------------
+the_now <- now(tz = "America/Puerto_Rico")
 
 all_tests <- get_bioportal(test_url)
 
@@ -116,15 +117,16 @@ if(FALSE){
 } else{
   ## Impute missing dates and remove inconsistent dates
   all_tests <- all_tests %>% 
+    mutate(date = if_else(collectedDate > reportedDate, reportedDate, collectedDate)) %>% ## if collectedDate is in the future make it reportedDate
     mutate(date = if_else(is.na(collectedDate), reportedDate - days(imputation_delay),  collectedDate)) %>%
-    mutate(date = if_else(!year(date) %in% the_years | date > today(), reportedDate - days(imputation_delay),  date)) %>%
+    mutate(date = if_else(!year(date) %in% the_years, reportedDate - days(imputation_delay),  date)) %>%
     filter(year(date) %in% the_years & date <= today()) %>%
     arrange(date, reportedDate)
 }
 
 
 # Reading and wrangling cases data from database ---------------------------
-age_levels <-  paste(seq(0,125,5), "to", seq(4,129,5))
+age_levels <-  paste(seq(0, 125, 5), "to", seq(4, 129, 5))
   
 all_tests_with_id <- get_bioportal(cases_url)
 
@@ -159,8 +161,9 @@ if(FALSE){
 } else{
   ## Impute missing dates
   all_tests_with_id <- all_tests_with_id %>% 
+    mutate(date = if_else(collectedDate > reportedDate, reportedDate, collectedDate)) %>% ## if collectedDate is in the future make it reportedDate
     mutate(date = if_else(is.na(collectedDate), reportedDate - days(imputation_delay),  collectedDate)) %>%
-    mutate(date = if_else(!year(date) %in% the_years | date > today(), reportedDate - days(imputation_delay),  date)) %>%
+    mutate(date = if_else(!year(date) %in% the_years, reportedDate - days(imputation_delay),  date)) %>%  
     mutate(date = as_date(date)) %>%
     filter(year(date) %in% the_years & date <= today()) %>%
     arrange(date, reportedDate)
@@ -546,14 +549,6 @@ lab_tab  <- lab_tab %>% group_by(Laboratorio, testType) %>%
   group_by(testType, date, Laboratorio) %>%
   summarize(tests = sum(tests),.groups = "drop") 
 
-# -- Save data
-## if on server, save with full path
-## if not on server, save to home directory
-if(Sys.info()["nodename"] == "fermat.dfci.harvard.edu"){
-  rda_path <- "/homes10/rafa/dashboard/pr-covid/dashboard/rdas"
-} else{
-  rda_path <- "rdas"
-}
 
 ## Vaccine data
 ## We will add it to hosp_mort data
@@ -570,25 +565,9 @@ for(j in which(names(vaccines)!="date")){
   }
 }
 
-
 ## fill in the NAs
-
 hosp_mort <- left_join(hosp_mort, vaccines, by = "date") 
-## define date and time of latest download
-the_stamp <- now()
-last_complete_day <- today() - 1
-save(first_day, last_complete_day,
-     alpha, the_stamp, 
-     tests, tests_by_strata, cases,
-     hosp_mort, labs, pr_pop, 
-     file = file.path(rda_path, "data.rda"))
-save(lab_tab, file = file.path(rda_path, "lab_tab.rda"))
-save(rezago, file = file.path(rda_path, "rezago.rda"))
 
-## For backward compatibility
-all_tests <- all_tests %>%  filter(testType == "Molecular")
-saveRDS(all_tests, file = file.path(rda_path, "all_tests.rds"), compress = "xz")
-saveRDS(all_tests_with_id, file = file.path(rda_path, "all_tests_with_id.rds"), compress = "xz")
 
 ## Adding rezago computation for deaths
 dat <- read_csv("https://raw.githubusercontent.com/sacundim/covid-19-puerto-rico/master/assets/data/cases/PuertoRico-bitemporal.csv",
@@ -611,7 +590,6 @@ rezago_mort <- dat %>%
   filter(new != 0) %>%
   mutate(diff = (as.numeric(bulletin_date) - as.numeric(date)))
 
-save(rezago_mort, file = file.path(rda_path, "rezago_mort.rda"))
 
 # By Region ---------------------------------------------------------------
 
@@ -716,7 +694,6 @@ pop_by_region <- read_csv("https://raw.githubusercontent.com/rafalab/pr-covid/ma
 tests_by_region$region <- factor(as.character(tests_by_region$region), 
                                  levels = c(levels(pop_by_region$region), "No reportada"))
 
-save(tests_by_region, pop_by_region, file = file.path(rda_path, "regions.rda"))
 
 
 # By age ------------------------------------------------------------------
@@ -841,8 +818,38 @@ pop_by_age <- read_csv("https://raw.githubusercontent.com/rafalab/pr-covid/maste
   mutate(ageRange = str_replace(ageRange, "-", " to ")) %>%
   mutate(ageRange = factor(ageRange, levels = levels(tests_by_age$ageRange)))
   
+
+# -- Save data
+## if on server, save with full path
+## if not on server, save to home directory
+if(Sys.info()["nodename"] == "fermat.dfci.harvard.edu"){
+  rda_path <- "/homes10/rafa/dashboard/pr-covid/dashboard/rdas"
+} else{
+  rda_path <- "rdas"
+}
+## define date and time of latest download
+the_stamp <- now()
+last_complete_day <- today() - 1
+save(first_day, last_complete_day,
+     alpha, the_stamp, 
+     tests, tests_by_strata, cases,
+     hosp_mort, labs, pr_pop, 
+     file = file.path(rda_path, "data.rda"))
+
+save(lab_tab, file = file.path(rda_path, "lab_tab.rda"))
+
+save(rezago, file = file.path(rda_path, "rezago.rda"))
+
+save(rezago_mort, file = file.path(rda_path, "rezago_mort.rda"))
+
+save(tests_by_region, pop_by_region, file = file.path(rda_path, "regions.rda"))
+
 save(tests_by_age, pop_by_age, file = file.path(rda_path, "by-age.rda"))
 
+## For backward compatibility
+all_tests <- all_tests %>%  filter(testType == "Molecular")
+saveRDS(all_tests, file = file.path(rda_path, "all_tests.rds"), compress = "xz")
+saveRDS(all_tests_with_id, file = file.path(rda_path, "all_tests_with_id.rds"), compress = "xz")
 
 
 
