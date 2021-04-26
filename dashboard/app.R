@@ -31,7 +31,7 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                    end = last_complete_day,
                                    min = first_day,
                                    format = "M-dd",
-                                   max = today(),
+                                   max = max(tests$date),
                                    language = "es",
                                    width = "100%"),
                     
@@ -173,6 +173,12 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                                            "Por ciento de casos" = "prop"),
                                             selected = "tp_pruebas",
                                             inline = TRUE),
+                               radioButtons("by_age_facet", 
+                                            label = "",
+                                            choices = list("Una gráfica por edad" = TRUE,
+                                                           "Juntos en una gráfica" = FALSE),
+                                            selected = TRUE,
+                                            inline = TRUE),
                                plotOutput("plot_by_age"),
                                DT::dataTableOutput("table_by_age")),
                       
@@ -227,7 +233,7 @@ server <- function(input, output, session) {
   observeEvent(input$alldates, {
     updateDateRangeInput(session, "range",
                          start = first_day,
-                         end   = today())
+                         end   = max(tests$date))
   })
   
   ## get date and time of latest update
@@ -491,7 +497,8 @@ server <- function(input, output, session) {
                    type =  input$testType,
                    cumm = as.logical(input$acumulativo), 
                    yscale = as.logical(input$yscale),
-                   version = input$by_age_version)})
+                   version = input$by_age_version,
+                   facet = as.logical(input$by_age_facet))})
   
   output$plot_by_age <- renderPlot(by_age()$p)
   output$table_by_age <- DT::renderDataTable(by_age()$pretty_tab, server = FALSE)
