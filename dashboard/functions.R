@@ -917,6 +917,59 @@ plot_fully_vaccinated <- function(hosp_mort,
 }
 
 
+plot_travelers <- function(travelers,  
+                          start_date = first_day, 
+                          end_date = last_complete_day){
+  
+  tmp <- travelers %>% 
+    filter(date >= start_date & date <= end_date) %>% 
+    select(date, residents, short, long) %>% 
+    rename("Residente" = residents,
+           "Menos de 5 días"= short,
+           "5 días o más" = long) %>%
+    pivot_longer(-date) %>%
+    mutate(name = factor(name, 
+                         levels = c("Residente",
+                                    "Menos de 5 días",
+                                    "5 días o más")))
+  
+  tmp %>% ggplot(aes(date, value, color = name)) +
+    geom_line() +
+    scale_x_date(date_labels = "%b %d") +
+    ggtitle("Viajeros llegando a Puerto Rico (media móvil de 7 días)") +
+    ylab("Viajeros por día") +
+    xlab("Fecha") +
+    theme_bw() +   
+    theme(legend.position="bottom", legend.title=element_blank()) 
+}
+
+plot_travelers_tests <- function(travelers,  
+                                 start_date = first_day, 
+                                 end_date = last_complete_day){
+  
+  tmp <- travelers %>% 
+    filter(date >= start_date & date <= end_date) %>% 
+    select(date, perc_residents, perc_short, perc_long) %>% 
+    rename("Residente" = perc_residents,
+           "Menos de 5 días"= perc_short,
+           "5 días o más" = perc_long) %>%
+    pivot_longer(-date) %>%
+    mutate(name = factor(name, 
+                         levels = c("Residente",
+                                    "Menos de 5 días",
+                                    "5 días o más")))
+  
+  tmp %>% ggplot(aes(date, value, color = name)) +
+    geom_line(show.legend = FALSE) +
+    scale_x_date(date_labels = "%b %d") +
+    scale_y_continuous(limits = c(0,1), labels = scales::percent) +
+    ggtitle("Por ciento de viajeros presentando prueba negativa (media móvil de 7 días)") +
+    ylab("Por ciento") +
+    xlab("Fecha") +
+    theme_bw() 
+}
+
+
 summary_by_region <- function(tests_by_region, 
                               pop_by_region,
                               start_date = first_day, 

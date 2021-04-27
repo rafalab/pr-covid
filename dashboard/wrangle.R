@@ -838,9 +838,32 @@ pop_by_age <- read_csv("https://raw.githubusercontent.com/rafalab/pr-covid/maste
   mutate(ageRange = factor(ageRange, levels = levels(tests_by_age$ageRange)))
   
 
-message("Saving data.")
+## add passanger data
+
+message("Computing traveler statistics.")
+
+url <- "https://BioPortal.salud.gov.pr/api/administration/reports/travels/total-forms-by-reported-arrival-date"
+
+travelers <- jsonlite::fromJSON(url) %>%
+  mutate(date = mdy(date)) %>%
+  filter(year(date)>=2020) %>%
+  filter(date <= today()) %>%
+  mutate(tmp1 =  ma7(date, residents)$moving_avg,
+         perc_residents = ma7(date, percentageResidentsArrivedWithNegativePcrResults*residents)$moving_avg/tmp1/100,
+         residents = tmp1,
+         tmp2 =  ma7(date, nonResidentsStayingLessThan5Days)$moving_avg,
+         perc_short = ma7(date, percentageNonResidentsStayingLessThan5DaysArrivedWithNegativePcrResults*nonResidentsStayingLessThan5Days)$moving_avg/tmp2/100,
+         short = tmp2,
+         tmp3 =  ma7(date, nonResidentsStaying5DaysOrMore)$moving_avg,
+         perc_long = ma7(date, percentageResidentsStaying5DaysOrMoreArrivedWithNegativePcrResults*nonResidentsStaying5DaysOrMore)$moving_avg/tmp3/100,
+         long= tmp3) %>%
+  select(date, residents, perc_residents, short, perc_short, long, perc_long)
+
 
 # -- Save data
+
+message("Saving data.")
+
 ## if on server, save with full path
 ## if not on server, save to home directory
 if(Sys.info()["nodename"] == "fermat.dfci.harvard.edu"){
@@ -866,6 +889,8 @@ save(rezago_mort, file = file.path(rda_path, "rezago_mort.rda"))
 save(tests_by_region, pop_by_region, file = file.path(rda_path, "regions.rda"))
 
 save(tests_by_age, pop_by_age, file = file.path(rda_path, "by-age.rda"))
+
+save(travelers, file = file.path(rda_path, "travelers.rda"))
 
 ## For backward compatibility
 all_tests <- all_tests %>%  filter(testType == "Molecular")

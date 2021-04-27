@@ -195,6 +195,10 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                plotOutput("vaccines"),
                                DT::dataTableOutput("vaccines_table")),
                       
+                      tabPanel("Viajeros",
+                               plotOutput("travelers"),
+                               plotOutput("travelers_tests")),
+                      
                       tabPanel("FAQ",
                                includeMarkdown("faq.md"))
                       
@@ -577,15 +581,30 @@ server <- function(input, output, session) {
   output$vaccines <- renderPlot({
     plot_vaccines(hosp_mort, 
                 start_date = input$range[1],
-                end_date =input$range[2])
+                end_date = input$range[2])
   })
   
   output$vaccines_table <- DT::renderDataTable({
     table_vaccines(hosp_mort, 
                   start_date = input$range[1],
-                  end_date =input$range[2])
+                  end_date = input$range[2])
   }, server = FALSE)
   
+  output$travelers <- renderPlot({
+    load(file.path(rda_path, "travelers.rda"))
+    plot_travelers(travelers, 
+                  start_date = input$range[1],
+                  end_date = input$range[2])
+  })
+  
+  output$travelers_tests <- renderPlot({
+    load(file.path(rda_path, "travelers.rda"))
+    plot_travelers_tests(travelers, 
+                   start_date = input$range[1],
+                   end_date = input$range[2])
+  })
+  
+   
   # -- This allows users to download data
   datasetInput <- reactive({
     switch(input$dataset,
