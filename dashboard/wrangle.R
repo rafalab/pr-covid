@@ -848,16 +848,22 @@ travelers <- jsonlite::fromJSON(url) %>%
   mutate(date = mdy(date)) %>%
   filter(year(date)>=2020) %>%
   filter(date <= today()) %>%
-  mutate(tmp1 =  ma7(date, residents)$moving_avg,
-         perc_residents = ma7(date, percentageResidentsArrivedWithNegativePcrResults*residents)$moving_avg/tmp1/100,
-         residents = tmp1,
-         tmp2 =  ma7(date, nonResidentsStayingLessThan5Days)$moving_avg,
-         perc_short = ma7(date, percentageNonResidentsStayingLessThan5DaysArrivedWithNegativePcrResults*nonResidentsStayingLessThan5Days)$moving_avg/tmp2/100,
-         short = tmp2,
-         tmp3 =  ma7(date, nonResidentsStaying5DaysOrMore)$moving_avg,
-         perc_long = ma7(date, percentageResidentsStaying5DaysOrMoreArrivedWithNegativePcrResults*nonResidentsStaying5DaysOrMore)$moving_avg/tmp3/100,
-         long= tmp3) %>%
-  select(date, residents, perc_residents, short, perc_short, long, perc_long)
+  mutate(residents_week_avg =  ma7(date, residents)$moving_avg,
+         perc_residents = percentageResidentsArrivedWithNegativePcrResults/100,
+         perc_residents_week_avg = ma7(date, perc_residents*residents)$moving_avg/residents_week_avg,
+
+         short = nonResidentsStayingLessThan5Days,
+         short_week_avg =  ma7(date, short)$moving_avg,
+         perc_short = percentageNonResidentsStayingLessThan5DaysArrivedWithNegativePcrResults/100,
+         perc_short_week_avg  = ma7(date, perc_short*short)$moving_avg/short_week_avg,
+
+         long = nonResidentsStaying5DaysOrMore,
+         long_week_avg =  ma7(date, nonResidentsStaying5DaysOrMore)$moving_avg,
+         perc_long = percentageResidentsStaying5DaysOrMoreArrivedWithNegativePcrResults/100,
+         perc_long_week_avg  = ma7(date, perc_long*long)$moving_avg/long_week_avg) %>%
+  select(date, 
+         residents, perc_residents, short, perc_short, long, perc_long,
+         residents_week_avg, perc_residents_week_avg, short_week_avg, perc_short_week_avg, long_week_avg, perc_long_week_avg)
 
 
 # -- Save data
