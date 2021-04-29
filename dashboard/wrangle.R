@@ -56,7 +56,7 @@ sum7 <- function(d, y, k = 7)
   tibble(date = d, moving_sum = as.numeric(stats::filter(y, rep(1, k), side = 1)))
 
 # -- Fixed values
-pr_pop <- 3193694 ## population of puerto rico
+pr_pop <- 3285874 ## population of puerto rico
 
 icu_beds <- 229 #if available beds is missing change to this
 
