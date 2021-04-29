@@ -359,7 +359,8 @@ tests_by_strata <- all_tests %>%
 # --Mortality and hospitlization
 hosp_mort <- read_csv("https://raw.githubusercontent.com/rafalab/pr-covid/master/dashboard/data/DatosMortalidad.csv") %>%
   mutate(date = mdy(Fecha)) %>% 
-  filter(date >= first_day) 
+  filter(date >= first_day) %>%
+  arrange(date)
 
 ## we started keeping track of available beds on 2020-09-20 
 hosp_mort <- hosp_mort %>% 
@@ -717,8 +718,8 @@ tests_by_region$region <- factor(as.character(tests_by_region$region),
 # By age ------------------------------------------------------------------
 message("Computing by age statistics.")
 
-age_starts <- c(0, 10, 15, 20,30,40,65,75)
-age_ends <- c(9, 14, 19,29,39,64,74,Inf)
+age_starts <- c(0, 10, 15, 20, 30, 40, 65, 75)
+age_ends <- c(9, 14, 19, 29, 39, 64, 74, Inf)
 
 ## compute daily totals
 age_levels <- paste(age_starts, age_ends, sep = " a ")
@@ -837,6 +838,46 @@ pop_by_age <- read_csv("https://raw.githubusercontent.com/rafalab/pr-covid/maste
   mutate(ageRange = str_replace(ageRange, "-", " to ")) %>%
   mutate(ageRange = factor(ageRange, levels = levels(tests_by_age$ageRange)))
   
+## add deaths by age
+
+message("Computing deaths by age.")
+
+url <- "https://bioportal.salud.gov.pr/api/administration/reports/deaths/summary"
+
+deaths <- jsonlite::fromJSON(url) %>%
+  mutate(date = as_date(ymd_hms(deathDate, tz = "America/Puerto_Rico"))) %>%
+  mutate(date = if_else(date < first_day | date > today(), 
+                        as_date(ymd_hms(reportDate, tz = "America/Puerto_Rico")),
+                        date)) %>%
+  mutate(age_start = as.numeric(str_extract(ageRange, "^\\d+")), 
+         age_end = as.numeric(str_extract(ageRange, "\\d+$"))) %>%
+  mutate(ageRange = age_levels[as.numeric(cut(age_start, c(age_starts, Inf), right = FALSE))]) %>%
+  mutate(ageRange = factor(ageRange, levels = age_levels)) 
+  
+## replace the death data with BioPortal data for consistency
+
+hosp_mort <- deaths %>%
+  group_by(date) %>%
+  summarize(deaths = n(), .groups = "drop") %>%
+  right_join(hosp_mort, by = "date") %>%
+  arrange(date) %>%
+  mutate(deaths = replace_na(deaths,0)) %>%
+  mutate(IncMueSalud = deaths,
+         mort_week_avg =  ma7(date, deaths)$moving_avg) %>%
+  select(-deaths)
+
+## Use this to assure all dates are included
+all_dates <- data.frame(date = seq(first_day, max(c(last_complete_day, deaths$date)), by = "day"))
+deaths_by_age <- deaths %>%
+  filter(!is.na(ageRange)) %>%
+  group_by(date, ageRange) %>%
+  summarize(deaths = n(), .groups = "drop") %>%
+  ungroup() %>%
+  full_join(all_dates, by = "date") %>%
+  complete(date, nesting(ageRange), fill = list(deaths = 0)) %>%
+  filter(!is.na(ageRange)) %>%
+  group_by(ageRange) %>%
+  mutate(deaths_week_avg = ma7(date, deaths)$moving_avg)
 
 ## add passanger data
 
@@ -894,7 +935,7 @@ save(rezago_mort, file = file.path(rda_path, "rezago_mort.rda"))
 
 save(tests_by_region, pop_by_region, file = file.path(rda_path, "regions.rda"))
 
-save(tests_by_age, pop_by_age, file = file.path(rda_path, "by-age.rda"))
+save(deaths_by_age, tests_by_age, pop_by_age, file = file.path(rda_path, "by-age.rda"))
 
 save(travelers, file = file.path(rda_path, "travelers.rda"))
 
