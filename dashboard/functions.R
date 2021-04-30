@@ -593,9 +593,9 @@ make_pretty_table <- function(tab, the_caption = ""){
 }
 
 make_positivity_table <- function(tests, hosp_mort, 
-                       start_date = first_day, 
-                       end_date = last_complete_day, 
-                       type = "Molecular"){
+                                  start_date = first_day, 
+                                  end_date = last_complete_day, 
+                                  type = "Molecular"){
 
   tmp <- select(hosp_mort, date, HospitCOV19, IncMueSalud, CamasICU)
   
@@ -919,54 +919,117 @@ plot_fully_vaccinated <- function(hosp_mort,
 
 plot_travelers <- function(travelers,  
                           start_date = first_day, 
-                          end_date = last_complete_day){
+                          end_date = last_complete_day,
+                          yscale = FALSE,
+                          version = c("totals", "percent")){
+  
+  version <- match.arg(version)
+  
   
   tmp <- travelers %>% 
-    filter(date >= start_date & date <= end_date) %>% 
-    select(date, residents, short, long) %>% 
-    rename("Residente" = residents,
-           "Menos de 5 días"= short,
-           "5 días o más" = long) %>%
+    filter(date >= start_date & date <= end_date) 
+  
+  if(version == "totals"){
+    tmp <- select(tmp, -starts_with("perc")) 
+    ylab <- "Viajeros por día"
+    the_title <- "Viajeros llegando a Puerto Rico"
+    if(yscale){
+      ylim <- with(travelers, range(c(residents, short, long), na.rm=TRUE))
+    } else{
+      ylim <- with(tmp, range(c(residents, short, long), na.rm=TRUE))
+    }
+    } else{
+      tmp <- select(tmp, date, starts_with("perc")) 
+      ylab <- "Por ciento"
+      the_title <- "Viajeros llegando a Puerto Rico"
+      if(yscale){
+        ylim <- c(0,1)
+      } else{
+        ylim <- with(tmp, range(c(perc_residents, perc_short, perc_long), na.rm=TRUE))
+      }
+    }
+  
+  values <- select(tmp, -contains("week_avg")) %>% 
     pivot_longer(-date) %>%
+    mutate(name = str_remove_all(name,"perc_"))
+  avgs <- select(tmp, date, contains("week_avg")) %>% 
+    pivot_longer(-date, values_to = "avg") %>%
+    mutate(name = str_remove_all(name,"perc_|_week_avg"))
+  
+  tab <- left_join(values, avgs, by = c("date", "name")) %>%
+    mutate(name = case_when(name == "residents" ~ "Residente",
+                            name == "short" ~ "Menos de 5 días",
+                            name == "long" ~ "5 días o más")) %>%
     mutate(name = factor(name, 
                          levels = c("Residente",
                                     "Menos de 5 días",
                                     "5 días o más")))
   
-  tmp %>% ggplot(aes(date, value, color = name)) +
-    geom_line() +
+  
+  tab  %>% ggplot(aes(date, value, color = name)) +
+    geom_point(alpha = 0.25) +
+    geom_line(aes(y = avg), size = 1.5) +
     scale_x_date(date_labels = "%b %d") +
-    ggtitle("Viajeros llegando a Puerto Rico (media móvil de 7 días)") +
-    ylab("Viajeros por día") +
+    ggtitle("Viajeros llegando a Puerto Rico") +
+    ylab(ylab) +
     xlab("Fecha") +
-    theme_bw() +   
-    theme(legend.position="bottom", legend.title=element_blank()) 
+    ggtitle(the_title) +
+    ylim(ylim) + 
+    theme_bw() 
 }
 
-plot_travelers_tests <- function(travelers,  
-                                 start_date = first_day, 
-                                 end_date = last_complete_day){
+
+table_travelers <- function(travelers,  
+                           start_date = first_day, 
+                           end_date = last_complete_day){
   
-  tmp <- travelers %>% 
-    filter(date >= start_date & date <= end_date) %>% 
-    select(date, perc_residents, perc_short, perc_long) %>% 
-    rename("Residente" = perc_residents,
-           "Menos de 5 días"= perc_short,
-           "5 días o más" = perc_long) %>%
-    pivot_longer(-date) %>%
-    mutate(name = factor(name, 
-                         levels = c("Residente",
-                                    "Menos de 5 días",
-                                    "5 días o más")))
+  tab <- travelers %>% 
+    #filter(date >= start_date & date <= end_date) %>% 
+    select(date, 
+           residents, residents_week_avg, perc_residents,
+           short, short_week_avg, perc_short,
+           long, long_week_avg, perc_long) %>%
+    mutate(residents = make_pretty(residents),
+           residents_week_avg = make_pretty(round(residents_week_avg)),
+           perc_residents = make_pct(perc_residents),
+           short = make_pretty(short), 
+           short_week_avg = make_pretty(round(short_week_avg)), 
+           perc_short = make_pct(perc_short),
+           long = make_pretty(long), 
+           long_week_avg = make_pretty(round(long_week_avg)), 
+           perc_long = make_pct(perc_long), 
+           dummy = date) %>%
+    arrange(desc(dummy)) %>%
+    mutate(date = format(date, "%B %d")) %>%
+    setNames(c("Fecha", 
+               "Total", "Media móvil", "% con prueba",
+               "Total", "Media móvil", "% con prueba",
+               "Total", "Media móvil", "% con prueba", 
+               "dummy")) 
   
-  tmp %>% ggplot(aes(date, value, color = name)) +
-    geom_line(show.legend = FALSE) +
-    scale_x_date(date_labels = "%b %d") +
-    scale_y_continuous(limits = c(0,1), labels = scales::percent) +
-    ggtitle("Por ciento de viajeros presentando prueba negativa (media móvil de 7 días)") +
-    ylab("Por ciento") +
-    xlab("Fecha") +
-    theme_bw() 
+  the_header <- htmltools::withTags(table(
+    class = 'display',
+    thead(style = "border-collapse: collapse;",
+          tr(
+            th('', colspan = 1, style = "border-bottom: none;"),
+            th('Residentes', colspan = 3, style = "border-bottom: none;text-align:center;"),
+            th('Menos de 5 días', colspan = 3, style = "border-bottom: none;text-align:center;"),
+            th('5 días o más', colspan = 3, style = "border-bottom: none;text-align:center;")),
+          tr(
+            lapply(names(tab)[-ncol(tab)], th)
+          )))
+  )
+  tab <- DT::datatable(tab, 
+                       container = the_header,
+                       rownames = FALSE,
+                       class = "display nowrap",
+                       options = list(dom = 't', pageLength = -1,
+                                      columnDefs = list(
+                                        list(targets = 0, orderData = ncol(tab)-1),
+                                        list(targets = ncol(tab)-1, visible = FALSE),
+                                        list(className = 'dt-center', targets = c(1:(ncol(tab)-1))))))
+  
+  return(tab)
 }
 
 
@@ -1112,25 +1175,27 @@ summary_by_region <- function(tests_by_region,
 return(list(p = p, tab = tab, pretty_tab = pretty_tab))
 }
 
-summary_by_age <- function(tests_by_age, 
+summary_by_age <- function(tests_by_age,
+                           deaths_by_age,
                            pop_by_age,
                            start_date = first_day, 
                            end_date = last_complete_day, 
                            type = "Molecular", 
                            cumm = FALSE,
                            yscale = FALSE,
-                           version = c("tp_pruebas", "tp_casos", "casos_per", "casos", "prop"),
+                           version = c("tp_pruebas", "tp_casos", "casos_per", "casos", "deaths_per", "deaths"),
                            facet = TRUE){
   
   version <- match.arg(version)
   
   dat <- tests_by_age %>%
     filter(testType == type & !is.na(ageRange) &
-             date >= start_date & date <= end_date ) %>%
+             date >= start_date & date <= end_date) %>%
     mutate(cases_rate_lower = get_ci_lower(cases_plus_negatives, cases_rate),
            cases_rate_upper = get_ci_upper(cases_plus_negatives, cases_rate)) %>%
-    left_join(pop_by_age, by = "ageRange") 
-  
+    left_join(filter(deaths_by_age, date >= start_date & date <= end_date), by = c("date", "ageRange")) %>%
+    left_join(pop_by_age, by = "ageRange")
+    
   if(cumm){
     dat <- dat %>% 
       group_by(ageRange) %>%
@@ -1145,9 +1210,10 @@ summary_by_age <- function(tests_by_age,
              cases_rate_lower = get_ci_lower(negative_cases + cases, cases_rate),
              cases_rate_upper = get_ci_upper(negative_cases + cases, cases_rate),
              cases_week_avg = cases,
-             people_total_week = people_total) %>%
+             people_total_week = people_total,
+             deaths = cumsum(replace_na(deaths, 0)),
+             deaths_week_avg = deaths) %>%
       ungroup()
-    
   }
   
   type_char <- case_when(type == "Molecular" ~ "molecular", 
@@ -1195,20 +1261,51 @@ summary_by_age <- function(tests_by_age,
     var_title <- "Casos únicos por día por 100,000 habitantes"
     the_ylim <- c(0, 80)
   }
-  if(version ==  "prop"){
-    dat <- dat %>% group_by(date) %>%
-      mutate(the_stat = cases_week_avg/sum(cases_week_avg),
-             daily_stat = cases/sum(cases)) %>%
-      ungroup() 
-    tab <- dat %>% 
-      mutate(the_stat = make_pct(the_stat)) %>%
-      select(date, ageRange, the_stat)
-    var_title <- "Por ciento de casos"
-    the_ylim <- c(0, .5)
-    pct <- TRUE
+  if(version == "deaths"){
+    if(cumm){
+      tab <- dat %>% 
+        mutate(the_stat = make_pretty(deaths)) %>%
+        select(date, ageRange, the_stat)
+    } else{
+      tab <- dat %>% 
+        mutate(the_stat = dynamic_round(deaths_week_avg, min_round = 100)) %>%
+        select(date, ageRange, the_stat)
+    }
+    dat <- dat %>% 
+      rename(the_stat = deaths_week_avg, daily_stat = deaths) 
+    var_title <- "Muertes por día"
+    the_ylim <- c(0, 10)
   }
   
-  if(cumm) the_ylim <- range(dat$the_stat, na.rm = TRUE)
+  if(version == "deaths_per"){
+    tab <- dat %>% 
+      mutate(the_stat = deaths_week_avg/poblacion*10^5) %>%
+      mutate(the_stat = ifelse(is.na(the_stat), "", format(round(the_stat, 1), nsmall = 1))) %>%
+      select(date, ageRange, the_stat)
+    dat <- dat %>% 
+      mutate(deaths_week_avg = deaths_week_avg/poblacion*10^5, deaths = deaths/poblacion*10^5) %>%
+      rename(the_stat = deaths_week_avg, daily_stat = deaths) 
+    var_title <- "Muertes por día por 100,000 habitantes"
+    the_ylim <- c(0, 3.25)
+  }
+  
+  # if(version ==  "prop"){
+  #   dat <- dat %>% group_by(date) %>%
+  #     mutate(the_stat = cases_week_avg/sum(cases_week_avg),
+  #            daily_stat = cases/sum(cases)) %>%
+  #     ungroup() 
+  #   tab <- dat %>% 
+  #     mutate(the_stat = make_pct(the_stat)) %>%
+  #     select(date, ageRange, the_stat)
+  #   var_title <- "Por ciento de casos"
+  #   the_ylim <- c(0, .5)
+  #   pct <- TRUE
+  # }
+  # 
+  if(cumm){
+    the_ylim <- range(dat$the_stat, na.rm = TRUE)
+    if(version %in% c("casos", "casos_per", "deaths", "deaths_per")) the_ylim[1] <- 0
+  }
   
   tab <- tab %>%
     pivot_wider(names_from = ageRange, values_from = the_stat) %>% 
@@ -1254,14 +1351,17 @@ summary_by_age <- function(tests_by_age,
         scale_y_continuous(labels = the_labels)
     }
     
-    if(version %in% c("casos", "casos_per")){
+    if(version %in% c("casos", "casos_per")){ the_color_1 <- "#FBBCB2"; the_color_2 <- "#CC523A"}
+    if(version %in% c("deaths", "deaths_per")){ the_color_1 <- "grey"; the_color_2 <- "black"}
+    
+    if(version %in% c("casos", "casos_per", "deaths", "deaths_per")){
       if(cumm){
         p <- p + 
-          geom_bar(stat = "identity", color = "#FBBCB2", fill = "#FBBCB2", width= 0.2)
+          geom_bar(stat = "identity", color = the_color_1, fill = the_color_1, width= 0.2)
        } else{
         p <- p + 
-          geom_bar(aes(y = daily_stat), stat = "identity", color = "#FBBCB2", fill = "#FBBCB2", width= 0.2, alpha =0.5, show.legend = FALSE) +
-          geom_line(aes(lty = date > last_day), color = "#CC523A", show.legend = FALSE, size = 1.25) 
+          geom_bar(aes(y = daily_stat), stat = "identity", color = the_color_1, fill = the_color_1, width= 0.2, alpha =0.5, show.legend = FALSE) +
+          geom_line(aes(lty = date > last_day), color = the_color_2, show.legend = FALSE, size = 1.25) 
       }
     } else{
       p <- p + 

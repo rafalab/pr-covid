@@ -170,7 +170,8 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                                            "Tasa de positividad (casos)" = "tp_casos",
                                                            "Casos" = "casos",
                                                            "Casos por 100,000" = "casos_per",
-                                                           "Por ciento de casos" = "prop"),
+                                                           "Muertes" = "deaths",
+                                                           "Muertes por 100,000" = "deaths_per"),
                                             selected = "tp_pruebas",
                                             inline = TRUE),
                                radioButtons("by_age_facet", 
@@ -191,13 +192,20 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                               style = button_style),
                                DT::dataTableOutput("labs")),
                       
-                      tabPanel("Vacunas",
+                      tabPanel("Vacunas",  
+                             
                                plotOutput("vaccines"),
                                DT::dataTableOutput("vaccines_table")),
                       
                       tabPanel("Viajeros",
+                               radioButtons("travelers_version", 
+                                            label = "",
+                                            choices = list("Número de viajeros" = "totals",
+                                                           "Por ciento con prueba negativa" = "percent"),
+                                            selected = "totals",
+                                            inline = TRUE),
                                plotOutput("travelers"),
-                               plotOutput("travelers_tests")),
+                               DT::dataTableOutput("table_travelers")),
                       
                       tabPanel("FAQ",
                                includeMarkdown("faq.md"))
@@ -494,7 +502,8 @@ server <- function(input, output, session) {
   output$table_by_region <- DT::renderDataTable(by_region()$pretty_tab, server = FALSE)
   
   by_age<- reactive({load(file.path(rda_path,"by-age.rda"));
-    summary_by_age(tests_by_age, 
+    summary_by_age(tests_by_age,
+                   deaths_by_age,
                    pop_by_age,
                    start_date = input$range[1], 
                    end_date = input$range[2], 
@@ -594,17 +603,18 @@ server <- function(input, output, session) {
     load(file.path(rda_path, "travelers.rda"))
     plot_travelers(travelers, 
                   start_date = input$range[1],
-                  end_date = input$range[2])
+                  end_date = input$range[2],
+                  yscale = input$yscale,
+                  version = input$travelers_version)
   })
   
-  output$travelers_tests <- renderPlot({
+  output$table_travelers <- DT::renderDataTable({
     load(file.path(rda_path, "travelers.rda"))
-    plot_travelers_tests(travelers, 
-                   start_date = input$range[1],
-                   end_date = input$range[2])
-  })
+    table_travelers(travelers, 
+                    start_date = input$range[1],
+                    end_date = input$range[2])
+  }, server = FALSE)
   
-   
   # -- This allows users to download data
   datasetInput <- reactive({
     switch(input$dataset,
