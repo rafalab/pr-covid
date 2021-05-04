@@ -1,0 +1,376 @@
+---
+title: "Monitoreando con datos durante la pandemia del COVID-19"
+author: 
+  Rafael Irizarry
+  Dana-Farber Cancer Institue and Harvard
+  @rafalab
+output:
+    ioslides_presentation:
+      fig_width: 7
+      fig_caption: no
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, fig.align="center", warning=FALSE, message=FALSE)
+```
+
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE, include=FALSE}
+library(tidyverse)
+dslabs::ds_theme_set()
+library(lubridate)
+library(readxl)
+library("twitterwidget")
+Sys.setlocale("LC_TIME", "es_ES")
+```
+
+
+
+## Marzo 11: Muy preocupado
+
+
+```{r out.extra='class="center"'}
+twitterwidget('1237756980338417665')
+```
+
+## Marzo 11: Muy preocupado
+
+```{r}
+knitr::include_graphics("https://pbs.twimg.com/media/ES1iMjbUMAcZlAh?format=png&name=small")
+```
+
+## Marzo 15: Menos preocupado
+
+```{r}
+twitterwidget('1239386321858240514')
+```
+
+## Marzo 25: Preocupado otra vez
+
+58,000 = 2% of PR population!
+
+```{r}
+twitterwidget("1242993012281675776")
+```
+
+## Modelos estadísticos verus matemáticos
+
+Son diferentes
+
+* Modelos matemáticos: hacen predicciones basados en ecuaciones diferenciales tratando de describir como funciona la naturaleza.
+
+* Modelos estadísticos: ajustan modelos a datos observados basado en modelos que han funcionado en el pasado para situaciones parecidas.
+
+* Visualización de datos: usa menos supuestos, pero permite descubrir patrones visualmente.
+
+
+## Italia y España hasta marzo 9
+
+```{r, cache=TRUE}
+dslabs::ds_theme_set()
+
+eudat <-read.csv("https://opendata.ecdc.europa.eu/covid19/casedistribution/csv",
+                          na.strings = "", stringsAsFactors = FALSE,
+                          fileEncoding = "UTF-8-BOM")
+eudat <- eudat %>% as_tibble %>% mutate(dateRep = dmy(dateRep))
+
+plot_eu <- function(x, 
+                    start = make_date(2020,3,1), 
+                    end = make_date(2020,3,25), 
+                    ylim = c(0,1000)
+                    ){
+  eudat %>% filter(countriesAndTerritories %in% x& 
+                     dateRep >= start &
+                     dateRep <= end)  %>%
+    ggplot(aes(dateRep, deaths)) +
+    geom_bar(stat = "identity") +
+    xlab("Fecha") +
+    ylab("Muertes") +
+    scale_y_continuous(limits = ylim) +
+    facet_wrap(~countriesAndTerritories)
+}
+
+plot_eu(c("Italy", "Spain"),  end = make_date(2020,3,9))
+```
+
+## Italia y España hasta marzo 25
+```{r}
+plot_eu(c("Italy", "Spain"),  end = make_date(2020,3,25))
+```
+
+## Italia y España hasta hoy
+```{r}
+plot_eu(c("Italy", "Spain"),  end = today())
+```
+
+## Nueva York y Massachusetts hasta marzo 25
+
+```{r, cache=TRUE}
+states <- read_csv("https://covidtracking.com/api/v1/states/daily.csv") %>%
+  mutate(date = ymd(date))
+```
+
+```{r}
+plot_us <- function(x, 
+                    start = make_date(2020,3,15), 
+                    end = make_date(2020,3,25),
+                    ylim = c(0,800)){
+  states %>% filter(state %in% x,
+                     date >= start &
+                     date <= end)  %>%
+    ggplot(aes(date, deathIncrease)) +
+    geom_bar(stat = "identity") +
+    xlab("Fecha") +
+    ylab("Muertes") +
+    scale_y_continuous(limits = ylim) +
+    facet_wrap(~state)
+}
+
+plot_us(c("NY", "MA"))
+```
+
+
+## Puerto Rico hasta marzo 25
+
+```{r}
+plot_us(c("PR"), ylim = c(0,15))
+```
+## Predecir es difícil
+
+"It's hard to make predictions especially about the future" - Yogi Berra
+
+"Forecasting s-curves is hard" - Constance Crozier
+
+## Predecir es difícil
+
+<iframe title="vimeo-player" src="https://player.vimeo.com/video/408599958" width="480" height="320" frameborder="0" allowfullscreen></iframe>
+
+
+## Esto es lo que acabo ocurriendo en NY y MA
+
+```{r}
+plot_us(c("NY", "MA"), end = today())
+```
+
+## Cases in Puerto Rico
+
+```{r out.height=450}
+knitr::include_graphics("https://images.jifo.co/39360305_1594646341759.png")
+```
+
+Source: Puerto Rico Institute of Statistics
+
+## ¿Menos casos los fines de semana?
+
+```{r}
+load("../dashboard/rdas/data.rda")
+tests %>%
+  filter(date >= make_date(2020, 5, 1) & testType=="Molecular") %>%
+  group_by(weekday = wday(date)) %>%
+  summarize(avg = mean(cases)) %>%
+  mutate(weekday = factor(weekday, labels = weekdays(as_date(3:9)))) %>%
+  ggplot(aes(weekday, avg)) +
+  xlab("") +
+  ylab("Número promedio de casos") +
+  geom_bar(stat = "identity")
+```
+
+## ¿Tanto están creciendo los casos en EEUU?
+
+```{r}
+us <- states %>% group_by(date) %>%
+  filter(date >= make_date(2020, 3, 15) & date <= make_date(2020, 12, 31)) %>%
+  summarize(cases = sum(positiveIncrease, na.rm=TRUE),
+            tests = sum(positiveIncrease, na.rm=TRUE) +
+              sum(negativeIncrease, na.rm=TRUE)) %>%
+  mutate(tests = pmax(0, tests))
+us %>% ggplot(aes(date, cases)) + 
+  geom_bar(stat = "identity") +
+  xlab("Date") +
+  ylab("Casos reportados") 
+```
+
+## Una razón es que se están haciendo muchas más pruebas 
+
+```{r}
+us %>% ggplot(aes(date, tests/10^3)) + 
+  geom_bar(stat = "identity") +
+  ylab("Miles de pruebas") +
+  xlab("Date")
+```
+
+
+## Positivity rate takes this into account
+
+```{r}
+us %>% ggplot(aes(date, cases/tests)) + 
+  geom_bar(stat = "identity") +
+  ylab("Tasa de positividad") +
+  xlab("Date") + 
+  scale_y_continuous(labels = scales::percent)
+```
+
+## Problema en Puerto Rico
+
+No se compartía cuántas pruebas se habían hecho.
+
+## Dashboard de Massachusetts 
+
+Massachusetts, que en mi opinion está monitoreando bien, lleva calculando y reportando la tasa de positividad por meses.
+
+[https://www.mass.gov/info-details/covid-19-response-reporting#covid-19-daily-dashboard-](https://www.mass.gov/info-details/covid-19-response-reporting#covid-19-daily-dashboard-)
+
+## Dashboard de Massachusetts 
+
+```{r, out.height=400, out.width=680}
+knitr::include_graphics("img/MA1.png")
+```
+
+## Dashboard de Massachusetts 
+
+También monitorean las hospitalizaciones y muertes.
+
+```{r, out.height=400, out.width=680}
+knitr::include_graphics("img/MA2.png")
+```
+
+## Información obtenida del dashboard de PR 
+
+```{r, out.height=400, out.width=680}
+knitr::include_graphics("img/PR1.png")
+```
+
+## Información obtenida del dashboard de PR
+
+```{r, out.height=400, out.width=680}
+knitr::include_graphics("img/PR2.png")
+```
+
+## Información obtenida del dashboard de PR
+
+```{r, out.height=400, out.width=680}
+knitr::include_graphics("img/PR3.png")
+```
+
+
+## No podiamos calcular la tasa de positividad
+```{r}
+twitterwidget("1270431134057402369")
+```
+
+## Obtuvimos datos del PRHST
+```{r}
+twitterwidget("1278355503127703552")
+```
+
+## Pero
+```{r}
+twitterwidget("1278355504708845568")
+```
+
+## Lo único que queremos es una tabla
+
+```{r}
+twitterwidget("1278355505468014599")
+```
+
+
+## Empezamos a notar una subida
+```{r}
+twitterwidget("1280189572249509888")
+```
+
+
+## Se observa una subida al final de junio
+
+```{r,  out.height=400, out.width=680}
+knitr::include_graphics("https://pbs.twimg.com/media/EcQkGONWsAEhz0T?format=png&name=large")
+```
+
+## Mientras tanto están llegando 27 vuelos de Florida
+```{r,  out.height=400, out.width=680}
+knitr::include_graphics("https://pbs.twimg.com/media/EcQkL5WXgAMGOzH?format=jpg&name=large")
+```
+
+
+## También vemos que suben las hospitalizaciones
+```{r}
+twitterwidget("1281590614644187146")
+```
+
+
+## Salud comparte un API
+
+```{r}
+twitterwidget("1281723724551659526")
+```
+
+
+## En July 6 teneoms una version, pero los datos no son públicos
+
+```{r,  out.height=400, out.width=680}
+knitr::include_graphics("img/early-positivity-rate.png")
+```
+
+## Ya estamos sobre 5%
+```{r}
+twitterwidget("1280189572249509888")
+```
+
+## El Departamento hace API público 
+
+Once we have data in a nice form, showing data is easy
+```{r, eval = FALSE, echo = TRUE}
+hosp <- read_xlsx("data/Dash Total.xlsx")
+hosp %>% 
+  ggplot(aes(Fecha, `Total de Personas Hospitalizadas COVID`)) +
+  geom_point() + geom_smooth(span = 0.3)
+```
+
+## Creamos un dashboard
+
+```{r}
+twitterwidget("1284292056697929730")
+```
+
+## Creamos un dashboard
+
+http://tpr.covidpr.info/
+
+
+## Asi estamos hoy
+```{r}
+plot_us(c("PR"), end = today(), ylim = c(0,15))
+```
+
+
+## Mapa temporal
+
+```{r, out.height=400, out.width=680}
+knitr::include_graphics("img/ani-2.gif")
+```
+
+
+## Recomendaciones
+
+* Organizen datos sistemáticamente
+* Monitoreen con visualizaciones: tasa de positividad, hospitalizaciones y muertes
+* Monitoreen por regiones geográficas
+* Datos y código: [https://github.com/rafalab/pr-covid](https://github.com/rafalab/pr-covid)
+
+## Agradecimientos
+
+* Joshua Villafañe Delgaado, Danilo Trinidad Perez Rivera, Elvis Nieves Miranda, Mónica Robles Fontán, Fabiola Cruz López (Departamento de Salud)
+* Marcos López Casillas y José Rodriguez Orengo (PRST)
+* Caroline Buckee, Michael Mina, Marc Lipsitch, Rolando Acosta (Harvard)
+* Daniel Colón Ramos (Yale)
+* Natalie Dean (University of Florida)
+* María-Eglée Pérez (UPRRP)
+* Annie Ng (DFCI)
+* Giovanna Guerrero (CienciaPR)
+* Arturo Portnoy (UPRM)
+* Robby Cortés 
+* @midnucas
+
+
+
