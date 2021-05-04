@@ -146,7 +146,7 @@ plot_us(c("PR"), ylim = c(0,15))
 <iframe title="vimeo-player" src="https://player.vimeo.com/video/408599958" width="480" height="320" frameborder="0" allowfullscreen></iframe>
 
 
-## Esto es lo que acabo ocurriendo en NY y MA
+## Lo que acabo ocurriendo en NY y MA
 
 ```{r}
 plot_us(c("NY", "MA"), end = today())
@@ -175,7 +175,7 @@ tests %>%
   geom_bar(stat = "identity")
 ```
 
-## ¿Tanto están creciendo los casos en EEUU?
+## ¿Tanto están creciendo casos en EEUU?
 
 ```{r}
 us <- states %>% group_by(date) %>%
@@ -190,7 +190,7 @@ us %>% ggplot(aes(date, cases)) +
   ylab("Casos reportados") 
 ```
 
-## Una razón es que se están haciendo muchas más pruebas 
+## Una razón: más pruebas 
 
 ```{r}
 us %>% ggplot(aes(date, tests/10^3)) + 
@@ -200,7 +200,7 @@ us %>% ggplot(aes(date, tests/10^3)) +
 ```
 
 
-## Positivity rate takes this into account
+## Positivity toma esto en cuenta
 
 ```{r}
 us %>% ggplot(aes(date, cases/tests)) + 
@@ -214,6 +214,7 @@ us %>% ggplot(aes(date, cases/tests)) +
 
 No se compartía cuántas pruebas se habían hecho.
 
+<!--
 ## Dashboard de Massachusetts 
 
 Massachusetts, que en mi opinion está monitoreando bien, lleva calculando y reportando la tasa de positividad por meses.
@@ -234,26 +235,28 @@ También monitorean las hospitalizaciones y muertes.
 knitr::include_graphics("img/MA2.png")
 ```
 
-## Información obtenida del dashboard de PR 
+-->
+
+## Información del dashboard de PR 
 
 ```{r, out.height=400, out.width=680}
 knitr::include_graphics("img/PR1.png")
 ```
 
-## Información obtenida del dashboard de PR
+## Información del dashboard de PR
 
 ```{r, out.height=400, out.width=680}
 knitr::include_graphics("img/PR2.png")
 ```
 
-## Información obtenida del dashboard de PR
+## Información del dashboard de PR
 
 ```{r, out.height=400, out.width=680}
 knitr::include_graphics("img/PR3.png")
 ```
 
 
-## No podiamos calcular la tasa de positividad
+## No podiamos calcular positividad
 ```{r}
 twitterwidget("1270431134057402369")
 ```
@@ -293,7 +296,8 @@ knitr::include_graphics("https://pbs.twimg.com/media/EcQkL5WXgAMGOzH?format=jpg&
 ```
 
 
-## También vemos que suben las hospitalizaciones
+## También suben hospitalizaciones
+
 ```{r}
 twitterwidget("1281590614644187146")
 ```
@@ -305,18 +309,22 @@ twitterwidget("1281590614644187146")
 twitterwidget("1281723724551659526")
 ```
 
-
+<!--
 ## En July 6 teneoms una version, pero los datos no son públicos
 
 ```{r,  out.height=400, out.width=680}
 knitr::include_graphics("img/early-positivity-rate.png")
 ```
 
+-->
+
+
 ## Ya estamos sobre 5%
 ```{r}
-twitterwidget("1280189572249509888")
+twitterwidget("1283199629308432387")
 ```
 
+<!--
 ## El Departamento hace API público 
 
 Once we have data in a nice form, showing data is easy
@@ -326,6 +334,7 @@ hosp %>%
   ggplot(aes(Fecha, `Total de Personas Hospitalizadas COVID`)) +
   geom_point() + geom_smooth(span = 0.3)
 ```
+-->
 
 ## Creamos un dashboard
 
@@ -333,14 +342,17 @@ hosp %>%
 twitterwidget("1284292056697929730")
 ```
 
+ 
 ## Creamos un dashboard
 
 http://tpr.covidpr.info/
 
 
-## Asi estamos hoy
+
+## Ventaja de positividad
+
 ```{r}
-plot_us(c("PR"), end = today(), ylim = c(0,15))
+twitterwidget("1349729720141836288")
 ```
 
 
@@ -365,10 +377,9 @@ knitr::include_graphics("img/ani-2.gif")
 * Caroline Buckee, Michael Mina, Marc Lipsitch, Rolando Acosta (Harvard)
 * Daniel Colón Ramos (Yale)
 * Natalie Dean (University of Florida)
-* María-Eglée Pérez (UPRRP)
+* María-Eglée Pérez, Arturo Portnoy (UPR)
 * Annie Ng (DFCI)
 * Giovanna Guerrero (CienciaPR)
-* Arturo Portnoy (UPRM)
 * Robby Cortés 
 * @midnucas
 
