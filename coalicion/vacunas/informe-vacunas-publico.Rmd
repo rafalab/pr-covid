@@ -193,14 +193,19 @@ tmp1 <- dose_2 %>% filter(date == max(dose_2$date)) %>%
 
 tmp2 <- dose_2 %>% filter(date == max(dose_2$date) - weeks(2)) %>%
   arrange(ageRange) %>%
-  mutate(dias_a_50 = make_pretty(round(pmax(0, (poblacion*.5 - total) / daily_week_avg - 14))),
-         dias_a_70 = make_pretty(round(pmax(0, (poblacion*.7- total) / daily_week_avg - 14)))) %>%
+  mutate(dias_a_50 = pmax(0, (poblacion*.5 - total) / daily_week_avg - 14),
+         dias_a_70 = pmax(0, (poblacion*.7 - total) / daily_week_avg - 14)) %>%
+  mutate(dias_a_50 = make_pretty(round(dias_a_50)),
+         dias_a_70 = make_pretty(round(dias_a_70))) %>%
+    mutate(dias_a_50 = ifelse(percent > 0.05, dias_a_50, NA),
+         dias_a_70 = ifelse(percent > 0.05, dias_a_70, NA)) %>%
   select(ageRange, gender, dias_a_50, dias_a_70)
 
 left_join(tmp1, tmp2, by = c("ageRange", "gender")) %>% 
   setNames(c("Grupo de edad", "Género", "Población", "Vacunados", "Por ciento", "Días para alcanzar 50%", "Días para alcanzar 70%")) %>%
   knitr::kable(align = "c")
 ```
+
 \newpage
 
 ## Resumen por grupo demográfico (primera dosis)
@@ -214,10 +219,15 @@ tmp1 <- dose_1 %>% filter(date == max(dose_2$date)) %>%
          poblacion = make_pretty(poblacion),
          porciento = make_pct(percent, 0)) %>%
   select(ageRange, gender, poblacion, vacunados, porciento)
-tmp2 <- dose_1 %>% filter(date == max(dose_2$date) - weeks(2)) %>%
+
+tmp2 <- dose_1 %>% filter(date == max(dose_1$date) - weeks(2)) %>%
   arrange(ageRange) %>%
-  mutate(dias_a_50 = make_pretty(round(pmax(0, (poblacion*.5 - total) / daily_week_avg - 14))),
-         dias_a_70 = make_pretty(round(pmax(0, (poblacion*.7- total) / daily_week_avg - 14)))) %>%
+  mutate(dias_a_50 = pmax(0, (poblacion*.5 - total) / daily_week_avg - 14),
+         dias_a_70 = pmax(0, (poblacion*.7 - total) / daily_week_avg - 14)) %>%
+  mutate(dias_a_50 = make_pretty(round(dias_a_50)),
+         dias_a_70 = make_pretty(round(dias_a_70))) %>%
+    mutate(dias_a_50 = ifelse(percent > 0.05, dias_a_50, NA),
+         dias_a_70 = ifelse(percent > 0.05, dias_a_70, NA)) %>%
   select(ageRange, gender, dias_a_50, dias_a_70)
 
 left_join(tmp1, tmp2, by = c("ageRange", "gender")) %>% 
