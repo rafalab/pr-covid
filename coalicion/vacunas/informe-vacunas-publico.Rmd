@@ -6,12 +6,14 @@ output: pdf_document
 ---
 
 
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, fig.pos = "!H", out.extra = "")
 ```
 
 ```{r, warning=FALSE, message=FALSE, include=FALSE}
 library(tidyverse)
+library(readxl)
 library(lubridate)
 library(tidycensus)
 Sys.setlocale("LC_TIME", "es_ES")
@@ -23,7 +25,7 @@ ma7 <- function(d, y, k = 7)
   tibble(date = d, moving_avg = as.numeric(stats::filter(y, rep(1/k, k), side = 1)))
 
 # Define age groups of interest -------------------------------------------
-age_starts <- c(10, 15, 18, seq(30, 80, 10))
+age_starts <- c(0, 10, 15, seq(20, 80, 10))
 age_ends <- c(age_starts[-1]-1, Inf)
 age_levels <- paste(age_starts, age_ends, sep = " a ")
 age_levels[length(age_levels)] <- paste0(age_starts[length(age_levels)],"+")
@@ -33,7 +35,7 @@ age_levels[length(age_levels)] <- paste0(age_starts[length(age_levels)],"+")
 ```{r, cache = TRUE, warning=FALSE, message=FALSE, include=FALSE}
 # Get population estimates from ACS19 -------------------------------
 pr_pop <- 3285874 ## population of puerto rico
-census_api_key("YOURKEYHERE") 
+census_api_key("YOUR_KEY_HERE") 
 v19 <- load_variables(2019, "acs1")
 ## Find the following names by looking at v19
 vars <- c(paste0("B01001_", sprintf("%03d",c(seq(3, 25), seq(27,49)))))
@@ -74,17 +76,34 @@ pop_by_municipio  <-  get_estimates(geography = "county",
   select(NAME, value) %>%
   setNames(c("municipio", "poblacion")) %>%
   mutate(poblacion = round(poblacion*correction))
-  
-census_dat_by_municipio <- get_acs(geography = "county", 
-                                   variables = vars,
-                                   year = 2019,
-                                   state = "Puerto Rico",
-                                   survey = "acs1")
+```
+
+```{r}
+census_dat_by_municipio <- read_xlsx("data/EstimadosPoblacionales2019_Wilmari.xlsx", sheet = 2)
+
+# From here: https://www.census.gov/data/tables/time-series/demo/popest/2010s-detail-puerto-rico-municipios.html
+# note for future: look into why it does not show up with get_estimate
+pop_by_municipio_age_gender <- census_dat_by_municipio %>%
+  select(-FIPS, -TOTAL) %>%
+  pivot_longer(cols = c("MALE", "FEMALE"), names_to = "gender", values_to = "poblacion") %>%
+  rename(ageRange = AGEP, municipio = MUN) %>%
+  mutate(ageRange = ifelse(ageRange == "Under 5 years", "0 to 4", ageRange)) %>%
+  mutate(ageRange = ifelse(ageRange == "85 years and over", "85 to Inf", ageRange)) %>%
+  mutate(ageRange = str_remove(ageRange, "years")) %>%
+  separate(ageRange, c("age_start", "age_end"), sep = " to ", convert = TRUE) %>%
+  mutate(gender = ifelse(gender == "MALE", "M", "F")) %>%
+  mutate(municipio = ifelse(municipio=="San Sebastian", "San Sebastián", municipio)) %>% 
+  mutate(ageRange = cut(age_start, c(age_starts, Inf), right = FALSE, labels = age_levels)) %>% 
+  group_by(municipio) %>%
+  mutate(prop = poblacion/sum(poblacion)) %>%
+  ungroup() %>%
+  select(municipio, ageRange, gender, prop)
 ```
 
 
 ```{r, cache = TRUE,warning=FALSE, message=FALSE, include=FALSE}
 # Read in raw data --------------------------------------------------------
+
 dat <- read_csv("data/Vacunas (Raw Data - Clean) 06-02-2021.csv")
 
 ## Notes:
@@ -166,16 +185,17 @@ resumen <- dat %>% group_by(id) %>%
   select(vacunas_recibidas, serie_completa, personas, n)
 
 ## Cuadra perfecto
-cat("DOSIS ADMINISTRADAS: ", 
+cat("DOSIS ADMINISTRADAS:", 
     make_pretty(nrow(dat)))
 
 ## Casi cuadra
-cat("PERSONAS CON AL MENOS UNA DOSIS: ", 
-    make_pretty(sum(resumen$personas)))
+cat("PERSONAS CON AL MENOS UNA DOSIS:", 
+    make_pretty(sum(resumen$personas)), make_pct(sum(resumen$personas)/pr_pop), "de la poblacion")
 
 ## No cuadra
-cat("PERSONAS CON SERIE DE DOSIS COMPLETADAS: ", 
-    make_pretty(sum(resumen$personas[resumen$serie_completa == "Sí"])))
+cat("PERSONAS CON SERIE DE DOSIS COMPLETADAS:", 
+    make_pretty(sum(resumen$personas[resumen$serie_completa == "Sí"])), 
+    make_pct(sum(resumen$personas[resumen$serie_completa == "Sí"]/pr_pop)), "de la poblacion")
 ```
 
 \newpage
@@ -205,7 +225,6 @@ left_join(tmp1, tmp2, by = c("ageRange", "gender")) %>%
   setNames(c("Grupo de edad", "Género", "Población", "Vacunados", "Por ciento", "Días para alcanzar 50%", "Días para alcanzar 70%")) %>%
   knitr::kable(align = "c")
 ```
-
 \newpage
 
 ## Resumen por grupo demográfico (primera dosis)
@@ -371,6 +390,63 @@ mun <- left_join(municipio_1, municipio_2, by= "municipio") %>%
 mun %>% filter(Municipio !="") %>% 
   knitr::kable(align = c("l", "r", "r", "r", "c","c"))
 ```
+
+\newpage
+
+## ¿Dónde están los mayores de 80 sin vacunar?
+
+```{r}
+mun <- vac %>% 
+  filter(!is.na(date_2) & !is.na(municipio_2) & !is.na(ageRange_2)) %>%
+  group_by(municipio_2, ageRange_2) %>%
+  summarize(total = n(), .groups = "drop") %>%
+  ungroup() %>%
+  rename(municipio = municipio_2, ageRange = ageRange_2) %>%
+  mutate(municipio =str_to_title(municipio)) %>%
+  mutate(municipio = recode(municipio, Anasco = "Añasco", 
+                            Bayamon = "Bayamón", 
+                            Canovanas = "Canóvanas", 
+                            Catano = "Cataño", 
+                            Comerio = "Comerío", 
+                            Guanica = "Guánica", 
+                            `Juana Diaz` = "Juana Díaz", 
+                            `Las Marias`="Las Marías", 
+                            Loiza = "Loíza", 
+                            Manati = "Manatí", 
+                            Mayaguez = "Mayagüez", 
+                            Otro = "", 
+                            Penuelas = "Peñuelas", 
+                            Rincon = "Rincón", 
+                            `Rio Grande`="Río Grande", 
+                            `San German`="San Germán", 
+                            `San Sebastian`="San Sebastián")) 
+
+## combine genders
+pop <- pop_by_municipio_age_gender %>%
+  group_by(municipio, ageRange) %>%
+  summarize(prop = sum(prop),  .groups = "drop") %>%
+  ungroup() %>%
+  left_join(pop_by_municipio, by = "municipio") %>%
+  mutate(poblacion = round(poblacion*prop))
+
+viejos <- left_join(mun, pop, by = c("municipio", "ageRange")) %>%
+  filter(ageRange == "80+") %>%
+  mutate(faltan = poblacion - total) %>%
+  mutate(perc = total / poblacion) %>%
+  select(municipio, faltan, poblacion, total, perc) %>% 
+  arrange(perc) 
+```
+
+
+Faltan `r make_pretty(sum(viejos$faltan, na.rm=TRUE) - viejos$total[viejos$municipio==""])` mayores de 80 por vacunar. 
+Aquí están por municipio ordenados por el por ciento de esta población que falta.
+
+```{r}
+viejos %>% mutate(municipio = ifelse(municipio=="", "No reportado", municipio)) %>% 
+  mutate(perc=make_pct(perc)) %>% setNames(c("Municipio", "Faltan", "Población", "Dosis completa", "Por ciento vacunado")) %>% 
+  knitr::kable(align = c("l","r","r", "r", "r"))
+```
+
 
 \newpage
 ## Vacunas por día
