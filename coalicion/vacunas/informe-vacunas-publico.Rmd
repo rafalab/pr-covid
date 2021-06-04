@@ -85,8 +85,7 @@ census_dat_by_municipio <- get_acs(geography = "county",
 
 ```{r, cache = TRUE,warning=FALSE, message=FALSE, include=FALSE}
 # Read in raw data --------------------------------------------------------
-
-dat <- read_csv("data/Vacunas (Raw Data - Clean) 05-31-2021.csv")
+dat <- read_csv("data/Vacunas (Raw Data - Clean) 06-02-2021.csv")
 
 ## Notes:
 ## Ages don't always match dob
@@ -153,6 +152,7 @@ y en cuanto el Departamento de Salud haga público los datos, serán compartidos
 
 Noten también que el informe esta basado en código preliminar. Si estudian el código y encuentra errores por favor envíelos a bianca.porratadoria@gmail.com
 
+
 ## Resumen general
 
 ```{r}
@@ -178,6 +178,7 @@ cat("PERSONAS CON SERIE DE DOSIS COMPLETADAS: ",
     make_pretty(sum(resumen$personas[resumen$serie_completa == "Sí"])))
 ```
 
+\newpage
 ## Resumen por grupo demográfico (dosis completa)
 
 Este resumen es para aquellos con ambas dosis. El estimado de días para alcanzar 50% y 70% está basado en la tasa de vacunación de hace dos semanas.
@@ -224,9 +225,54 @@ left_join(tmp1, tmp2, by = c("ageRange", "gender")) %>%
   knitr::kable(align = "c")
 ```
 
+\newpage
+
+## Por ciento de la población vacunadas con predicción
+
+Línea entrecortada representa la predicción basada en tasa de hace dos semanas. Noten que esta predicción solo se cumple si mantienen esa tasa.
+
+```{r}
+last_day <- max(dat$date, na.rm=TRUE) - weeks(2)
+
+tmp1 <- vac %>% filter(!is.na(date_1)) %>% 
+  group_by(date = date_1) %>%
+  summarize(daily = n()) %>%
+  ungroup() %>%
+  mutate(total = cumsum(daily), percent = total / pr_pop, dosis = "Primera") %>%
+  filter(date <= last_day)
+
+tmp2 <- vac %>% filter(!is.na(date_2)) %>% 
+  group_by(date = date_2) %>%
+  summarize(daily = n()) %>%
+  ungroup() %>%
+  mutate(total = cumsum(daily), percent = total / pr_pop, dosis = "Completa") %>%
+  filter(date <= last_day)
+
+param <- tmp2 %>% filter(date > last_day - weeks(2) & date <= last_day) %>%
+  summarize(slope = mean(daily), intercept = last(total))
+
+dates <- seq(last_day+days(1), last_day + months(6), by="days")
+
+pred <- data.frame(date = dates, daily = param$slope) %>%
+  mutate(total = cumsum(daily) + param$intercept, percent = total / pr_pop, dosis = "Completa") %>%
+  filter(round(percent, 2) <= 0.7)
+
+tmp2 <- bind_rows(tmp2, pred)
+
+bind_rows(tmp1, tmp2) %>%
+  ggplot(aes(date, total/pr_pop, color = dosis, lty = date > last_day)) +
+  geom_line() +
+  scale_y_continuous(limits = c(0, 1), labels = scales::percent) +
+  ylab("Por ciento") +
+  xlab("Fecha") +
+  ggtitle("Por ciento vacunados en Puerto Rico") +
+  theme_bw()  + guides(linetype = FALSE) +
+  geom_hline(yintercept = 0.7, lty = 2) +
+  annotate("text", x=max(tmp2$date)-days(5), y=max(tmp2$percent)+0.02, label = format(max(tmp2$date), "%b %d"))
+```
 
 \newpage
-## Por ciento de la población con dosis completa por fecha
+## Por ciento de la población con dosis completa por fecha por group demográfico
 
 Línea entrecortada representa periodos con datos incompletos.
 
@@ -244,7 +290,7 @@ dose_2 %>% rename(Género = gender) %>%
 ```
 
 \newpage
-## Por ciento de la población con primera dosis por fecha
+## Por ciento de la población con primera dosis por fecha por group de edad
 
 Línea entrecortada representa periodos con datos incompletos.
 
@@ -303,9 +349,11 @@ mun <- left_join(municipio_1, municipio_2, by= "municipio") %>%
                             `San German`="San Germán", 
                             `San Sebastian`="San Sebastián")) %>%
   left_join(pop_by_municipio, by = c("municipio")) %>%
-  mutate(percent_dosis_1 = make_pct(round(total_1 / poblacion, 2)))%>%
-  mutate(percent_dosis_2 = make_pct(round(total_2 / poblacion, 2))) %>%
-  arrange(desc(percent_dosis_2 ))  %>%
+  mutate(percent_dosis_1 = total_1 / poblacion,
+    percent_dosis_2 = total_2 / poblacion) %>%
+  arrange(desc(percent_dosis_2))  %>%
+  mutate(percent_dosis_1 = make_pct(round(percent_dosis_1, 3)))%>%
+  mutate(percent_dosis_2 = make_pct(round(percent_dosis_2, 3))) %>%
   mutate(total_1 = make_pretty(total_1), total_2 = make_pretty(total_2), 
          poblacion = make_pretty(poblacion)) %>%
   setNames(c("Municipio", "Dosis 1", "Dosis completa", "Población", "% Dosis 1", "% Dosis completa "))
