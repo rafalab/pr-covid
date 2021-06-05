@@ -167,6 +167,46 @@ cat("PERSONAS CON SERIE DE DOSIS COMPLETADAS:",
 ```
 
 \newpage
+
+## Pirámdia poblacional
+
+```{r}
+tmp1 <- dose_1 %>% filter(date == max(dose_1$date)) %>% select(ageRange, gender, total) %>% rename(primera=total)
+tmp2 <- dose_2 %>% filter(date == max(dose_1$date))%>% select(ageRange, gender, total) %>% rename(completa=total)
+tab <- full_join(tmp1, tmp2, by=c("ageRange", "gender")) %>% 
+  right_join(pop_by_age_gender, by=c("ageRange", "gender")) %>%
+ replace_na(list(primera=0, completa=0)) %>%
+  mutate(faltan = poblacion - primera, 
+         primera = primera - completa) %>%
+  mutate(faltan = ifelse(gender=="M", -faltan, faltan),
+         primera = ifelse(gender=="M", -primera, primera),
+         completa = ifelse(gender=="M", -completa, completa)) %>%
+  select(-poblacion) %>%
+  arrange(gender, ageRange) %>%
+  pivot_longer(c(primera, completa, faltan), values_to = "total", names_to="estatus") %>%
+  mutate(estatus = factor(estatus, levels = c("faltan",  "primera","completa"), 
+                          labels = c("No vacunados", "Solo primera dosis", "Dosis completa")))
+
+labs <- seq(-200000,200000,100000)
+tab %>%
+  ggplot(aes(ageRange, total, fill = estatus)) +
+  geom_bar(position = "stack", stat = "identity", color = I("black"), width = 1) +
+  scale_y_continuous(labels= prettyNum(abs(labs), big.mark = ",", scientific=FALSE), breaks = labs,
+                      limits = c(-250000, 250000)) + 
+  geom_hline(yintercept = 0) +
+  ylab("Personas") +
+  xlab("Grupo de edad") + 
+  annotate("text", x=Inf, y=Inf, label = "\nMujeres   ", vjust = 1, hjust = 1) +
+  annotate("text", x=Inf, y=-Inf, label = "\n   Hombres", vjust = 1, hjust = 0) +
+  coord_flip() + 
+  theme_bw() +
+  scale_fill_discrete(name = "Estatus de vacunación") +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) 
+#ggsave("~/Desktop/formid.png", width = 8, height = 4)
+```
+
+
+\newpage
 ## Resumen por grupo demográfico (dosis completa)
 
 Este resumen es para aquellos con ambas dosis. El estimado de días para alcanzar 50% y 70% está basado en la tasa de vacunación de hace dos semanas.
@@ -269,6 +309,8 @@ bind_rows(tmp1, tmp2) %>%
   scale_x_date(date_labels = "%b", breaks = scales::breaks_width("1 month"))
 ```
 
+
+
 \newpage
 ## Por ciento de la población con dosis completa por fecha por group demográfico
 
@@ -340,6 +382,73 @@ mun <- left_join(municipio_1, municipio_2, by= "municipio") %>%
          
 mun %>% filter(Municipio !="") %>% 
   knitr::kable(align = c("l", "r", "r", "r", "c","c"))
+```
+
+
+## Piramdie poblacional de algunos pueblos
+
+Vemos mucha variedad en la vacunación por municipio. Como ejemplo mostramos  la piramide poblacional para 
+nuevo municipios.
+
+```{r}
+tmp1 <- vac %>% 
+  filter(municipio_1 != "" & !is.na(date_1) & !is.na(ageRange_1) & gender_1 %in% c("F","M")) %>%
+  group_by(municipio_1, ageRange_1, gender_1) %>%
+  summarize(total = n(), .groups = "drop") %>%
+  ungroup() %>%
+  rename(municipio = municipio_1, gender = gender_1, ageRange = ageRange_1) %>%
+  select(municipio, ageRange, gender, total) %>% 
+  complete(municipio, ageRange, gender, fill = list(total = 0)) %>%
+  rename(primera=total) 
+  
+tmp2 <- vac %>% 
+  filter(municipio_2 != "" & !is.na(date_2) & !is.na(ageRange_2) & gender_2 %in% c("F","M")) %>%
+  group_by(municipio_2, ageRange_2, gender_2) %>%
+  summarize(total = n(), .groups = "drop") %>%
+  ungroup() %>%
+  rename(municipio = municipio_2, gender = gender_2, ageRange = ageRange_2) %>%
+  select(municipio, ageRange, gender, total) %>% 
+  complete(municipio, ageRange, gender, fill = list(total = 0)) %>%
+  rename(completa = total) 
+
+tmp <- left_join(pop_by_municipio_age_gender, pop_by_municipio, by = "municipio") %>% 
+  mutate(subpoblacion = poblacion*prop)
+
+tab <- full_join(tmp1, tmp2, by=c("municipio", "ageRange", "gender")) %>% 
+  right_join(tmp, by=c("municipio", "ageRange", "gender")) %>%
+ replace_na(list(primera=0, completa=0)) %>%
+  mutate(faltan = (subpoblacion - primera)/poblacion, 
+         primera = (primera - completa)/ poblacion,
+         completa = completa/poblacion) %>%
+  mutate(faltan = ifelse(gender=="M", -faltan, faltan),
+         primera = ifelse(gender=="M", -primera, primera),
+         completa = ifelse(gender=="M", -completa, completa)) %>%
+  select(-poblacion) %>%
+  arrange(gender, ageRange) %>%
+  pivot_longer(c(primera, completa, faltan), values_to = "total", names_to="estatus") %>%
+  mutate(estatus = factor(estatus, levels = c("faltan",  "primera","completa"), 
+                          labels = c("No vacunados", "Solo primera dosis", "Dosis completa")))
+
+labs <- seq(-.08,.08,0.04)
+tab %>% filter(municipio %in% c("Aibonito", "San Juan", "Ponce", "Guaynabo", "Cataño", "Culebra", "Villalba",  "Loíza", "Mayagüez")) %>%
+  ggplot(aes(ageRange, total, fill = estatus)) +
+  geom_bar(position = "stack", stat = "identity", color = I("black"), width = 1) +
+  scale_y_continuous(labels= make_pct(abs(labs)), breaks = labs,
+                      limits = c(-.08, .08)) + 
+  geom_hline(yintercept = 0) +
+  ylab("Personas") +
+  xlab("Grupo de edad") + 
+  annotate("text", x=Inf, y=Inf, label = "Mujeres ", vjust = 1, hjust = 1) +
+  annotate("text", x=Inf, y=-Inf, label = " Hombres", vjust = 1, hjust = 0) +
+  coord_flip() + 
+  theme_bw() +
+  scale_fill_discrete(name = "Estatus de vacunación") +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.position = "bottom") +
+  facet_wrap(~municipio) 
+ggsave("~/Desktop/formid.png", width = 10, height = 5)
+
+
+
 ```
 
 \newpage
@@ -510,3 +619,8 @@ prov %>%
   theme_bw()
 ```
 
+### Agradecimientos
+
+Wilmarí De Jesus proveyó datos demográficos por pueblo.
+
+José Zavala y \@miducas proveyeron recomendaciones y reportaron errores.
