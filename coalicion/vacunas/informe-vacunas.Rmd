@@ -10,7 +10,7 @@ knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, fig.pos = 
 ```
 
 ```{r, warning=FALSE, message=FALSE, include=FALSE}
-fn <- "data/Vacunas (Raw Data - Clean) 06-02-2021.csv"
+fn <- "data/Vacunas (Raw Data - Clean) 06-06-2021.csv"
 library(tidyverse)
 library(readxl)
 library(lubridate)
@@ -105,6 +105,7 @@ dose_1 <- vac %>%
   group_by(date_1, gender_1, ageRange_1) %>%
   summarize(daily = n(), .groups = "drop") %>%
   ungroup() %>%
+  complete(date_1, gender_1, ageRange_1, fill = list(daily = 0)) %>%
   group_by(ageRange_1, gender_1) %>%
   mutate(total = cumsum(daily)) %>%
   mutate(daily_week_avg = ma7(date_1, daily)$moving_avg) %>%
@@ -112,13 +113,14 @@ dose_1 <- vac %>%
   rename(date = date_1, gender = gender_1, ageRange = ageRange_1) %>%
   left_join(pop_by_age_gender, by = c("ageRange", "gender")) %>%
   mutate(percent = total / poblacion,
-         daily_percent = daily_week_avg / poblacion)
+         daily_percent = daily_week_avg / poblacion) 
 
 dose_2 <- vac %>% 
   filter(!is.na(date_2) & !is.na(ageRange_2) & gender_2 %in% c("F","M")) %>%
   group_by(date_2, gender_2, ageRange_2) %>%
   summarize(daily = n(), .groups = "drop") %>%
   ungroup() %>%
+  complete(date_2, gender_2, ageRange_2, fill = list(daily = 0)) %>%
   group_by(ageRange_2, gender_2) %>%
   mutate(total = cumsum(daily)) %>%
   mutate(daily_week_avg = ma7(date_2, daily)$moving_avg) %>%
@@ -171,8 +173,8 @@ cat("PERSONAS CON SERIE DE DOSIS COMPLETADAS:",
 ## Pirámdia poblacional
 
 ```{r}
-tmp1 <- dose_1 %>% filter(date == max(dose_1$date)) %>% select(ageRange, gender, total) %>% rename(primera=total)
-tmp2 <- dose_2 %>% filter(date == max(dose_1$date))%>% select(ageRange, gender, total) %>% rename(completa=total)
+tmp1 <- dose_1 %>% filter(date == max(date)) %>% select(ageRange, gender, total) %>% rename(primera = total)
+tmp2 <- dose_2 %>% filter(date == max(date)) %>% select(ageRange, gender, total) %>% rename(completa = total)
 tab <- full_join(tmp1, tmp2, by=c("ageRange", "gender")) %>% 
   right_join(pop_by_age_gender, by=c("ageRange", "gender")) %>%
  replace_na(list(primera=0, completa=0)) %>%
@@ -193,7 +195,6 @@ tab %>%
   geom_bar(position = "stack", stat = "identity", color = I("black"), width = 1) +
   scale_y_continuous(labels= prettyNum(abs(labs), big.mark = ",", scientific=FALSE), breaks = labs,
                       limits = c(-250000, 250000)) + 
-  geom_hline(yintercept = 0) +
   ylab("Personas") +
   xlab("Grupo de edad") + 
   annotate("text", x=Inf, y=Inf, label = "\nMujeres   ", vjust = 1, hjust = 1) +
@@ -202,7 +203,6 @@ tab %>%
   theme_bw() +
   scale_fill_discrete(name = "Estatus de vacunación") +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) 
-#ggsave("~/Desktop/formid.png", width = 8, height = 4)
 ```
 
 
@@ -266,7 +266,7 @@ left_join(tmp1, tmp2, by = c("ageRange", "gender")) %>%
 
 ## Por ciento de la población vacunadas con predicción
 
-Línea entrecortada representa la predicción basada en tasa de hace dos semanas. Noten que esta predicción solo se cumple si mantienen esa tasa.
+Línea entrecortada representa la predicción basada en tasa de hace dos semanas. Noten que esta predicción solo se cumple si mantienen esa tasa. En las próximas dos páginas vemos patrones preocupantes: una vez dividimos en grupos de edad, vemos que las tasas de vacunación bajan luego de que 40% del grupo se vacuna.
 
 ```{r}
 last_day <- max(dat$date, na.rm=TRUE) - weeks(2)
@@ -384,13 +384,13 @@ mun %>% filter(Municipio !="") %>%
   knitr::kable(align = c("l", "r", "r", "r", "c","c"))
 ```
 
-
+\newpage
 ## Piramdie poblacional de algunos pueblos
 
 Vemos mucha variedad en la vacunación por municipio. Como ejemplo mostramos  la piramide poblacional para 
 nuevo municipios.
 
-```{r}
+```{r, fig.dim = c(8, 8), out.height="80%"}
 tmp1 <- vac %>% 
   filter(municipio_1 != "" & !is.na(date_1) & !is.na(ageRange_1) & gender_1 %in% c("F","M")) %>%
   group_by(municipio_1, ageRange_1, gender_1) %>%
@@ -423,20 +423,18 @@ tab <- full_join(tmp1, tmp2, by=c("municipio", "ageRange", "gender")) %>%
   mutate(faltan = ifelse(gender=="M", -faltan, faltan),
          primera = ifelse(gender=="M", -primera, primera),
          completa = ifelse(gender=="M", -completa, completa)) %>%
-  select(-poblacion) %>%
-  arrange(gender, ageRange) %>%
+  arrange(municipio, gender, ageRange) %>%
   pivot_longer(c(primera, completa, faltan), values_to = "total", names_to="estatus") %>%
   mutate(estatus = factor(estatus, levels = c("faltan",  "primera","completa"), 
                           labels = c("No vacunados", "Solo primera dosis", "Dosis completa")))
 
-labs <- seq(-.08,.08,0.04)
+labs <- seq(-.08, .08, 0.04)
 tab %>% filter(municipio %in% c("Aibonito", "San Juan", "Ponce", "Guaynabo", "Cataño", "Culebra", "Villalba",  "Loíza", "Mayagüez")) %>%
   ggplot(aes(ageRange, total, fill = estatus)) +
   geom_bar(position = "stack", stat = "identity", color = I("black"), width = 1) +
-  scale_y_continuous(labels= make_pct(abs(labs)), breaks = labs,
-                      limits = c(-.08, .08)) + 
+  scale_y_continuous(labels= make_pct(abs(labs)), breaks = labs) + 
   geom_hline(yintercept = 0) +
-  ylab("Personas") +
+  ylab("Por ciento") +
   xlab("Grupo de edad") + 
   annotate("text", x=Inf, y=Inf, label = "Mujeres ", vjust = 1, hjust = 1) +
   annotate("text", x=Inf, y=-Inf, label = " Hombres", vjust = 1, hjust = 0) +
@@ -445,11 +443,28 @@ tab %>% filter(municipio %in% c("Aibonito", "San Juan", "Ponce", "Guaynabo", "Ca
   scale_fill_discrete(name = "Estatus de vacunación") +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.position = "bottom") +
   facet_wrap(~municipio) 
-ggsave("~/Desktop/formid.png", width = 10, height = 5)
-
-
-
 ```
+
+<!--
+```{r}
+labs <- seq(-1500,1500,500)
+tab %>% filter(municipio=="Villalba") %>%
+  mutate(total = total*poblacion) %>%
+  ggplot(aes(ageRange, total, fill = estatus)) +
+  geom_bar(position = "stack", stat = "identity", color = I("black"), width = 1) +
+  scale_y_continuous(labels= prettyNum(abs(labs), big.mark = ",", scientific=FALSE), breaks = labs,
+                      limits = c(-1600, 1600)) + 
+  ylab("Personas") +
+  xlab("Grupo de edad") + 
+  annotate("text", x=Inf, y=Inf, label = "\nMujeres   ", vjust = 1, hjust = 1) +
+  annotate("text", x=Inf, y=-Inf, label = "\n   Hombres", vjust = 1, hjust = 0) +
+  coord_flip() + 
+  theme_bw() +
+  scale_fill_discrete(name = "Estatus de vacunación") +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) 
+```
+-->
+
 
 \newpage
 
@@ -489,6 +504,8 @@ viejos %>% mutate(municipio = ifelse(municipio=="", "No reportado", municipio)) 
   setNames(c("Municipio", "Faltan", "Población", "Dosis completa", "Por ciento vacunado")) %>% 
   knitr::kable(align = c("l","r","r", "r", "r"))
 ```
+
+\newpage
 ## ¿Dónde están los mayores de 60 sin vacunar?
 
 ```{r}
@@ -516,9 +533,59 @@ viejos %>% mutate(municipio = ifelse(municipio=="", "No reportado", municipio)) 
 
 
 \newpage
+## Rezago 
+
+```{r}
+prov <- dat %>% mutate(diff = as.numeric(insert_date) - as.numeric(date))  %>% 
+  mutate(proveedor = case_when(str_detect(proveedor, "WALGREENS") ~ "Walgreens",
+                               str_detect(proveedor, "WALMART|SAM'S") ~ "Walmart/Sams",
+                               str_detect(proveedor, "CVS") ~ "CVS",
+                               str_detect(proveedor, "VOCES") ~ "Voces",
+                               str_detect(proveedor, "PONCE HLTH SCI UNIV") ~ "Ponce Health",
+                               str_detect(proveedor, "PR NATIONAL GUARD") ~ "Guardia Nacional",
+                               str_detect(proveedor, "CDVA") ~ "CDVA",           
+                               str_detect(proveedor, "COLEGIO MEDICOS CIRUJANOS") ~ "Colegio de Médicos", #Victor y su pandilla",
+                               str_detect(proveedor, "DESARROLLO SALUDN") ~ "Desarrollo de la Salud",
+                               str_detect(proveedor, "AUXILIO MUTUO") ~ "Auxilio Mutuo",
+                               str_detect(proveedor, "CORRECCIONAL") ~ "Correccional",
+                               str_detect(proveedor, "FARMACIA|FARMACIAS|PHARMACY") ~ "Otras farmacias",
+                               str_detect(proveedor, "HOSP|HOSPTIAL") ~ "Otros",
+                               str_detect(proveedor, "MEDICAL SCIENCE CAMPUS UPR") ~ "Ciencias Médcias", 
+                               str_detect(proveedor, "UNIVERSIDAD|UPR|UNIV|COLEGIO") ~ "Otras Universidades",
+                               str_detect(proveedor, "CDT") ~ "CDTs",
+                               str_detect(proveedor, "DR ") ~ "Doctores",
+                               TRUE ~ "Otros")) 
+```
+
+Parar una vacunación aparecer en este análisis se tiene que reportar al PREIS. Algunos proveedores toman diás en entrar los datos. La entrada de datos parece estar mejorando pero aun vemos rezago. La próxima gráfica muestra el por ciento de vacunaciones que se reportan como función del número de días. 
+
+```{r}
+n_points <- 300
+start_date <- today()-days(45)
+end_date <-  today()-days(15)
+ndays <- as.numeric(end_date)-as.numeric(start_date)
+dias <- round(seq(0, ndays, length.out = n_points))
+the_diff <- filter(prov, date >= start_date & date <= end_date) %>%
+  .$diff
+tmp <- data.frame(dias = dias, props = ecdf(the_diff)(dias))
+                    
+tmp %>%
+  ggplot(aes(x = dias, y = props)) +
+  geom_step(alpha = 0.75) +
+  xlab("Días de rezago") +
+  ylab("Por ciento reportados") +
+  labs(title = "Rezago reportando datos de vacunación",
+       subtitle = paste("Basado en datos de ", format(start_date, "%B %d"), "a", format(end_date, "%B %d."))) +
+  scale_y_continuous(labels=scales::percent, limits = c(0,1)) +
+  xlim(0, ndays) +
+  theme_bw()  
+```
+
+
+\newpage
 ## Vacunas por día
 
-No incluye datos de las últimas dos semanas por estar incompletos.
+No incluye datos de las últimas dos semanas por estar incompletos. Noten que hay un rezago en reportar datos de vacunación al departamento de salud por lo caul mientras más reciente el día más  
 
 
 ```{r}
@@ -557,30 +624,8 @@ no_dose_2 %>% knitr::kable(align = "c")
 ```
 
 
-\newpage
-## Proveedores 
 
-```{r}
-prov <- dat %>% mutate(diff = as.numeric(insert_date) - as.numeric(date))  %>% 
-  mutate(proveedor = case_when(str_detect(proveedor, "WALGREENS") ~ "Walgreens",
-                               str_detect(proveedor, "WALMART|SAM'S") ~ "Walmart/Sams",
-                               str_detect(proveedor, "CVS") ~ "CVS",
-                               str_detect(proveedor, "VOCES") ~ "Voces",
-                               str_detect(proveedor, "PONCE HLTH SCI UNIV") ~ "Ponce Health",
-                               str_detect(proveedor, "PR NATIONAL GUARD") ~ "Guardia Nacional",
-                               str_detect(proveedor, "CDVA") ~ "CDVA",           
-                               str_detect(proveedor, "COLEGIO MEDICOS CIRUJANOS") ~ "Colegio de Médicos", #Victor y su pandilla",
-                               str_detect(proveedor, "DESARROLLO SALUDN") ~ "Desarrollo de la Salud",
-                               str_detect(proveedor, "AUXILIO MUTUO") ~ "Auxilio Mutuo",
-                               str_detect(proveedor, "CORRECCIONAL") ~ "Correccional",
-                               str_detect(proveedor, "FARMACIA|FARMACIAS|PHARMACY") ~ "Otras farmacias",
-                               str_detect(proveedor, "HOSP|HOSPTIAL") ~ "Otros",
-                               str_detect(proveedor, "MEDICAL SCIENCE CAMPUS UPR") ~ "Ciencias Médcias", 
-                               str_detect(proveedor, "UNIVERSIDAD|UPR|UNIV|COLEGIO") ~ "Otras Universidades",
-                               str_detect(proveedor, "CDT") ~ "CDTs",
-                               str_detect(proveedor, "DR ") ~ "Doctores",
-                               TRUE ~ "Otros")) 
-```
+##Proveedores 
 
 Estos son los totales de vacunas administradas por proveedor. Incluimos también el rezago medio en entrar los datos al sistema para todo el periodo y para la última semana.
 
@@ -619,7 +664,10 @@ prov %>%
   theme_bw()
 ```
 
+\newpage
 ### Agradecimientos
+
+Departamento de Salud por proveer datos.
 
 Wilmarí De Jesus proveyó datos demográficos por pueblo.
 
