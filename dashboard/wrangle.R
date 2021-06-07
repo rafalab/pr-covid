@@ -398,7 +398,7 @@ for(j in which(names(vaccines)!="date")){
 }
 
 ## fill in the NAs
-hosp_mort <- left_join(hosp_mort, vaccines, by = "date") 
+hosp_mort <- full_join(hosp_mort, vaccines, by = "date") 
 
 
 if(FALSE){
@@ -861,7 +861,7 @@ deaths <- jsonlite::fromJSON(url) %>%
 hosp_mort <- deaths %>%
   group_by(date) %>%
   summarize(deaths = n(), .groups = "drop") %>%
-  right_join(hosp_mort, by = "date") %>%
+  full_join(hosp_mort, by = "date") %>%
   arrange(date) %>%
   mutate(deaths = replace_na(deaths,0)) %>%
   mutate(IncMueSalud = deaths,
