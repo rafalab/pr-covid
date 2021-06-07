@@ -385,7 +385,7 @@ mun %>% filter(Municipio !="") %>%
 ```
 
 \newpage
-## Piramdie poblacional de algunos pueblos
+## Piramide poblacional de algunos pueblos
 
 Vemos mucha variedad en la vacunación por municipio. Como ejemplo mostramos  la piramide poblacional para 
 nuevo municipios.
@@ -671,4 +671,4 @@ Departamento de Salud por proveer datos.
 
 Wilmarí De Jesus proveyó datos demográficos por pueblo.
 
-José Zavala y \@miducas proveyeron recomendaciones y reportaron errores.
+José Zavala y \@midnucas proveyeron recomendaciones y reportaron errores.
