@@ -10,7 +10,7 @@ knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, fig.pos = 
 ```
 
 ```{r, warning=FALSE, message=FALSE, include=FALSE}
-fn <- "data/Vacunas (Raw Data - Clean) 06-06-2021.csv"
+fn <- "data/Vacunas (Raw Data - Clean) 06-13-2021.csv"
 library(tidyverse)
 library(readxl)
 library(lubridate)
@@ -133,13 +133,13 @@ dose_2 <- vac %>%
 
 ## Disclaimer
 
-Este informe está basado en datos del sistema Puerto Rico Electronic Immunization System (PREIS) compartidos con la Coalición Científica por el Departamento de Salud. Los datos no se han hecho públicos. Compartimos el código utilizado por la Coalición aquí
+Este informe está basado en datos del Puerto Rico Electronic Immunization System (PREIS) compartidos con la Coalición Científica por el Departamento de Salud. Los datos no se han hecho públicos. Compartimos el código utilizado por la Coalición aquí
 
 https://github.com/rafalab/pr-covid/tree/master/coalicion/vacunas
 
 y en cuanto el Departamento de Salud haga público los datos, serán compartidos por esta Coalición para facilitar reproducir nuestros informes, similar a cómo se ha hecho con todos los otros informes de la Coalición. Noten que sin los datos no podrán reproducir el informe, pero desafortunadamente no tenemos permiso para compartir estos datos.
 
-Noten también que el informe esta basado en código preliminar. Si estudian el código y encuentra errores por favor envíelos a bianca.porratadoria@gmail.com
+Noten también que el informe está basado en código preliminar. Si estudian el código y encuentra errores por favor envíelos a bianca.porratadoria@gmail.com
 
 
 ## Resumen general
@@ -170,7 +170,7 @@ cat("PERSONAS CON SERIE DE DOSIS COMPLETADAS:",
 
 \newpage
 
-## Pirámdia poblacional
+## Pirámide poblacional
 
 ```{r}
 tmp1 <- dose_1 %>% filter(date == max(date)) %>% select(ageRange, gender, total) %>% rename(primera = total)
@@ -186,7 +186,7 @@ tab <- full_join(tmp1, tmp2, by=c("ageRange", "gender")) %>%
   select(-poblacion) %>%
   arrange(gender, ageRange) %>%
   pivot_longer(c(primera, completa, faltan), values_to = "total", names_to="estatus") %>%
-  mutate(estatus = factor(estatus, levels = c("faltan",  "primera","completa"), 
+  mutate(estatus = factor(estatus, levels = c("faltan",  "primera", "completa"), 
                           labels = c("No vacunados", "Solo primera dosis", "Dosis completa")))
 
 labs <- seq(-200000,200000,100000)
@@ -264,7 +264,7 @@ left_join(tmp1, tmp2, by = c("ageRange", "gender")) %>%
 
 \newpage
 
-## Por ciento de la población vacunadas con predicción
+## Por ciento de la población vacunada con predicción
 
 Línea entrecortada representa la predicción basada en tasa de hace dos semanas. Noten que esta predicción solo se cumple si mantienen esa tasa. En las próximas dos páginas vemos patrones preocupantes: una vez dividimos en grupos de edad, vemos que las tasas de vacunación bajan luego de que 40% del grupo se vacuna.
 
@@ -385,10 +385,10 @@ mun %>% filter(Municipio !="") %>%
 ```
 
 \newpage
-## Piramide poblacional de algunos pueblos
+## Pirámide poblacional de algunos pueblos
 
-Vemos mucha variedad en la vacunación por municipio. Como ejemplo mostramos  la piramide poblacional para 
-nuevo municipios.
+Vemos mucha variedad en la vacunación por municipio. Como ejemplo mostramos  la pirámide poblacional para 
+nueve municipios.
 
 ```{r, fig.dim = c(8, 8), out.height="80%"}
 tmp1 <- vac %>% 
@@ -541,7 +541,7 @@ prov <- dat %>% mutate(diff = as.numeric(insert_date) - as.numeric(date))  %>%
                                str_detect(proveedor, "WALMART|SAM'S") ~ "Walmart/Sams",
                                str_detect(proveedor, "CVS") ~ "CVS",
                                str_detect(proveedor, "VOCES") ~ "Voces",
-                               str_detect(proveedor, "PONCE HLTH SCI UNIV") ~ "Ponce Health",
+                               str_detect(proveedor, "PONCE HEALTH SCIENCE UNIV|PONCE HLTH SCI UNIV HUB") ~ "Ponce Health",
                                str_detect(proveedor, "PR NATIONAL GUARD") ~ "Guardia Nacional",
                                str_detect(proveedor, "CDVA") ~ "CDVA",           
                                str_detect(proveedor, "COLEGIO MEDICOS CIRUJANOS") ~ "Colegio de Médicos", #Victor y su pandilla",
@@ -557,7 +557,7 @@ prov <- dat %>% mutate(diff = as.numeric(insert_date) - as.numeric(date))  %>%
                                TRUE ~ "Otros")) 
 ```
 
-Parar una vacunación aparecer en este análisis se tiene que reportar al PREIS. Algunos proveedores toman diás en entrar los datos. La entrada de datos parece estar mejorando pero aun vemos rezago. La próxima gráfica muestra el por ciento de vacunaciones que se reportan como función del número de días. 
+Para una vacunación aparecer en este análisis se tiene que reportar al PREIS. Algunos proveedores toman días en entrar los datos. La entrada de datos parece estar mejorando pero aun vemos rezago. La próxima gráfica muestra el por ciento de vacunaciones que se reportan como función del número de días. 
 
 ```{r}
 n_points <- 300
@@ -583,9 +583,9 @@ tmp %>%
 
 
 \newpage
-## Vacunas por día
+## Vacunas por día por grupo de edad
 
-No incluye datos de las últimas dos semanas por estar incompletos. Noten que hay un rezago en reportar datos de vacunación al departamento de salud por lo caul mientras más reciente el día más  
+No incluye datos de las últimas dos semanas por estar incompletos. Noten que hay un rezago en reportar datos de vacunación al departamento de salud por lo cual dias recientes tienen más datos incompletos (ver sección de rezagos).
 
 
 ```{r}
@@ -605,6 +605,30 @@ dat %>%
   labs(fill = "Grupo de edad") 
 ```
 
+## Vacunas por día por fabricante
+
+No incluye datos de las últimas dos semanas por estar incompletos. Noten que hay un rezago en reportar datos de vacunación al departamento de salud por lo cual dias recientes tienen más datos incompletos (ver sección de rezagos).
+
+
+```{r}
+dat %>%
+  mutate(date = floor_date(date, unit = "week")) %>%
+  filter(!is.na(ageRange) & date < max(date) - weeks(2)) %>%
+  group_by(date, manu) %>%
+  summarize(total = n()) %>%
+  ungroup() %>%
+  mutate(manu = factor(manu, levels = c("PFR","MOD","JSN"))) %>%
+  mutate(manu = recode(manu, MOD = "Moderna", PFR = "Pfizer", JSN = "Janssen")) %>%
+  ggplot(aes(date, total, color = manu)) +
+  geom_line() +
+  scale_y_continuous(labels = scales::comma) +
+  ylab("Vacunas por semana") +
+  xlab("Fecha") +
+  ggtitle("Vacunas por semana por fabricante") +
+  theme_bw() +
+  labs(color = "Fabricante") 
+ggsave("~/Desktop/fabricante.png", width = 8, height = 4)
+```
 
 ## Por ciento que no se está poniendo la segunda dosis
 
@@ -624,13 +648,12 @@ no_dose_2 %>% knitr::kable(align = "c")
 ```
 
 
-
 ##Proveedores 
 
 Estos son los totales de vacunas administradas por proveedor. Incluimos también el rezago medio en entrar los datos al sistema para todo el periodo y para la última semana.
 
 ```{r}
-prov %>% group_by(proveedor) %>%
+prov %>% group_by(proveedor) %>%R
   summarize(total = n(), 
             rezago = median(diff), 
             rezago_esta_semana = median(diff[insert_date >= today() - weeks(1)])) %>%
@@ -667,7 +690,7 @@ prov %>%
 \newpage
 ### Agradecimientos
 
-Departamento de Salud por proveer datos.
+Departamento de Salud por proveer datos y Enrique Volckers por facilitar el traslado de datos.
 
 Wilmarí De Jesus proveyó datos demográficos por pueblo.
 
