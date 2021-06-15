@@ -216,8 +216,9 @@ tmp1 <- dose_2 %>% filter(date == max(dose_2$date)) %>%
   arrange(ageRange) %>%
   mutate(vacunados = make_pretty(total),
          poblacion = make_pretty(poblacion),
-         porciento = make_pct(percent, 0)) %>%
-  select(ageRange, gender, poblacion, vacunados, porciento)
+         porciento = make_pct(percent, 0),
+         ritmo     = make_pct(daily_percent, 2)) %>%
+  select(ageRange, gender, poblacion, vacunados, porciento, ritmo)
 
 tmp2 <- dose_2 %>% filter(date == max(dose_2$date) - weeks(2)) %>%
   arrange(ageRange) %>%
@@ -230,7 +231,7 @@ tmp2 <- dose_2 %>% filter(date == max(dose_2$date) - weeks(2)) %>%
   select(ageRange, gender, dias_a_50, dias_a_70)
 
 left_join(tmp1, tmp2, by = c("ageRange", "gender")) %>% 
-  setNames(c("Grupo de edad", "Género", "Población", "Vacunados", "Por ciento", "Días para alcanzar 50%", "Días para alcanzar 70%")) %>%
+  setNames(c("Grupo de edad", "Género", "Población", "Vacunados", "Por ciento", "Ritmo diario", "Días para alcanzar 50%", "Días para alcanzar 70%")) %>%
   knitr::kable(align = "c")
 ```
 \newpage
@@ -244,8 +245,9 @@ tmp1 <- dose_1 %>% filter(date == max(dose_2$date)) %>%
   arrange(ageRange) %>%
   mutate(vacunados = make_pretty(total),
          poblacion = make_pretty(poblacion),
-         porciento = make_pct(percent, 0)) %>%
-  select(ageRange, gender, poblacion, vacunados, porciento)
+         porciento = make_pct(percent, 0),
+         ritmo     = make_pct(daily_percent, 2)) %>%
+  select(ageRange, gender, poblacion, vacunados, porciento, ritmo)
 
 tmp2 <- dose_1 %>% filter(date == max(dose_1$date) - weeks(2)) %>%
   arrange(ageRange) %>%
@@ -258,7 +260,7 @@ tmp2 <- dose_1 %>% filter(date == max(dose_1$date) - weeks(2)) %>%
   select(ageRange, gender, dias_a_50, dias_a_70)
 
 left_join(tmp1, tmp2, by = c("ageRange", "gender")) %>% 
-  setNames(c("Grupo de edad", "Género", "Población", "Vacunados", "Por ciento", "Días para alcanzar 50%", "Días para alcanzar 70%")) %>%
+  setNames(c("Grupo de edad", "Género", "Población", "Vacunados", "Por ciento", "Ritmo diario", "Días para alcanzar 50%", "Días para alcanzar 70%")) %>%
   knitr::kable(align = "c")
 ```
 
