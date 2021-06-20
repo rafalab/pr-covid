@@ -47,7 +47,7 @@ pop_by_age_gender <- pop_by_age_gender %>%
 pop_by_municipio_age_gender <- pop_by_municipio_age_gender  %>%
   mutate(ageRange = cut(age_start, c(age_starts, Inf), right = FALSE, labels = age_levels)) %>% 
   group_by(municipio, ageRange, gender) %>%
-  summarize(prop = sum(prop), .groups = "drop") %>%
+  summarize(poblacion = sum(poblacion), .groups = "drop") %>%
   ungroup() 
 ```
 
@@ -353,7 +353,9 @@ dose_1 %>% rename(Género = gender) %>%
 \newpage
 ## Tasas de vacunación por municipio
 
-Mostramos los por cientos de cada municipio ordenado por el por ciento de dosis completas.
+Mostramos los por cientos de cada municipio ordenado por el por ciento de dosis completas. 
+
+Ojo: Los datos demográficos de los pueblos son los estimados del ACS para 2019 por lo cual el total no será igual al que usamos anteriormente para todo Puerto Rico que está basado en el censo de 2020. Los datos del 2020 para cada pueblo aun no están disponibles. El total para Puerto Rico del 2020 es 3% más alto que el estimado del 2019.
 
 ```{r}
 municipio_1 <- vac %>% 
@@ -413,8 +415,9 @@ tmp2 <- vac %>%
   complete(municipio, ageRange, gender, fill = list(total = 0)) %>%
   rename(completa = total) 
 
-tmp <- left_join(pop_by_municipio_age_gender, pop_by_municipio, by = "municipio") %>% 
-  mutate(subpoblacion = poblacion*prop)
+tmp <- pop_by_municipio_age_gender %>% 
+ rename(subpoblacion = poblacion) %>%
+  left_join(pop_by_municipio, by = "municipio") 
 
 tab <- full_join(tmp1, tmp2, by=c("municipio", "ageRange", "gender")) %>% 
   right_join(tmp, by=c("municipio", "ageRange", "gender")) %>%
@@ -431,7 +434,8 @@ tab <- full_join(tmp1, tmp2, by=c("municipio", "ageRange", "gender")) %>%
                           labels = c("No vacunados", "Solo primera dosis", "Dosis completa")))
 
 labs <- seq(-.08, .08, 0.04)
-tab %>% filter(municipio %in% c("Aibonito", "San Juan", "Ponce", "Guaynabo", "Cataño", "Culebra", "Villalba",  "Loíza", "Mayagüez")) %>%
+tab %>% filter(municipio %in% c("Maunabo", "Luquillo")) %>%
+#  filter(municipio %in% c("Aibonito", "San Juan", "Ponce", "Guaynabo", "Cataño", "Culebra", "Villalba",  "Loíza", "Mayagüez")) %>%
   ggplot(aes(ageRange, total, fill = estatus)) +
   geom_bar(position = "stack", stat = "identity", color = I("black"), width = 1) +
   scale_y_continuous(labels= make_pct(abs(labs)), breaks = labs) + 
@@ -483,10 +487,7 @@ mun <- vac %>%
 ## combine genders
 pop <- pop_by_municipio_age_gender %>%
   group_by(municipio, ageRange) %>%
-  summarize(prop = sum(prop),  .groups = "drop") %>%
-  ungroup() %>%
-  left_join(pop_by_municipio, by = "municipio") %>%
-  mutate(poblacion = round(poblacion*prop))
+  summarize(poblacion = sum(poblacion),  .groups = "drop")
 
 viejos <- left_join(mun, pop, by = c("municipio", "ageRange")) %>%
   filter(ageRange == "80+") %>%
@@ -655,7 +656,7 @@ no_dose_2 %>% knitr::kable(align = "c")
 Estos son los totales de vacunas administradas por proveedor. Incluimos también el rezago medio en entrar los datos al sistema para todo el periodo y para la última semana.
 
 ```{r}
-prov %>% group_by(proveedor) %>%R
+prov %>% group_by(proveedor) %>%
   summarize(total = n(), 
             rezago = median(diff), 
             rezago_esta_semana = median(diff[insert_date >= today() - weeks(1)])) %>%
@@ -693,7 +694,5 @@ prov %>%
 ### Agradecimientos
 
 Departamento de Salud por proveer datos y Enrique Volckers por facilitar el traslado de datos.
-
-Wilmarí De Jesus proveyó datos demográficos por pueblo.
 
 José Zavala y \@midnucas proveyeron recomendaciones y reportaron errores.
