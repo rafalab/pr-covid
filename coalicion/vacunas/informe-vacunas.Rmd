@@ -10,7 +10,7 @@ knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, fig.pos = 
 ```
 
 ```{r, warning=FALSE, message=FALSE, include=FALSE}
-fn <- "data/Vacunas (Raw Data - Clean) 06-13-2021.csv"
+fn <- "data/Vacunas (Raw Data - Clean) 06-20-2021.csv"
 library(tidyverse)
 library(readxl)
 library(lubridate)
@@ -372,9 +372,15 @@ municipio_2 <- vac %>%
   ungroup() %>%
   rename(municipio = municipio_2)
 
-
+rezago <- dat %>% 
+ mutate(diff = as.numeric(insert_date) - as.numeric(date)) %>%
+  group_by(municipio) %>%
+  summarize(rezago = round(median(diff)),
+            .groups = "drop") %>%
+  ungroup()
+ 
 mun <- left_join(municipio_1, municipio_2, by= "municipio") %>%
-  left_join(pop_by_municipio, by = c("municipio")) %>%
+  left_join(pop_by_municipio, by = "municipio") %>%
   mutate(percent_dosis_1 = total_1 / poblacion,
          percent_dosis_2 = total_2 / poblacion) %>%
   arrange(desc(percent_dosis_2), desc(percent_dosis_1))  %>%
@@ -382,10 +388,11 @@ mun <- left_join(municipio_1, municipio_2, by= "municipio") %>%
   mutate(percent_dosis_2 = make_pct(round(percent_dosis_2, 3))) %>%
   mutate(total_1 = make_pretty(total_1), total_2 = make_pretty(total_2), 
          poblacion = make_pretty(poblacion)) %>%
-  setNames(c("Municipio", "Dosis 1", "Dosis completa", "Población", "% Dosis 1", "% Dosis completa "))
+  left_join(rezago, by = "municipio") %>%
+  setNames(c("Municipio", "Dosis 1", "Dosis completa", "Población", "% Dosis 1", "% Dosis completa", "Rezago"))
          
 mun %>% filter(Municipio !="") %>% 
-  knitr::kable(align = c("l", "r", "r", "r", "c","c"))
+  knitr::kable(align = c("l", "r", "r", "r", "c","c", "r", "r"))
 ```
 
 \newpage
@@ -434,8 +441,8 @@ tab <- full_join(tmp1, tmp2, by=c("municipio", "ageRange", "gender")) %>%
                           labels = c("No vacunados", "Solo primera dosis", "Dosis completa")))
 
 labs <- seq(-.08, .08, 0.04)
-tab %>% filter(municipio %in% c("Maunabo", "Luquillo")) %>%
-#  filter(municipio %in% c("Aibonito", "San Juan", "Ponce", "Guaynabo", "Cataño", "Culebra", "Villalba",  "Loíza", "Mayagüez")) %>%
+tab %>% #filter(municipio %in% c("Maunabo", "Luquillo")) %>%
+  filter(municipio %in% c("Aibonito", "San Juan", "Ponce", "Guaynabo", "Cataño", "Culebra", "Villalba",  "Loíza", "Mayagüez")) %>%
   ggplot(aes(ageRange, total, fill = estatus)) +
   geom_bar(position = "stack", stat = "identity", color = I("black"), width = 1) +
   scale_y_continuous(labels= make_pct(abs(labs)), breaks = labs) + 
@@ -689,6 +696,7 @@ prov %>%
   ylab("Vacunas por día") +
   theme_bw()
 ```
+
 
 \newpage
 ### Agradecimientos
