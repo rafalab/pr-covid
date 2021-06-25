@@ -198,6 +198,7 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                DT::dataTableOutput("vaccines_table")),
                       
                       tabPanel("Viajeros",
+                               h4("Ojo: El Departamento de Salud parece que dejo de compartir estos datos en mayo 1. Los datos desde ese día no son fiables."),
                                radioButtons("travelers_version", 
                                             label = "",
                                             choices = list("Número de viajeros" = "totals",

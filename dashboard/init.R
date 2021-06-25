@@ -31,7 +31,6 @@ map <- st_read("data/pri_adm_2019_shp/pri_admbnda_adm1_2019.shp") %>%
   st_transform(crs = 4326) %>%
   st_crop(xmin = -67.3, xmax = -65.3, ymin = 17.9, ymax = 18.5)
 map <- cbind(map, st_coordinates(st_centroid(map)))
-
 load(file.path(rda_path,"data.rda"))
 
 lag_to_complete <- 4
