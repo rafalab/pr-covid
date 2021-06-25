@@ -400,6 +400,7 @@ plot_map <- function(tests_by_strata,
                      min_rate = 0.03,
                      max_rate = 0.12){
     
+  load("data/map.rda")
   ret <- tests_by_strata %>%
     filter(date >= start_date &  date <= end_date & testType == type) %>%
     group_by(testType, date, patientCity) %>%
@@ -413,28 +414,28 @@ plot_map <- function(tests_by_strata,
     ungroup() %>%
     mutate(rate = 100*pmin(pmax(rate, min_rate), max_rate)) %>%
     na.omit() %>%
-      {merge(map, .,by.x = "ADM1_ES", by.y = "patientCity", all.y = T)} %>%
-      ggplot() +
-      geom_sf(data = map, fill= "gray", size = 0.15) +
-      geom_sf(aes(fill = rate), color = "black", size = 0.15) +
-      geom_text(data = map, aes(X, Y, label = ADM1_ES),
-                size  = 2.2,
-                color = "black",
-                fontface = "bold") +
-      scale_fill_gradientn(colors = RColorBrewer::brewer.pal(9, "Reds"),
-                           name = "Por ciento de pruebas positivas:",
-                           limits= c(100*min_rate, 100*max_rate)) +
-      theme_void() +
-      theme(legend.position = "bottom") +
-      ggtitle(paste("Por ciento de pruebas positivas por municipio para el period de",
-                    format(start_date, "%B %d"),
-                    "a",
-                    format(end_date, "%B %d."), "\n",
-                    paste("Pruebas", 
-                          case_when(type == "Molecular" ~ "moleculares", 
-                                    type == "Serological" ~ "serológicas",
-                                    type == "Antigens" ~ "de antígenos",
-                                    type == "Molecular+Antigens" ~ "moleculares y de antígenos"))))
+    rename(municipio = patientCity) %>%
+    left_join(map, by = "municipio") %>%
+    ggplot() + 
+    geom_polygon(aes(x = X, y = Y, group = paste(municipio, part), fill = rate), color = "black", size = 0.15)  + 
+    geom_text(mapping = aes(x = X, y = Y, label = municipio), data = map_centers,
+              size  = 2.2,
+              color = "black",
+              fontface = "bold") +
+    scale_fill_gradientn(colors = RColorBrewer::brewer.pal(9, "Reds"),
+                         name = "Por ciento de pruebas positivas:",
+                         limits= c(100*min_rate, 100*max_rate)) +
+    theme_void() +
+    theme(legend.position = "bottom") +
+    ggtitle(paste("Por ciento de pruebas positivas por municipio para el period de",
+                  format(start_date, "%B %d"),
+                  "a",
+                  format(end_date, "%B %d."), "\n",
+                  paste("Pruebas", 
+                        case_when(type == "Molecular" ~ "moleculares", 
+                                  type == "Serological" ~ "serológicas",
+                                  type == "Antigens" ~ "de antígenos",
+                                  type == "Molecular+Antigens" ~ "moleculares y de antígenos"))))
   return(ret)
 }
 
