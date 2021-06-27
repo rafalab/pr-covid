@@ -398,7 +398,7 @@ mun %>% filter(Municipio !="") %>%
 \newpage
 ## Pirámide poblacional de algunos pueblos
 
-Vemos mucha variedad en la vacunación por municipio. Como ejemplo mostramos  la pirámide poblacional para 
+Vemos mucha variedad en la vacunación por municipio. Como ejemplo mostramos la pirámide poblacional para 
 nueve municipios.
 
 ```{r, fig.dim = c(8, 8), out.height="80%"}
@@ -637,7 +637,6 @@ dat %>%
   ggtitle("Vacunas por semana por fabricante") +
   theme_bw() +
   labs(color = "Fabricante") 
-ggsave("~/Desktop/fabricante.png", width = 8, height = 4)
 ```
 
 ## Por ciento que no se está poniendo la segunda dosis
