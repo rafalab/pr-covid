@@ -10,7 +10,7 @@ knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, fig.pos = 
 ```
 
 ```{r, warning=FALSE, message=FALSE, include=FALSE}
-fn <- "data/Vacunas (Raw Data - Clean) 06-20-2021.csv"
+fn <- "data/Vacunas (Raw Data - Clean) 06-27-2021.csv"
 library(tidyverse)
 library(readxl)
 library(lubridate)
@@ -159,13 +159,16 @@ cat("DOSIS ADMINISTRADAS:",
     make_pretty(nrow(dat)))
 
 ## Casi cuadra
-cat("PERSONAS CON AL MENOS UNA DOSIS:", 
-    make_pretty(sum(resumen$personas)), make_pct(sum(resumen$personas)/pr_pop), "de la poblacion")
+cat("PERSONAS CON AL MENOS UNA DOSIS:",
+    make_pretty(sum(resumen$personas)),
+    make_pct(sum(resumen$personas)/pr_pop), "de la poblacion",
+    make_pct(sum(resumen$personas)/pr_adult_pop), "de los adultos.")
 
 ## No cuadra
 cat("PERSONAS CON SERIE DE DOSIS COMPLETADAS:", 
     make_pretty(sum(resumen$personas[resumen$serie_completa == "Sí"])), 
-    make_pct(sum(resumen$personas[resumen$serie_completa == "Sí"]/pr_pop)), "de la poblacion")
+    make_pct(sum(resumen$personas[resumen$serie_completa == "Sí"]/pr_pop)), "de la poblacion",
+    make_pct(sum(resumen$personas[resumen$serie_completa == "Sí"]/pr_adult_pop)), "de los adultos.")
 ```
 
 \newpage
