@@ -546,6 +546,68 @@ viejos %>% mutate(municipio = ifelse(municipio=="", "No reportado", municipio)) 
 
 
 \newpage
+
+
+
+## ¿Dónde están los mayores de 80 sin vacunar? (ninguna dosis)
+
+```{r}
+mun_1 <- vac %>% 
+  filter(!is.na(date_1) & !is.na(municipio_1) & !is.na(ageRange_1)) %>%
+  group_by(municipio_1, ageRange_1) %>%
+  summarize(total = n(), .groups = "drop") %>%
+  ungroup() %>%
+  rename(municipio = municipio_1, ageRange = ageRange_1) 
+
+viejos_1 <- left_join(mun_1, pop, by = c("municipio", "ageRange")) %>%
+  filter(ageRange == "80+") %>%
+  mutate(faltan = poblacion - total) %>%
+  mutate(perc = total / poblacion) %>%
+  select(municipio, faltan, poblacion, total, perc) %>% 
+  arrange(perc) 
+```
+
+
+Faltan `r make_pretty(sum(viejos_1$faltan, na.rm=TRUE) - viejos_1$total[viejos_1$municipio==""])` mayores de 80 por vacunar sin alguna dosis. 
+Aquí están por municipio ordenados por el por ciento de esta población que falta.
+
+```{r}
+viejos_1 %>% mutate(municipio = ifelse(municipio=="", "No reportado", municipio)) %>% 
+  mutate(faltan = make_pretty(faltan), poblacion = make_pretty(poblacion), total = make_pretty(total), perc=make_pct(perc)) %>% 
+  setNames(c("Municipio", "Faltan", "Población", "Dosis 1", "% con al menos una dosis")) %>% 
+  knitr::kable(align = c("l","r","r", "r", "r"))
+```
+
+\newpage
+## ¿Dónde están los mayores de 60 sin vacunar? (ninguna dosis)
+
+```{r}
+viejos_1 <- left_join(mun_1, pop, by = c("municipio", "ageRange")) %>%
+  filter(ageRange %in% c("60 a 69", "70 a 79", "80+")) %>%
+  group_by(municipio) %>%
+  summarize(total = sum(total), poblacion = sum(poblacion), .groups = "drop") %>%  
+  ungroup() %>%
+  mutate(faltan = poblacion - total) %>%
+  mutate(perc = total / poblacion) %>%
+  select(municipio, faltan, poblacion, total, perc) %>% 
+  arrange(perc) 
+```
+
+
+Faltan `r make_pretty(sum(viejos_1$faltan, na.rm=TRUE) - viejos_1$total[viejos_1$municipio==""])` mayores de 60 por vacunar sin alguna dosis. 
+Aquí están por municipio ordenados por el por ciento de esta población que falta.
+
+```{r}
+viejos_1 %>% mutate(municipio = ifelse(municipio=="", "No reportado", municipio)) %>% 
+  mutate(faltan = make_pretty(faltan), poblacion = make_pretty(poblacion), total = make_pretty(total), perc=make_pct(perc)) %>% 
+  setNames(c("Municipio", "Faltan", "Población", "Dosis 1", "% con al menos una dosis")) %>% 
+  knitr::kable(align = c("l","r","r", "r", "r"))
+```
+
+
+\newpage
+
+
 ## Rezago 
 
 ```{r}
