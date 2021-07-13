@@ -1,5 +1,6 @@
 ##  Informes Diarios Sobre COVID19 Coalición Científica de Puerto Rico
 
+* [2021-07-13](informe-2021-07-13.html)
 * [2021-07-12](informe-2021-07-12.html)
 * [2021-07-11](informe-2021-07-11.html)
 * [2021-07-10](informe-2021-07-10.html)
