@@ -1,6 +1,6 @@
 ---
 title: "Informe Sobre Vacunación en Puerto Rico"
-author: "Rafael A. Irizarry"
+author: "José Zavala y Rafael A. Irizarry"
 date: "`r Sys.Date()`"
 output: pdf_document
 ---
@@ -10,7 +10,7 @@ knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, fig.pos = 
 ```
 
 ```{r, warning=FALSE, message=FALSE, include=FALSE}
-fn <- "data/Vacunas (Raw Data - Clean) 06-27-2021.csv"
+fn <- "data/Vacunas (Raw Data - Clean) 07-11-2021.csv"
 library(tidyverse)
 library(readxl)
 library(lubridate)
@@ -765,6 +765,6 @@ prov %>%
 \newpage
 ### Agradecimientos
 
-Departamento de Salud por proveer datos y Enrique Volckers por facilitar el traslado de datos.
+Departamento de Salud por proveer datos y Enrique Volckers y Eduardo Zavala por facilitar el traslado de datos.
 
-José Zavala y \@midnucas proveyeron recomendaciones y reportaron errores.
+\@midnucas proveyó recomendaciones y reportó errores.
