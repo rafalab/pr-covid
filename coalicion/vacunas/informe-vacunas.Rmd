@@ -2,7 +2,11 @@
 title: "Informe Sobre Vacunación en Puerto Rico"
 author: "José Zavala y Rafael A. Irizarry"
 date: "`r Sys.Date()`"
-output: pdf_document
+output: 
+  pdf_document:
+    number_sections: true
+    toc: true
+    toc_depth: 2
 ---
 
 ```{r setup, include=FALSE}
@@ -10,12 +14,14 @@ knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, fig.pos = 
 ```
 
 ```{r, warning=FALSE, message=FALSE, include=FALSE}
-fn <- "data/Vacunas (Raw Data - Clean) 07-11-2021.csv"
 library(tidyverse)
 library(readxl)
 library(lubridate)
 library(tidycensus)
 Sys.setlocale("LC_TIME", "es_ES")
+
+last_day <- make_date(2021, 7, 17)
+fn <- paste0("data/Vacunas (Raw Data - Clean) ", format(last_day+days(1),"%m-%d-%Y"), ".csv")
 
 # Define functions --------------------------------------------------------
 make_pct <- function(x, digit = 1) ifelse(is.na(x), "", paste0(format(round(100*x, digit = digit), nsmall = digit), "%"))
@@ -131,7 +137,7 @@ dose_2 <- vac %>%
          daily_percent = daily_week_avg / poblacion)
 ```
 
-## Disclaimer
+# Disclaimer
 
 Este informe está basado en datos del Puerto Rico Electronic Immunization System (PREIS) compartidos con la Coalición Científica por el Departamento de Salud. Los datos no se han hecho públicos. Compartimos el código utilizado por la Coalición aquí
 
@@ -141,8 +147,8 @@ y en cuanto el Departamento de Salud haga público los datos, serán compartidos
 
 Noten también que el informe está basado en código preliminar. Si estudian el código y encuentra errores por favor envíelos a bianca.porratadoria@gmail.com
 
-
-## Resumen general
+\newpage
+# Resumen general
 
 ```{r}
 resumen <- dat %>% group_by(id) %>%
@@ -154,26 +160,59 @@ resumen <- dat %>% group_by(id) %>%
   arrange(desc(serie_completa), desc(personas)) %>%
   select(vacunas_recibidas, serie_completa, personas, n)
 
+last_week_resumen <- dat %>% 
+  filter(insert_date <= last_day - weeks(1)) %>%
+  group_by(id) %>%
+  summarize(vacunas_recibidas = paste(manu, collapse = ";"), n=n()) %>%
+  ungroup() %>%
+  group_by(vacunas_recibidas) %>%
+  summarize(personas = n(), n = n[1]) %>%
+  mutate(serie_completa = ifelse(vacunas_recibidas %in% c("MOD", "NA", "PFR"), "No", "Sí")) %>%
+  arrange(desc(serie_completa), desc(personas)) %>%
+  select(vacunas_recibidas, serie_completa, personas, n)
+
 ## Cuadra perfecto
-cat("DOSIS ADMINISTRADAS:", 
+cat("Dosis administradas:", 
     make_pretty(nrow(dat)))
 
+cat("Cambio desde la semana pasada:", 
+    make_pretty(nrow(dat) - 
+                  nrow(filter(dat,insert_date <= last_day - weeks(1)))))
+
 ## Casi cuadra
-cat("PERSONAS CON AL MENOS UNA DOSIS:",
+cat("Personas con al menos una dosis:",
     make_pretty(sum(resumen$personas)),
     make_pct(sum(resumen$personas)/pr_pop), "de la poblacion",
     make_pct(sum(resumen$personas)/pr_adult_pop), "de los adultos.")
 
+cat("Semana pasada:",
+    make_pretty(sum(last_week_resumen$personas)),
+    make_pct(sum(last_week_resumen$personas)/pr_pop), "de la poblacion",
+    make_pct(sum(last_week_resumen$personas)/pr_adult_pop), "de los adultos.")
+
+cat("Cambio de la semana pasata:",
+    make_pretty(sum(resumen$personas) - sum(last_week_resumen$personas)))
+    
 ## No cuadra
-cat("PERSONAS CON SERIE DE DOSIS COMPLETADAS:", 
+cat("Personas con serie de dosis completa:", 
     make_pretty(sum(resumen$personas[resumen$serie_completa == "Sí"])), 
     make_pct(sum(resumen$personas[resumen$serie_completa == "Sí"]/pr_pop)), "de la poblacion",
     make_pct(sum(resumen$personas[resumen$serie_completa == "Sí"]/pr_adult_pop)), "de los adultos.")
+
+cat("Semana pasada:", 
+    make_pretty(sum(last_week_resumen$personas[resumen$serie_completa == "Sí"])), 
+    make_pct(sum(last_week_resumen$personas[resumen$serie_completa == "Sí"]/pr_pop)), "de la poblacion",
+    make_pct(sum(last_week_resumen$personas[resumen$serie_completa == "Sí"]/pr_adult_pop)), "de los adultos.")
+
+cat("Cambio de la samana pasada:", 
+    make_pretty(sum(resumen$personas[resumen$serie_completa == "Sí"]) - 
+      sum(last_week_resumen$personas[resumen$serie_completa == "Sí"])))
 ```
+
 
 \newpage
 
-## Pirámide poblacional
+# Pirámide poblacional
 
 ```{r}
 tmp1 <- dose_1 %>% filter(date == max(date)) %>% select(ageRange, gender, total) %>% rename(primera = total)
@@ -210,7 +249,7 @@ tab %>%
 
 
 \newpage
-## Resumen por grupo demográfico (dosis completa)
+# Resumen por grupo demográfico (dosis completa)
 
 Este resumen es para aquellos con ambas dosis. El estimado de días para alcanzar 50% y 70% está basado en la tasa de vacunación de hace dos semanas.
  
@@ -238,8 +277,7 @@ left_join(tmp1, tmp2, by = c("ageRange", "gender")) %>%
   knitr::kable(align = "c")
 ```
 \newpage
-
-## Resumen por grupo demográfico (primera dosis)
+# Resumen por grupo demográfico (primera dosis)
 
 Este resumen es el mismo de la sección anterior pero para la primera dosis.
  
@@ -268,8 +306,9 @@ left_join(tmp1, tmp2, by = c("ageRange", "gender")) %>%
 ```
 
 \newpage
+# Por ciento de la población vacunada
 
-## Por ciento de la población vacunada con predicción
+## Predicción
 
 Línea entrecortada representa la predicción basada en tasa de hace dos semanas. Noten que esta predicción solo se cumple si mantienen esa tasa. En las próximas dos páginas vemos patrones preocupantes: una vez dividimos en grupos de edad, vemos que las tasas de vacunación bajan luego de que 40% del grupo se vacuna.
 
@@ -308,7 +347,7 @@ bind_rows(tmp1, tmp2) %>%
   ylab("Por ciento") +
   xlab("Fecha") +
   ggtitle("Por ciento vacunados en Puerto Rico") +
-  theme_bw()  + guides(linetype = FALSE) +
+  theme_bw()  + guides(linetype = "none") +
   geom_hline(yintercept = 0.7, lty = 2) +
   annotate("text", x=max(tmp2$date)-days(5), y=max(tmp2$percent)+0.02, label = format(max(tmp2$date), "%b %d")) +
   scale_x_date(date_labels = "%b", breaks = scales::breaks_width("1 month"))
@@ -317,12 +356,14 @@ bind_rows(tmp1, tmp2) %>%
 
 
 \newpage
-## Por ciento de la población con dosis completa por fecha por group demográfico
+
+## Dosis completa por fecha por group demográfico
 
 Línea entrecortada representa periodos con datos incompletos.
 
 ```{r}
 dose_2 %>% rename(Género = gender) %>%
+  filter(ageRange != "0 a 9") %>%
   ggplot(aes(date, percent, color = Género, lty = date > max(dose_2$date) - weeks(2))) +
   geom_line() +
   scale_y_continuous(limits = c(0, 1), labels = scales::percent) +
@@ -335,12 +376,13 @@ dose_2 %>% rename(Género = gender) %>%
 ```
 
 \newpage
-## Por ciento de la población con primera dosis por fecha por group de edad
+## Primera dosis por fecha por group de edad
 
 Línea entrecortada representa periodos con datos incompletos.
 
 ```{r}
 dose_1 %>% rename(Género = gender) %>%
+  filter(ageRange != "0 a 9") %>%
   ggplot(aes(date, percent, color = Género, lty = date > max(dose_2$date) - weeks(2))) +
   geom_line() +
   scale_y_continuous(limits = c(0, 1), labels = scales::percent) +
@@ -349,11 +391,13 @@ dose_1 %>% rename(Género = gender) %>%
   facet_wrap(~ ageRange, nrow = 3) +
   ggtitle("Por ciento con primera dosis") +
   theme_bw() +
-  theme(legend.position = "bottom")  + guides(linetype = FALSE) 
+  theme(legend.position = "bottom")  + guides(linetype = "none") 
 ```
 
 
 \newpage
+# Municipios
+
 ## Tasas de vacunación por municipio
 
 Mostramos los por cientos de cada municipio ordenado por el por ciento de dosis completas. 
@@ -399,10 +443,9 @@ mun %>% filter(Municipio !="") %>%
 ```
 
 \newpage
-## Pirámide poblacional de algunos pueblos
+## Pirámide poblacional por municipio
 
-Vemos mucha variedad en la vacunación por municipio. Como ejemplo mostramos la pirámide poblacional para 
-nueve municipios.
+Vemos mucha variedad en la vacunación por municipio, como vemos en la pirámide poblacional.
 
 ```{r, fig.dim = c(8, 8), out.height="80%"}
 tmp1 <- vac %>% 
@@ -443,22 +486,36 @@ tab <- full_join(tmp1, tmp2, by=c("municipio", "ageRange", "gender")) %>%
   mutate(estatus = factor(estatus, levels = c("faltan",  "primera","completa"), 
                           labels = c("No vacunados", "Solo primera dosis", "Dosis completa")))
 
+tmp_mun <- unique(tab$municipio)
+indexes <- list(tmp_mun[1:12], 
+                tmp_mun[13:23], 
+                tmp_mun[24:34], 
+                tmp_mun[35:45],
+                tmp_mun[46:56],
+                tmp_mun[57:67],
+                tmp_mun[68:78])
+
 labs <- seq(-.08, .08, 0.04)
-tab %>% #filter(municipio %in% c("Maunabo", "Luquillo")) %>%
-  filter(municipio %in% c("Aibonito", "San Juan", "Ponce", "Guaynabo", "Cataño", "Culebra", "Villalba",  "Loíza", "Mayagüez")) %>%
-  ggplot(aes(ageRange, total, fill = estatus)) +
-  geom_bar(position = "stack", stat = "identity", color = I("black"), width = 1) +
-  scale_y_continuous(labels= make_pct(abs(labs)), breaks = labs) + 
-  geom_hline(yintercept = 0) +
-  ylab("Por ciento") +
-  xlab("Grupo de edad") + 
-  annotate("text", x=Inf, y=Inf, label = "Mujeres ", vjust = 1, hjust = 1) +
-  annotate("text", x=Inf, y=-Inf, label = " Hombres", vjust = 1, hjust = 0) +
-  coord_flip() + 
-  theme_bw() +
-  scale_fill_discrete(name = "Estatus de vacunación") +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.position = "bottom") +
-  facet_wrap(~municipio) 
+for(i in 1:length(indexes)){
+  p <- tab %>% #filter(municipio %in% c("Maunabo", "Luquillo")) %>%
+    #  filter(municipio %in% c("Aibonito", "San Juan", "Ponce", "Guaynabo", "Cataño", "Culebra", "Villalba",  "Loíza", "Mayagüez")) %>%
+    #  filter(municipio %in% c("Aibonito", "San Juan", "Ponce", "Guaynabo", "Cataño", "Culebra", "Villalba",  "Loíza", "Mayagüez")) %>%
+    filter(municipio %in% indexes[[i]]) %>%
+    ggplot(aes(ageRange, total, fill = estatus)) +
+    geom_bar(position = "stack", stat = "identity", color = I("black"), width = 1) +
+    scale_y_continuous(labels= make_pct(abs(labs)), breaks = labs) + 
+    geom_hline(yintercept = 0) +
+    ylab("Por ciento") +
+    xlab("Grupo de edad") + 
+    annotate("text", x=Inf, y=Inf, label = "Mujeres ", vjust = 1, hjust = 1) +
+    annotate("text", x=Inf, y=-Inf, label = " Hombres", vjust = 1, hjust = 0) +
+    coord_flip() + 
+    theme_bw() +
+    scale_fill_discrete(name = "Estatus de vacunación") +
+    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.position = "bottom") +
+    facet_wrap(~municipio)
+    print(p)
+}
 ```
 
 <!--
@@ -484,7 +541,9 @@ tab %>% filter(municipio=="Villalba") %>%
 
 \newpage
 
-## ¿Dónde están los mayores de 80 sin vacunar?
+# ¿Dónde están los que aun no tienen dosis completa?
+
+## ¿Dónde están los mayores de 80 sin dosis completa?
 
 ```{r}
 mun <- vac %>% 
@@ -519,7 +578,7 @@ viejos %>% mutate(municipio = ifelse(municipio=="", "No reportado", municipio)) 
 ```
 
 \newpage
-## ¿Dónde están los mayores de 60 sin vacunar?
+## ¿Dónde están los mayores de 60 sin dosis completa?
 
 ```{r}
 viejos <- left_join(mun, pop, by = c("municipio", "ageRange")) %>%
@@ -532,7 +591,6 @@ viejos <- left_join(mun, pop, by = c("municipio", "ageRange")) %>%
   select(municipio, faltan, poblacion, total, perc) %>% 
   arrange(perc) 
 ```
-
 
 Faltan `r make_pretty(sum(viejos$faltan, na.rm=TRUE) - viejos$total[viejos$municipio==""])` mayores de 60 por vacunar. 
 Aquí están por municipio ordenados por el por ciento de esta población que falta.
@@ -547,9 +605,33 @@ viejos %>% mutate(municipio = ifelse(municipio=="", "No reportado", municipio)) 
 
 \newpage
 
+## ¿Dónde están los menores (10-19) sin dosis completa?
 
+```{r}
+menores <- left_join(mun, pop, by = c("municipio", "ageRange")) %>%
+  filter(ageRange %in% c("10 a 14", "15 a 19")) %>%
+  group_by(municipio) %>%
+  summarize(poblacion = sum(poblacion), total = sum(total)) %>%
+  mutate(faltan = poblacion - total) %>%
+  mutate(perc = total / poblacion) %>%
+  select(municipio, faltan, poblacion, total, perc) %>% 
+  arrange(perc) 
+```
 
-## ¿Dónde están los mayores de 80 sin vacunar? (ninguna dosis)
+Faltan `r make_pretty(sum(menores$faltan, na.rm=TRUE) - menores$total[viejos$municipio==""])` menores entre 10 y 19 años por vacunar. 
+Aquí están por municipio ordenados por el por ciento de esta población que falta.
+
+```{r}
+menores %>% mutate(municipio = ifelse(municipio=="", "No reportado", municipio)) %>% 
+  mutate(faltan = make_pretty(faltan), poblacion = make_pretty(poblacion), total = make_pretty(total), perc=make_pct(perc)) %>% 
+  setNames(c("Municipio", "Faltan", "Población", "Dosis completa", "Por ciento vacunado")) %>% 
+  knitr::kable(align = c("l","r","r", "r", "r"))
+```
+
+\newpage
+# ¿Dónde están los que aun no tienen niguna dosis?
+
+## ¿Dónde están los mayores de 80 sin ninguna dosis?
 
 ```{r}
 mun_1 <- vac %>% 
@@ -579,7 +661,7 @@ viejos_1 %>% mutate(municipio = ifelse(municipio=="", "No reportado", municipio)
 ```
 
 \newpage
-## ¿Dónde están los mayores de 60 sin vacunar? (ninguna dosis)
+## ¿Dónde están los mayores de 60 sin ninguna dosis?
 
 ```{r}
 viejos_1 <- left_join(mun_1, pop, by = c("municipio", "ageRange")) %>%
@@ -607,8 +689,32 @@ viejos_1 %>% mutate(municipio = ifelse(municipio=="", "No reportado", municipio)
 
 \newpage
 
+## ¿Dónde están los menores (10-19) sin dosis completa?
 
-## Rezago 
+```{r}
+menores_1 <- left_join(mun_1, pop, by = c("municipio", "ageRange")) %>%
+  filter(ageRange %in% c("10 a 14", "15 a 19")) %>%
+  group_by(municipio) %>%
+  summarize(poblacion = sum(poblacion), total = sum(total)) %>%
+  mutate(faltan = poblacion - total) %>%
+  mutate(perc = total / poblacion) %>%
+  select(municipio, faltan, poblacion, total, perc) %>% 
+  arrange(perc) 
+```
+
+Faltan `r make_pretty(sum(menores_1$faltan, na.rm=TRUE) - menores_1$total[viejos$municipio==""])` menores entre 10 y 19 años por vacunar. 
+Aquí están por municipio ordenados por el por ciento de esta población que falta.
+
+```{r}
+menores_1 %>% mutate(municipio = ifelse(municipio == "", "No reportado", municipio)) %>% 
+  mutate(faltan = make_pretty(faltan), poblacion = make_pretty(poblacion), total = make_pretty(total), perc=make_pct(perc)) %>% 
+  setNames(c("Municipio", "Faltan", "Población", "Dosis completa", "Por ciento vacunado")) %>% 
+  knitr::kable(align = c("l","r","r", "r", "r"))
+```
+
+
+\newpage
+# Rezago 
 
 ```{r}
 prov <- dat %>% mutate(diff = as.numeric(insert_date) - as.numeric(date))  %>% 
@@ -658,6 +764,8 @@ tmp %>%
 
 
 \newpage
+# Vacunas por día 
+
 ## Vacunas por día por grupo de edad
 
 No incluye datos de las últimas dos semanas por estar incompletos. Noten que hay un rezago en reportar datos de vacunación al departamento de salud por lo cual dias recientes tienen más datos incompletos (ver sección de rezagos).
@@ -704,7 +812,7 @@ dat %>%
   labs(color = "Fabricante") 
 ```
 
-## Por ciento que no se está poniendo la segunda dosis
+# Por ciento que no se está poniendo la segunda dosis
 
 Contamos los que aun no se han vacunado (o los datos no han entrado) luego de 8 semanas de la primera dosis.
 
@@ -721,8 +829,8 @@ no_dose_2 <- vac %>% filter(ageRange_1 != "10 a 14") %>%
 no_dose_2 %>% knitr::kable(align = "c")
 ```
 
-
-##Proveedores 
+\newpage
+# Proveedores 
 
 Estos son los totales de vacunas administradas por proveedor. Incluimos también el rezago medio en entrar los datos al sistema para todo el periodo y para la última semana.
 
@@ -763,8 +871,8 @@ prov %>%
 
 
 \newpage
-### Agradecimientos
+# Agradecimientos
 
-Departamento de Salud por proveer datos y Enrique Volckers y Eduardo Zavala por facilitar el traslado de datos.
+Al Departamento de Salud por proveer datos y Enrique Volckers y Eduardo Zavala por facilitar el traslado de datos.
 
-\@midnucas proveyó recomendaciones y reportó errores.
+A Lilly Rodríguez y \@midnucas por proveer recomendaciones y reportar errores.
