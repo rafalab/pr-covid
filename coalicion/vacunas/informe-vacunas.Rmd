@@ -689,7 +689,7 @@ viejos_1 %>% mutate(municipio = ifelse(municipio=="", "No reportado", municipio)
 
 \newpage
 
-## ¿Dónde están los menores (10-19) sin dosis completa?
+## ¿Dónde están los menores (10-19) sin ninguna dosis?
 
 ```{r}
 menores_1 <- left_join(mun_1, pop, by = c("municipio", "ageRange")) %>%
@@ -768,7 +768,7 @@ tmp %>%
 
 ## Vacunas por día por grupo de edad
 
-No incluye datos de las últimas dos semanas por estar incompletos. Noten que hay un rezago en reportar datos de vacunación al departamento de salud por lo cual dias recientes tienen más datos incompletos (ver sección de rezagos).
+No incluye datos de las últimas dos semanas por estar incompletos. Noten que hay un rezago en reportar datos de vacunación al Departamento de Salud por lo cual días recientes tienen más datos incompletos (ver sección de rezagos).
 
 
 ```{r}
