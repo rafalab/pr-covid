@@ -66,6 +66,18 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular", day = last_com
                   date %in% the_dates)  %>%
     arrange(desc(date))
   
+  cas_day <- filter(tests, testType == type & date >= max(the_dates))  %>%
+    arrange(desc(cases_week_avg)) %>%
+    slice(1) %>% pull(date)
+  
+  the_latest_cas_dates <- cas_day - weeks(0:1)
+  
+  latest <- tests %>% 
+    filter(testType == type &date %in% the_latest_cas_dates) %>%
+    arrange(desc(date))
+  
+  if(nrow(latest) > 0) cas <- bind_rows(latest, cas) else hos <- bind_rows(slice(cas, c(1,2)), cas)
+  
   ## get overdisepersion, last day is a global variable defined in init
   ## we assume cases are Possion with the precalculated trend an offset.
   phi <- tests %>% filter(date >= make_date(2020, 7, 1) & 
@@ -79,12 +91,14 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular", day = last_com
   
   phi <- pmax(phi, 1)
   
-  change_cas <- sapply(1:(nrow(cas)-1), function(i){
+  change_cas <- sapply(c(1, 3:(nrow(cas)-1)), function(i){
     d <- cas$cases_week_avg[i] - cas$cases_week_avg[i+1]
     se <- sqrt((phi*cas$cases_week_avg[i] + phi*cas$cases_week_avg[i+1])/7)
     signif <- abs(d/se) > qnorm(0.975)
     sign(d) * signif 
   })
+  
+  cas <- cas[-2,]
   
   ## tests
   ##as pos but for number of tests
@@ -129,7 +143,7 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular", day = last_com
     filter(date %in% the_latest_hosp_dates) %>%
     arrange(desc(date))
   
-  if(nrow(latest) > 0) hos <- bind_rows(latest, hos) else hos <- bind_rows(slice(hos, 1), hos)
+  if(nrow(latest) > 0) hos <- bind_rows(latest, hos) else hos <- bind_rows(slice(hos, c(1,2)), hos)
   
   hosp_fit <- hosp_mort %>% filter(date >= make_date(2020, 7, 1) & date <= last_day) %>%
     filter(!is.na(HospitCOV19)) %>%
@@ -262,7 +276,12 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular", day = last_com
   casespos <- slice(casespos, -1)
   change_casespos <- change_casespos[-1]
   
-  casos <- paste(round(cas$cases_week_avg[1]),  arrows[change_cas[1] + 2])
+  ## pick recent weekly average for caseswith highest value
+  ## we do this because of incomplete data, the highest is likely the most accurate
+  
+  casos <- paste(round(cas$cases_week_avg[1]),  arrows[change_cas[1] + 2]) ## keep same arrow as latest
+  cas <- slice(cas, -1)
+  change_cas <- change_cas[-1]
   
   hosp <- paste(prettyNum(hos$HospitCOV19[1], big.mark = ","), arrows[change_hos[1]+2])
   hos <- slice(hos, -1)
