@@ -275,11 +275,11 @@ server <- function(input, output, session) {
   })
   
   output$disclaimer <- renderText({
-    paste0("<p>Las tasas de positividad y casos nuevos por día están basados en datos que aun se están actualizando, por lo cual pueden cambiar durante el día. ",
+    paste0("<p>Las tasas de positividad y casos nuevos por día están basados en datos que aún se están actualizando, por lo cual pueden cambiar durante el día. ",
            "La siguiente tabla muestra los datos para las semana de ",
            format(last_day-days(6), "%B %d a "), format(last_day, "%B %d, "),
            "fechas para las cuales los datos ya están casi completos. ",
-           "También incluimos las dos semanas anteriores para ilustrar tendencias.")
+           "También incluímos las dos semanas anteriores para ilustrar tendencias.")
            
   })
   
@@ -309,16 +309,15 @@ server <- function(input, output, session) {
   })
 
   # -- This shows a summary
-  res <- reactive(compute_summary(tests, hosp_mort, type = "Molecular"))
-  res2 <- reactive(compute_summary(tests, hosp_mort, type = "Molecular+Antigens"))
-  
+  res <- reactive(compute_summary(tests, hosp_mort))
+
   output$positividad <-  renderText({
     paste0(
       "<table cellpadding=\"100\" cellspacing=\"100\">",
       "<tr><td>Tasa de positividad (pruebas):</td><td align=\"right\">&emsp;", res()$positividad, "</td></tr>", 
       "<tr><td>Tasa de positividad (casos):</td><td align=\"right\">&emsp;", res()$casos_positividad, "</td></tr>", #, "&emsp;", 
-      "<tr><td>Casos nuevos por día:</td><td align=\"right\">&emsp;", res2()$casos, "</td></tr>",
-       "<tr><td>Hospitalizaciones:</td><td align=\"right\">&emsp;", res()$hosp, "</td></tr>",
+      "<tr><td>Casos nuevos por día:</td><td align=\"right\">&emsp;", res()$casos, "</td></tr>",
+      "<tr><td>Hospitalizaciones:</td><td align=\"right\">&emsp;", res()$hosp, "</td></tr>",
       "<tr><td>% población vacunada:</td><td align=\"right\">&emsp;", res()$vacunas, "</td></tr>",
       "<tr><td>Días para alcanzar 70%:</td><td align=\"right\">&emsp;", res()$dias_hasta_meta_vacunas, "</td></tr>",
       "<tr><td>% por lo menos 1 dosis:</td><td align=\"right\">&emsp;", res()$una_dosis, "</td></tr></table>")
@@ -326,12 +325,7 @@ server <- function(input, output, session) {
   
   output$resumen_table <- DT::renderDataTable({
     ## Hard-wiring the test type.
-    tab <- compute_summary(tests, hosp_mort, type = "Molecular")$tab
-    tab2 <- compute_summary(tests, hosp_mort, type = "Molecular+Antigens")$tab
-    tab[3, -2] <- tab2[3, -2]
-    tab[4, -2] <- tab2[4, -2]
-    
-    tab %>%
+   compute_summary(tests, hosp_mort)$tab %>%
       DT::datatable(class = 'white-space: nowrap',
                     rownames = FALSE,
                     escape = FALSE, 

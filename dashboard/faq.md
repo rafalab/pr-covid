@@ -30,13 +30,13 @@ El dashboard estás dividido en un panel de control a la izquierda (arriba en pa
 
 El panel principal tiene 16 partes con una pestaña para cada una. 
 
-La página de inició, bajo la pestaña _RESUMEN_, provee un resumen general de la situación. Nos enfocamos en 6 indicadores: la tasa de positividad, los casos detectados por día, pruebas diarias, las hospitalizaciones, las muertes, y el por ciento de la población vacunada. Esta página se divide en tres partes: 1) niveles actuales, 2) niveles de hace una semana y niveles meta y 3) resúmenes gráfico. Debido a que hay retrasos en reportar resultados de pruebas y muertes, los niveles actuales no reportan casos, pruebas ni muertes. Más detalles sobre estas métricas se incluyen en la sección _¿Qué indicadores se incluyen y por qué?_
+La página de inició, bajo la pestaña _RESUMEN_, provee un resumen general de la situación. Nos enfocamos en 6 indicadores: la tasa de positividad, los casos detectados por día, pruebas diarias, las hospitalizaciones, las muertes, y el por ciento de la población vacunada. Esta página se divide en tres partes: 1) niveles actuales, 2) niveles de hace una semana y niveles meta y 3) resúmenes gráfico. Debido a que hay retrasos en reportar resultados de pruebas y muertes, los niveles actuales no reportan casos, pruebas ni muertes. Más detalles sobre estas métricas se incluyen en la sección _¿Qué indicadores se incluyen y por qué?_ 
 
 El panel de control te permite cambiar opciones de como ver los datos. Las opciones que pueden cambiar son las siguientes:
 
-* Las fechas examinadas: Por defecto mostramos los últimos 90 días, pero pueden cambiarlo a cualquier intervalo. Incluimos tres botones que automaticamente permiten cambiar a la ultima semana, los últimos 90 días, o todas las fechas desde marzo 12.
+* Las fechas examinadas: Por defecto mostramos los últimos 90 días, pero pueden cambiarlo a cualquier intervalo. Incluimos tres botones que automáticamente permiten cambiar a la ultima semana, los últimos 90 días, o todas las fechas desde marzo 12. Está opción no afecta las tablas en la pestaña _RESUMEN_ pues en está fijamos la fechas a las más recientes, aunque si cambia los gráficas.
 
-* El tipo prueba usada para crear resúmenes: moleculares, de antígeno, o serológica. También incluimos una opción que combina las dos pruebas diagnósticas: moleculares y de antígeno. Note que los datos de hospitalizaciones, muertes, y vacunas no son afectados por esta opción.
+* El tipo prueba usada para crear resúmenes: moleculares, de antígeno, o serológica. También incluimos una opción que combina las dos pruebas diagnósticas: moleculares y de antígeno. Note que los datos de hospitalizaciones, muertes, y vacunas no son afectados por esta opción. Está opción no afecta la pestaña _RESUMEN_ pues en está fijamos el tipo de prueba que mostramos.
 
 * Datos diarios o acumulativos: Por defecto mostramos datos diarios ya que se destacan las tendencias mucho mejor. Pero ofrecemos la opción de cambiar a datos acumulativos. 
 
