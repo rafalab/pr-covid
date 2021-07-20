@@ -16,23 +16,27 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular", day = last_com
   ## they are 4 entries, 1 week apart
   ## lag_to_complete is a global var
   the_dates <- day - days(lag_to_complete) - weeks(0:3)
+  the_latest_dates <- day - weeks(0:1)
   
   ## positivity
   ## we include the latest day because we have a usable value
-  ## we take it out later to keep the table dimensions the same
-  pos <- filter(tests, testType == type & 
-                  date %in% the_dates) %>%
+  ## we also keep a week earlier 
+  ## we take them out later to keep the table dimensions the same
+  pos <- filter(tests, testType == type & date %in% the_dates) %>%
     arrange(desc(date))
   
-  latest <- tests %>% filter(date <= day & date > max(the_dates) & testType == type) %>%
-    arrange(desc(date)) %>% slice(1)
+  #latest <- tests %>% filter(date <= day & date > max(the_dates) & testType == type) %>%
+   # arrange(desc(date)) %>% slice(c(1, 8))
   
-  if(nrow(latest) > 0) pos <- bind_rows(latest, pos) else bind_rows(slice(pos, 1), pos)
+  latest <- filter(tests, testType == type & date %in% the_latest_dates) %>%
+    arrange(desc(date))
+  
+  if(nrow(latest) > 0) pos <- bind_rows(latest, pos) else bind_rows(slice(pos, c(1,2), pos))
   
   ## this computes the difference in positivity between weeks
   ##determines if they are significant
   ## and returns -1 (decrease), 0 (no change), 1 (increase)
-  change_pos <- sapply(1:(nrow(pos)-1), function(i){
+  change_pos <- sapply(c(1,3:(nrow(pos)-1)), function(i){
     p1 <- pos$fit[i] 
     p0 <- pos$fit[i+1]
     d <- p1 - p0
@@ -43,7 +47,7 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular", day = last_com
   
   casespos <- pos 
   
-  change_casespos <- sapply(1:(nrow(casespos)-1), function(i){
+  change_casespos <- sapply(c(1,3:(nrow(casespos)-1)), function(i){
     p1 <- casespos$cases_rate[i] 
     p0 <- casespos$cases_rate[i+1]
     d <- p1 - p0
@@ -52,6 +56,9 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular", day = last_com
     signif <- abs(d/se) > qnorm(0.975)
     sign(casespos$cases_rate[i] - casespos$cases_rate[i+1]) * signif 
   })
+  
+  pos <- pos[-2,] ##remove second entry which was included only to compare
+  casespos <- casespos[-2,]
   
   ## cases 
   ## same a pos but for cases
@@ -80,7 +87,7 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular", day = last_com
   })
   
   ## tests
-  ##as pos but for nnumber of tests
+  ##as pos but for number of tests
   tes <- filter(tests, testType == type & 
                   date %in% the_dates) %>%
     arrange(desc(date))
@@ -112,9 +119,15 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular", day = last_com
     filter(date %in% the_dates)  %>%
     arrange(desc(date))
   
+  hosp_day <- hosp_mort %>% 
+    filter(!is.na(HospitCOV19) & date <= day & date >= max(the_dates)) %>%
+    arrange(desc(date)) %>% slice(1) %>% pull(date)
+  
+  the_latest_hosp_dates <- hosp_day - weeks(0:1)
+  
   latest <- hosp_mort %>% select(date, HospitCOV19, hosp_week_avg) %>% 
-    filter(!is.na(HospitCOV19) & date <= day & date > max(the_dates)) %>%
-    arrange(desc(date)) %>% slice(1)
+    filter(date %in% the_latest_hosp_dates) %>%
+    arrange(desc(date))
   
   if(nrow(latest) > 0) hos <- bind_rows(latest, hos) else hos <- bind_rows(slice(hos, 1), hos)
   
@@ -134,7 +147,7 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular", day = last_com
   ## this is the transformation needed to compute difference of averages
   X <- matrix(rep(c(1/7, -1/7), each = 7))
   
-  change_hos <- sapply(1:(nrow(hos)-1), function(i){
+  change_hos <- sapply(c(1, 3:(nrow(hos)-1)), function(i){
     d <- hos$hosp_week_avg[i] - hos$hosp_week_avg[i+1]
     
     ## compute the SE of the difference of averages given correlation
@@ -152,6 +165,8 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular", day = last_com
     sign(d) * signif 
   })
   
+  hos <- hos[-2,]
+
   ## Muertes
   ## as pos but for deaths
   mor <- hosp_mort %>% select(date, mort_week_avg) %>% 
@@ -287,9 +302,9 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular", day = last_com
   
   colnames(tab) <- c("Métrica", 
                      "Meta", 
-                     paste0(format(pos$date[1]-days(6), "%b%d-"),format(pos$date[1], "%b%d")),
-                     paste0(format(pos$date[2]-days(6), "%b%d-"),format(pos$date[2], "%b%d")),
-                     paste0(format(pos$date[3]-days(6), "%b%d-"),format(pos$date[3], "%b%d")))
+                     paste0(format(pos$date[1]-days(6), "%b%d-"), format(pos$date[1], "%b%d")),
+                     paste0(format(pos$date[2]-days(6), "%b%d-"), format(pos$date[2], "%b%d")),
+                     paste0(format(pos$date[3]-days(6), "%b%d-"), format(pos$date[3], "%b%d")))
                      
                      
   return(list(tab = tab, riesgo = riesgo, nivel = nivel, tendencia = tendencia, 
