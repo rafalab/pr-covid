@@ -1604,8 +1604,8 @@ compute_summary <- function(tests, hosp_mort, day = last_complete_day){
                 "<span style=\"color:#FFC900;font-weight: bold;\">&#8596;</span>",
                 "<span style=\"color:#01D474;font-weight: bold;\">&#8593;</span>")
   
-  no_arrow <- "<span style=\"color:#ffffff00;font-weight: bold;\">&#8596;</span>"
-  
+  #no_arrow <- "<span style=\"color:#ffffff00;font-weight: bold;\">&#8596;</span>"
+  no_arrow <- ""
   ## make arrow based on change values. +2 because turne -1,0,1 to 1,2,3
   make_arrow <- function(i){
     replace_na(
@@ -1655,10 +1655,10 @@ compute_summary <- function(tests, hosp_mort, day = last_complete_day){
   
   vacs_per_day <- diff(vac$people_fully_vaccinated[c(1,3)])/diff(as.numeric(vac$date[c(1,3)]))
   
-  dias_hasta_meta_vacunas <- paste(
-    prettyNum(round((pr_pop*0.7 - vac$people_fully_vaccinated[1]) / vacs_per_day), big.mark = ","),
-    no_arrow)
-  
+  tmp <- round((pr_pop*0.7 - vac$people_fully_vaccinated[1]) / vacs_per_day)
+  dias_hasta_meta_vacunas <- paste0(
+    prettyNum(tmp, big.mark = ","), format(today()+tmp, " (%b %d)"))
+    
   vac <- slice(vac, -1)
   
   meta <- c("< 3.0%", "< 2.0%",  "< 30",  "> 4,500", "< 300", "< 1", "> 70%")

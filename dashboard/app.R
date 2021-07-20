@@ -318,9 +318,9 @@ server <- function(input, output, session) {
       "<tr><td>Tasa de positividad (casos):</td><td align=\"right\">&emsp;", res()$casos_positividad, "</td></tr>", #, "&emsp;", 
       "<tr><td>Casos nuevos por día:</td><td align=\"right\">&emsp;", res()$casos, "</td></tr>",
       "<tr><td>Hospitalizaciones:</td><td align=\"right\">&emsp;", res()$hosp, "</td></tr>",
+      "<tr><td>% por lo menos 1 dosis:</td><td align=\"right\">&emsp;", res()$una_dosis, "</td></tr>",
       "<tr><td>% población vacunada:</td><td align=\"right\">&emsp;", res()$vacunas, "</td></tr>",
-      "<tr><td>Días para alcanzar 70%:</td><td align=\"right\">&emsp;", res()$dias_hasta_meta_vacunas, "</td></tr>",
-      "<tr><td>% por lo menos 1 dosis:</td><td align=\"right\">&emsp;", res()$una_dosis, "</td></tr></table>")
+      "<tr><td>Días para alcanzar 70%:</td><td align=\"right\">&emsp;", res()$dias_hasta_meta_vacunas, "</td></tr></table>")
   })
   
   output$resumen_table <- DT::renderDataTable({
