@@ -247,6 +247,8 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular", day = last_com
   casespos <- slice(casespos, -1)
   change_casespos <- change_casespos[-1]
   
+  casos <- paste(round(cas$cases_week_avg[1]),  arrows[change_cas[1] + 2])
+  
   hosp <- paste(prettyNum(hos$HospitCOV19[1], big.mark = ","), arrows[change_hos[1]+2])
   hos <- slice(hos, -1)
   change_hos <- change_hos[-1]
@@ -277,7 +279,7 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular", day = last_com
                 
                 meta = meta,
                 
-                 valor =  paste(make_values(1), make_arrow(1)),
+                valor =  paste(make_values(1), make_arrow(1)),
                  
                 cambio_1 = paste(make_values(2), make_arrow(2)),
                 cambio_2 = paste(make_values(3), make_arrow(3)),
@@ -292,7 +294,7 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular", day = last_com
                      
   return(list(tab = tab, riesgo = riesgo, nivel = nivel, tendencia = tendencia, 
               positividad = positividad, casos_positividad = casos_positividad, 
-              hosp = hosp, una_dosis = una_dosis, vacunas = vacunas,
+              casos = casos, hosp = hosp, una_dosis = una_dosis, vacunas = vacunas,
               dias_hasta_meta_vacunas = dias_hasta_meta_vacunas))
   
 }
