@@ -35,7 +35,7 @@ poblacion_municipios <- tibble(patientCity = names(pop), poblacion = pop) %>%
 
 load(file.path(rda_path,"data.rda"))
 
-lag_to_complete <- 4
+lag_to_complete <- 3
 last_day <- last_complete_day - days(lag_to_complete)
 
 
