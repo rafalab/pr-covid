@@ -741,8 +741,8 @@ prov <- dat %>% mutate(diff = as.numeric(insert_date) - as.numeric(date))  %>%
 Para una vacunación aparecer en este análisis se tiene que reportar al PREIS. Algunos proveedores toman días en entrar los datos. La entrada de datos parece estar mejorando pero aun vemos rezago. La próxima gráfica muestra el por ciento de vacunaciones que se reportan como función del número de días. 
 
 ```{r}
-n_points <- 300
-start_date <- today()-days(45)
+n_points <- 280
+start_date <- today()-days(43)
 end_date <-  today()-days(15)
 ndays <- as.numeric(end_date)-as.numeric(start_date)
 dias <- round(seq(0, ndays, length.out = n_points))
@@ -757,8 +757,8 @@ tmp %>%
   ylab("Por ciento reportados") +
   labs(title = "Rezago reportando datos de vacunación",
        subtitle = paste("Basado en datos de ", format(start_date, "%B %d"), "a", format(end_date, "%B %d."))) +
-  scale_y_continuous(labels=scales::percent, limits = c(0,1)) +
-  xlim(0, ndays) +
+  scale_x_continuous(limits = c(0, ndays), breaks = seq(0,28,7)) +
+  scale_y_continuous(labels=scales::percent, limits = c(0,1), breaks = c(seq(0,0.5,0.25), seq(0.8,1,0.1)) ) +
   theme_bw()  
 ```
 
