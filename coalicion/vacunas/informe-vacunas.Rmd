@@ -464,6 +464,7 @@ left_join(municipio_2, pop_by_municipio, by = "municipio") %>%
   scale_fill_gradientn(colors = rev(RColorBrewer::brewer.pal(9, "Reds")),
                        name = "Por ciento con dosis completa:",
                        limits= c(100*min_rate, 100*max_rate)) +
+  coord_map() +
   theme_bw() +
   theme_void() +
   theme(legend.position = "bottom")
