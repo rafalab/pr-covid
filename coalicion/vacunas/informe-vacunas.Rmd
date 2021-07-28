@@ -20,7 +20,7 @@ library(lubridate)
 library(tidycensus)
 Sys.setlocale("LC_TIME", "es_ES")
 
-last_day <- make_date(2021, 7, 17)
+last_day <- make_date(2021, 7, 24)
 fn <- paste0("data/Vacunas (Raw Data - Clean) ", format(last_day+days(1),"%m-%d-%Y"), ".csv")
 
 # Define functions --------------------------------------------------------
@@ -440,6 +440,34 @@ mun <- left_join(municipio_1, municipio_2, by= "municipio") %>%
          
 mun %>% filter(Municipio !="") %>% 
   knitr::kable(align = c("l", "r", "r", "r", "c","c", "r", "r"))
+```
+
+\newpage 
+## Mapa de cobertura de vacunación por municipio
+
+```{r}
+min_rate <- .40
+max_rate <- .70
+load("../../dashboard/data/map.rda")
+
+left_join(municipio_2, pop_by_municipio, by = "municipio") %>%
+  mutate(rate = total_2 / poblacion) %>%
+  mutate(rate = 100*pmin(pmax(rate, min_rate), max_rate)) %>%
+  na.omit() %>%
+  left_join(map, by = "municipio") %>%
+  ggplot() + 
+  geom_polygon(aes(x = X, y = Y, group = paste(municipio, part), fill = rate), color = "black", size = 0.15) + 
+  geom_text(mapping = aes(x = X, y = Y, label = municipio), data = map_centers,
+            size  = 2.2,
+            color = "black",
+            fontface = "bold") +
+  scale_fill_gradientn(colors = rev(RColorBrewer::brewer.pal(9, "Reds")),
+                       name = "Por ciento con dosis completa:",
+                       limits= c(100*min_rate, 100*max_rate)) +
+  theme_bw() +
+  theme_void() +
+  theme(legend.position = "bottom")
+ggsave("~/Desktop/mapa.png", width = 10, height = 5)
 ```
 
 \newpage
