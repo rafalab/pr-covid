@@ -426,6 +426,7 @@ plot_map <- function(tests_by_strata,
     scale_fill_gradientn(colors = RColorBrewer::brewer.pal(9, "Reds"),
                          name = "Por ciento de pruebas positivas:",
                          limits= c(100*min_rate, 100*max_rate)) +
+    coord_map() +
     theme_void() +
     theme(legend.position = "bottom") +
     ggtitle(paste("Por ciento de pruebas positivas por municipio para el period de",
