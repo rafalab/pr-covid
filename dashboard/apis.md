@@ -48,3 +48,7 @@
 
 * Viajeros llegando al aeropuerto:
 ```/administration/reports/travels/total-forms-by-reported-arrival-date```
+
+* Muertes:
+```https://bioportal.salud.gov.pr/api/administration/reports/deaths/summary```
+
