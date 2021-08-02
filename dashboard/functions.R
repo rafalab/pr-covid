@@ -743,7 +743,7 @@ plot_rezago <- function(rezago, rezago_mort,
                         max_days = 30){
   
   diff_mort <- rezago_mort %>%
-    filter(new > 0 & diff >=0 & date >= start_date &  date <= end_date) %>%
+    filter(date >= start_date &  date <= end_date) %>%
     pull(diff)
   
   dias <- seq(0, max_days, length.out = n_points)

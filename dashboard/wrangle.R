@@ -588,28 +588,6 @@ lab_tab  <- lab_tab %>% group_by(Laboratorio, testType) %>%
   summarize(tests = sum(tests),.groups = "drop") 
 
 
-## Adding rezago computation for deaths
-dat <- read_csv("https://raw.githubusercontent.com/sacundim/covid-19-puerto-rico/master/assets/data/cases/PuertoRico-bitemporal.csv",
-                col_types = cols(bulletin_date = col_date(),
-                                 datum_date = col_date(),
-                                 confirmed_and_suspect_cases = col_integer(),
-                                 confirmed_cases = col_integer(),
-                                 probable_cases = col_integer(),
-                                 suspect_cases = col_integer(),
-                                 deaths = col_integer()))
-
-rezago_mort <- dat %>% 
-  rename(date = datum_date) %>%
-  filter(!is.na(deaths)) %>%
-  arrange(date, bulletin_date) %>%
-  filter(!is.na(deaths)) %>%
-  group_by(date) %>%
-  mutate(new = diff(c(0, deaths))) %>%
-  ungroup() %>%
-  filter(new != 0) %>%
-  mutate(diff = (as.numeric(bulletin_date) - as.numeric(date)))
-
-
 # By Region ---------------------------------------------------------------
 
 ## We now create the tests data table but by region
@@ -880,6 +858,28 @@ deaths_by_age <- deaths %>%
   filter(!is.na(ageRange)) %>%
   group_by(ageRange) %>%
   mutate(deaths_week_avg = ma7(date, deaths)$moving_avg)
+
+
+## Rezagos muerte
+
+## The following code commented out because we now use Salud API
+## Adding rezago computation for deaths
+# dat <- read_csv("https://raw.githubusercontent.com/sacundim/covid-19-puerto-rico/master/assets/data/cases/PuertoRico-bitemporal.csv",
+#                 col_types = cols(bulletin_date = col_date(),
+#                                  datum_date = col_date(),
+#                                  confirmed_and_suspect_cases = col_integer(),
+#                                  confirmed_cases = col_integer(),
+#                                  probable_cases = col_integer(),
+#                                  suspect_cases = col_integer(),
+#                                  deaths = col_integer()))
+
+rezago_mort <- deaths %>% 
+  filter(!is.na(date)) %>%
+  mutate(bulletin_date = as_date(ymd_hms(reportDate, tz = "America/Puerto_Rico"))) %>%
+  arrange(date, bulletin_date) %>%
+  mutate(diff = (as.numeric(bulletin_date) - as.numeric(date))) %>%
+  select(date, diff)
+
 
 ## add passanger data
 
