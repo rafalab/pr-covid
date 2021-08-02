@@ -745,8 +745,9 @@ menores_1 %>% mutate(municipio = ifelse(municipio == "", "No reportado", municip
 # Rezago 
 
 ```{r}
-prov <- dat %>% mutate(diff = as.numeric(insert_date) - as.numeric(date))  %>% 
-  mutate(proveedor = case_when(str_detect(proveedor, "WALGREENS") ~ "Walgreens",
+simplify_proveedor <- function(x, col_name = "proveedor") {
+  x %>%
+mutate("{col_name}" := case_when(str_detect(proveedor, "WALGREENS") ~ "Walgreens",
                                str_detect(proveedor, "WALMART|SAM'S") ~ "Walmart/Sams",
                                str_detect(proveedor, "CVS") ~ "CVS",
                                str_detect(proveedor, "VOCES") ~ "Voces",
@@ -763,7 +764,12 @@ prov <- dat %>% mutate(diff = as.numeric(insert_date) - as.numeric(date))  %>%
                                str_detect(proveedor, "UNIVERSIDAD|UPR|UNIV|COLEGIO") ~ "Otras Universidades",
                                str_detect(proveedor, "CDT") ~ "CDTs",
                                str_detect(proveedor, "DR ") ~ "Doctores",
-                               TRUE ~ "Otros")) 
+                               TRUE ~ "Otros"))
+}
+
+prov_full <- dat %>% mutate(diff = as.numeric(insert_date) - as.numeric(date))
+prov <- prov_full %>% 
+  simplify_proveedor()
 ```
 
 Para una vacunación aparecer en este análisis se tiene que reportar al PREIS. Algunos proveedores toman días en entrar los datos. La entrada de datos parece estar mejorando pero aun vemos rezago. La próxima gráfica muestra el por ciento de vacunaciones que se reportan como función del número de días. 
@@ -863,17 +869,20 @@ no_dose_2 %>% knitr::kable(align = "c")
 Estos son los totales de vacunas administradas por proveedor. Incluimos también el rezago medio en entrar los datos al sistema para todo el periodo y para la última semana.
 
 ```{r}
-prov %>% group_by(proveedor) %>%
-  summarize(total = n(), 
-            rezago = median(diff), 
+prov_full %>% simplify_proveedor("proveedor_simple") %>%
+  group_by(proveedor_simple) %>%
+  summarize(subproveedores = length(unique(proveedor)),
+            total = n(), 
+            rezago = median(diff),
+            entradas_esta_semana = sum(insert_date >= today() - weeks(1)),
             rezago_esta_semana = median(diff[insert_date >= today() - weeks(1)])) %>%
   ungroup() %>%
-  mutate(o = ifelse(proveedor == "Otros", -Inf, total)) %>%  
+  mutate(o = ifelse(proveedor_simple == "Otros", -Inf, entradas_esta_semana)) %>%  
   arrange(desc(o)) %>%
   select(-o) %>%
   mutate(total = make_pretty(total)) %>%
-  setNames(c("Proveedor", "Vacunas administradas", "Rezago medio (días)", "Rezago última semana")) %>% 
-  knitr::kable(align = c("l","r","r", "r"))
+  setNames(c("Proveedor", "Sub-proveedores", "Vacunas administradas", "Rezago medio (días)", "Entradas última semana","Rezago última semana")) %>% 
+  knitr::kable(align = c("l","r", "r","r", "r", "r"))
 ```
 
 Estos son las vacunaciones por día (media móvil de 7 días) que hacen los proveedores que más vacunas administran.
