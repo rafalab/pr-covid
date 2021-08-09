@@ -20,7 +20,7 @@ library(lubridate)
 library(tidycensus)
 Sys.setlocale("LC_TIME", "es_ES")
 
-last_day <- make_date(2021, 7, 24)
+last_day <- make_date(2021, 8, 7)
 fn <- paste0("data/Vacunas (Raw Data - Clean) ", format(last_day+days(1),"%m-%d-%Y"), ".csv")
 
 # Define functions --------------------------------------------------------
@@ -865,6 +865,7 @@ no_dose_2 %>% knitr::kable(align = "c")
 ```
 
 \newpage
+
 # Proveedores 
 
 Estos son los totales de vacunas administradas por proveedor. Incluimos también el rezago medio en entrar los datos al sistema para todo el periodo y para la última semana.
@@ -881,14 +882,22 @@ prov_full %>% simplify_proveedor("proveedor_simple") %>%
   mutate(o = ifelse(proveedor_simple == "Otros", -Inf, entradas_esta_semana)) %>%  
   arrange(desc(o)) %>%
   select(-o) %>%
-  mutate(total = make_pretty(total)) %>%
+  mutate(total = make_pretty(total), entradas_esta_semana = make_pretty(entradas_esta_semana)) %>%
   setNames(c("Proveedor", "Sub-proveedores", "Vacunas administradas", "Rezago medio (días)", "Entradas última semana","Rezago última semana")) %>% 
-  knitr::kable(align = c("l","r", "r","r", "r", "r"))
+  kableExtra::kbl(align = c("l","r", "r","r", "r", "r"), booktabs = TRUE,
+                  linesep = "")  %>% 
+  kableExtra::kable_styling(latex_options = c("striped","HOLD_position")) %>%
+  kableExtra::column_spec(column = 1, width = "1.25in") %>%
+  kableExtra::column_spec(column = 2, width = "0.75in") %>%
+  kableExtra::column_spec(column = 3, width = "1in") %>%
+  kableExtra::column_spec(column = 4, width = "0.75in") %>%
+  kableExtra::column_spec(column = 5, width = "0.75in") %>%
+  kableExtra::column_spec(column = 6, width = "0.75in")
 ```
 
 Estos son las vacunaciones por día (media móvil de 7 días) que hacen los proveedores que más vacunas administran.
 
-```{r}
+```{r, fig.dim = c(8, 4), out.height="40%"}
 keep <- setdiff(names(sort(table(prov$proveedor),decreasing = TRUE))[1:10], c("Otros"))
 prov %>%
   filter(proveedor %in% keep) %>%
