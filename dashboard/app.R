@@ -126,7 +126,9 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                DT::dataTableOutput("tabla_positividad")),
                       
                       tabPanel("Hospitalizaciones",
-                               plotOutput("hospitalizaciones")),
+                               plotOutput("hospitalizaciones"),
+                               hr(),
+                               plotOutput("hospitalizaciones_ped")),
                       
                       tabPanel("ICU",
                                plotOutput("icu")),
@@ -452,19 +454,17 @@ server <- function(input, output, session) {
   )
   
   # -- This creates the hospitalization figure
-  output$hospitalizaciones <- renderPlot({
-    p1 <- plot_hosp(hosp_mort, 
-                    start_date = input$range[1],
-                    end_date = input$range[2],
-                    yscale = as.logical(input$yscale))
-    p2 <- plot_hosp_ped(hosp_mort, 
-                        start_date = input$range[1],
-                        end_date = input$range[2],
-                        yscale = as.logical(input$yscale))
-    p <- gridExtra::grid.arrange(p1, p2, ncol = 1)
-    return(p)
-  })
-
+  output$hospitalizaciones <- renderPlot(
+    plot_hosp(hosp_mort, 
+              start_date = input$range[1],
+              end_date = input$range[2],
+              yscale = as.logical(input$yscale)))
+  output$hospitalizaciones_ped <- renderPlot(
+    plot_hosp_ped(hosp_mort, 
+                  start_date = input$range[1],
+                  end_date = input$range[2],
+                  yscale = as.logical(input$yscale)))
+  
   # -- This creates the ICU figure
   output$icu <- renderPlot(
     plot_icu(hosp_mort, 
@@ -656,9 +656,13 @@ server <- function(input, output, session) {
            "hosp-mort" = {
              hosp_mort %>%
                select(date, HospitCOV19, CamasICU, CamasICU_disp, IncMueSalud, 
-                      hosp_week_avg, icu_week_avg, mort_week_avg) %>%
+                      hosp_week_avg, icu_week_avg, mort_week_avg,
+                      CAMAS_ICU_COVID, CAMAS_PICU_COVID, CAMAS_PICU_DISP,
+                      ped_hosp_week_avg, picu_week_avg) %>%
                setNames(c("dates", "hospitalizaciones", "camas_icu", "camas_icu_disp", "muertes",
-                        "hospitalizaciones_week_avg", "camas_icu_week_avg", "muertes_week_avg"))
+                        "hospitalizaciones_week_avg", "camas_icu_week_avg", "muertes_week_avg",
+                        "hospitalizaciones_ped", "camas_picu", "camas_picu_disp",
+                        "hospitalizaciones_ped_week_avg", "camas_picu_week_avg"))
            },
            "positivos" = select(tests, -old_rate),
            "municipios" = {
