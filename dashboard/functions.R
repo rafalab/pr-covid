@@ -228,6 +228,42 @@ plot_hosp <- function(hosp_mort,
   return(ret)
 }
 
+plot_hosp_ped <- function(hosp_mort,  
+                          start_date = first_day, 
+                          end_date = last_complete_day,
+                          yscale = FALSE){
+  
+  tmp <- hosp_mort %>% 
+    filter(!is.na(CAMAS_PED_COVID) & 
+             date >= start_date & date <= end_date) %>% 
+    select(date, CAMAS_PED_COVID, ped_hosp_week_avg, CAMAS_PICU_COVID, picu_week_avg) 
+  
+  if(yscale){
+    ret <- tmp %>% 
+      ggplot(aes(x = date)) +
+      geom_bar(mapping = aes(y = CAMAS_PED_COVID), stat = "identity", width = 0.75, fill = "#8CC8F4") +
+      geom_line(aes(y = ped_hosp_week_avg), color="#8CC8F4", size = 1.25) +
+      geom_bar(mapping = aes(y = CAMAS_PICU_COVID), stat = "identity", width = 0.75, fill = "darkblue") +
+      geom_line(aes(y = picu_week_avg), color="darkblue", size = 1.25) +
+      ggtitle("Hospitalizaciones y ICU Pediátricas")
+  } else{
+    ret <- tmp %>% 
+      ggplot(aes(x = date)) +
+      geom_point(mapping = aes(y = CAMAS_PED_COVID), width = 0.75, color = "#8CC8F4") +
+      geom_line(aes(y = ped_hosp_week_avg), color="#8CC8F4", size = 1.25) +
+      ggtitle("Hospitalizaciones") 
+  }
+  
+  ret <- ret +  
+    xlab("Fecha") +
+    ylab("Pacientes") +
+    scale_x_date(date_labels = "%b", breaks = breaks_width("1 month"))  +
+    theme_bw() 
+  
+  return(ret)
+}
+
+
 plot_cases <- function(cases, 
                        start_date = first_day, 
                        end_date = last_complete_day, 

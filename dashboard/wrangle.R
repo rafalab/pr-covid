@@ -359,20 +359,31 @@ tests_by_strata <- all_tests %>%
   ungroup()
 
 # --Mortality and hospitlization
-hosp_mort <- read_csv("https://raw.githubusercontent.com/rafalab/pr-covid/master/dashboard/data/DatosMortalidad.csv") %>%
-  mutate(date = mdy(Fecha)) %>% 
+# use old handmade database to fill in the blanks
+old_hosp_mort <- read_csv("https://raw.githubusercontent.com/rafalab/pr-covid/master/dashboard/data/DatosMortalidad.csv") %>%
+  mutate(date = mdy(Fecha)) %>%
   filter(date >= first_day) %>%
-  arrange(date)
+  arrange(date) %>%
+  select(date, HospitCOV19, CamasICU_disp, CamasICU)
+# we started keeping track of available beds on 2020-09-20
+# hosp_mort <- hosp_mort %>%
+#   replace_na(list(CamasICU_disp = icu_beds))
 
-## we started keeping track of available beds on 2020-09-20 
-hosp_mort <- hosp_mort %>% 
-  replace_na(list(CamasICU_disp = icu_beds))
-
-
+hosp_mort <- read.csv("https://covid19datos.salud.gov.pr/estadisticas_v2/download/data/sistemas_salud/completo") %>% 
+  mutate(date = as_date(FE_REPORTE)) %>%
+  filter(date >= first_day) %>%
+  full_join(old_hosp_mort, by = "date") %>%
+  arrange(date) %>%
+  ## add columns to match old table
+  mutate(HospitCOV19 = ifelse(is.na(CAMAS_ADULTOS_COVID), HospitCOV19, CAMAS_ADULTOS_COVID),
+         CamasICU = ifelse(is.na(CAMAS_ICU_COVID), CamasICU, CAMAS_ICU_COVID),
+         CamasICU_disp = ifelse(is.na(CAMAS_ICU_DISP), CamasICU_disp, CAMAS_ICU_DISP))
+         
 # -- seven day averages 
-fits <- with(hosp_mort, 
-             ma7(d = date, y = IncMueSalud))
-hosp_mort$mort_week_avg <- fits$moving_avg
+# deaths gets added later
+# fits <- with(hosp_mort, 
+#              ma7(d = date, y = IncMueSalud))
+# hosp_mort$mort_week_avg <- fits$moving_avg
 
 fits <- with(hosp_mort, 
              ma7(d = date, y = HospitCOV19))
@@ -381,6 +392,20 @@ hosp_mort$hosp_week_avg <- fits$moving_avg
 fits <- with(hosp_mort, 
              ma7(d = date, y = CamasICU))
 hosp_mort$icu_week_avg <- fits$moving_avg
+
+ind <- which(!is.na(hosp_mort$CAMAS_PED_COVID))
+fits <- with(hosp_mort[ind,], 
+             ma7(d = date, y = CAMAS_PED_COVID))
+hosp_mort$ped_hosp_week_avg <- rep(NA, nrow(hosp_mort))
+hosp_mort$ped_hosp_week_avg[ind] <- fits$moving_avg
+
+ind <- which(!is.na(hosp_mort$CAMAS_PICU_COVID))
+fits <- with(hosp_mort[ind,], 
+             ma7(d = date, y = CAMAS_PICU_COVID))
+hosp_mort$picu_week_avg <- rep(NA, nrow(hosp_mort))
+hosp_mort$picu_week_avg[ind] <- fits$moving_avg
+
+
 
 ## Vaccine data
 ## We will add it to hosp_mort data
@@ -401,9 +426,9 @@ for(j in which(names(vaccines)!="date")){
 hosp_mort <- full_join(hosp_mort, vaccines, by = "date") 
 
 
-if(FALSE){
-  plot_deaths(hosp_mort)
-}
+# if(FALSE){
+#   plot_deaths(hosp_mort)
+# }
 
 # Compute time it takes tests to come in ----------------------------------
 

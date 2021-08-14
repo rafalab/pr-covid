@@ -452,13 +452,19 @@ server <- function(input, output, session) {
   )
   
   # -- This creates the hospitalization figure
-  output$hospitalizaciones <- renderPlot(
-    plot_hosp(hosp_mort, 
-              start_date = input$range[1],
-              end_date = input$range[2],
-              yscale = as.logical(input$yscale))
-  )
-  
+  output$hospitalizaciones <- renderPlot({
+    p1 <- plot_hosp(hosp_mort, 
+                    start_date = input$range[1],
+                    end_date = input$range[2],
+                    yscale = as.logical(input$yscale))
+    p2 <- plot_hosp_ped(hosp_mort, 
+                        start_date = input$range[1],
+                        end_date = input$range[2],
+                        yscale = as.logical(input$yscale))
+    p <- gridExtra::grid.arrange(p1, p2, ncol = 1)
+    return(p)
+  })
+
   # -- This creates the ICU figure
   output$icu <- renderPlot(
     plot_icu(hosp_mort, 
