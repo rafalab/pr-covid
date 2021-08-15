@@ -50,8 +50,8 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                  label = "Tipo de prueba",
                                  choices = list("Molecular" = "Molecular",
                                                 "Molecular + Antígeno" = "Molecular+Antigens",
-                                                "Antígeno" = "Antigens",
-                                                "Serológica" = "Serological"),
+                                                "Antígeno" = "Antigens"),
+                                              #  "Serológica" = "Serological"),
                                  selected = "Molecular"),
                     radioButtons("acumulativo", 
                                  label = "Tipo de gráfico",
@@ -368,7 +368,7 @@ server <- function(input, output, session) {
                cumm = as.logical(input$acumulativo))
     
     type <- case_when(input$testType == "Molecular" ~ "moleculares.", 
-                      input$testType == "Serological" ~ "serológicas.",
+                     # input$testType == "Serological" ~ "serológicas.",
                       input$testType == "Antigens" ~ "de antígenos.",
                       input$testType == "Molecular+Antigens" ~ "moleculares y de antígenos.")
     
@@ -492,21 +492,24 @@ server <- function(input, output, session) {
   )
   
   # -- This creates positivity plot by lab
-  output$positividad_por_lab <- renderPlot(
+  output$positividad_por_lab <- renderPlot({
+    load(file.path(rda_path,"labs.rda"))
     plot_positivity_by_lab(labs, 
               start_date =input$range[1], 
               end_date =input$range[2], 
               type = input$testType, 
               yscale = as.logical(input$yscale))
+  }
   )
   
   # -- This creates proportion of tests per labs
-  output$numero_pruebas_por_lab <- renderPlot(
+  output$numero_pruebas_por_lab <- renderPlot({
+    load(file.path(rda_path,"labs.rda"))
     plot_tests_by_lab(labs, 
                       start_date =input$range[1], 
                       end_date =input$range[2], 
                       type = input$testType)
-  )
+  })
   
   # -- This creates the daily number of tests figure
   output$casos <- renderPlot(
@@ -534,7 +537,8 @@ server <- function(input, output, session) {
   output$plot_by_region <- renderPlot(by_region()$p)
   output$table_by_region <- DT::renderDataTable(by_region()$pretty_tab, server = FALSE)
   
-  by_age<- reactive({load(file.path(rda_path,"by-age.rda"));
+  by_age<- reactive({
+    load(file.path(rda_path,"by-age.rda"));
     summary_by_age(tests_by_age,
                    deaths_by_age,
                    pop_by_age,
@@ -551,6 +555,7 @@ server <- function(input, output, session) {
   
   # -- This creates a geographical table of positivity rate
   output$municipios <- DT::renderDataTable({
+    load(file.path(rda_path,"tests_by_strata.rda"))
     ret <- make_municipio_table(tests_by_strata,  
                                 start_date =input$range[1], 
                                 end_date =input$range[2], 
@@ -575,19 +580,23 @@ server <- function(input, output, session) {
   )
   
   # -- This creates a geographical map of positivity rate
-  output$mapa_positividad <- renderPlot(
+  output$mapa_positividad <- renderPlot({
+    load(file.path(rda_path,"tests_by_strata.rda"))
     plot_map(tests_by_strata,  
              start_date = input$range[1], 
              end_date = input$range[2],
              type =  input$testType)
+  }
   )
   
-  output$age <- renderPlot(
+  output$age <- renderPlot({
+    load(file.path(rda_path,"tests_by_strata.rda"))
     plot_agedist(tests_by_strata, start_date =input$range[1], 
                  end_date =input$range[2], 
                  type = input$testType,
                  yscale = as.logical(input$yscale),
                  version = input$age_plot_version)
+  }
   )
   
   output$rezago <- renderPlot({
@@ -666,8 +675,10 @@ server <- function(input, output, session) {
            },
            "positivos" = select(tests, -old_rate),
            "municipios" = {
+             load(file.path(rda_path,"tests_by_strata.rda"))
              tests_by_strata %>%
-               filter(testType %in% c("Antigens", "Molecular", "Serological")) %>%
+              # filter(testType %in% c("Antigens", "Molecular", "Serological")) %>%
+               filter(testType %in% c("Antigens", "Molecular")) %>%
                mutate(patientCity = as.character(patientCity)) %>%
                filter(patientCity %in% c("No reportado", poblacion_municipios$patientCity)) %>%
                group_by(testType, patientCity, date) %>%
@@ -677,18 +688,22 @@ server <- function(input, output, session) {
                left_join(poblacion_municipios, by = "patientCity") 
            },
            "edad" = {
+             load(file.path(rda_path,"tests_by_strata.rda"))
              tests_by_strata %>%
                filter(ageRange != "No reportado") %>%
-               filter(testType %in% c("Antigens", "Molecular", "Serological")) %>%
+              # filter(testType %in% c("Antigens", "Molecular", "Serological")) %>%
+               filter(testType %in% c("Antigens", "Molecular")) %>%
                group_by(testType, ageRange, date) %>%
                summarize(positives = sum(positives), .groups = "drop") %>%
                ungroup() %>%
                mutate(percent = positives/sum(positives))
            },
            "municipios-edad" = {
+             load(file.path(rda_path,"tests_by_strata.rda"))
              tests_by_strata %>%
                filter(ageRange != "No reportado") %>%
-               filter(testType %in% c("Antigens", "Molecular", "Serological")) %>%
+              # filter(testType %in% c("Antigens", "Molecular", "Serological")) %>%
+               filter(testType %in% c("Antigens", "Molecular")) %>%
                mutate(patientCity = as.character(patientCity)) %>%
                filter(patientCity %in% c("No reportado", poblacion_municipios$patientCity)) 
            },

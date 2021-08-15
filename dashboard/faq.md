@@ -36,7 +36,7 @@ El panel de control te permite cambiar opciones de como ver los datos. Las opcio
 
 * Las fechas examinadas: Por defecto mostramos los últimos 90 días, pero pueden cambiarlo a cualquier intervalo. Incluimos tres botones que automáticamente permiten cambiar a la ultima semana, los últimos 90 días, o todas las fechas desde marzo 12. Está opción no afecta las tablas en la pestaña _RESUMEN_ pues en está fijamos la fechas a las más recientes, aunque si cambia los gráficas.
 
-* El tipo prueba usada para crear resúmenes: moleculares, de antígeno, o serológica. También incluimos una opción que combina las dos pruebas diagnósticas: moleculares y de antígeno. Note que los datos de hospitalizaciones, muertes, y vacunas no son afectados por esta opción. Está opción no afecta la pestaña _RESUMEN_ pues en está fijamos el tipo de prueba que mostramos.
+* El tipo prueba usada para crear resúmenes: moleculares o de antígeno. También incluimos una opción que combina las dos pruebas diagnósticas: moleculares y de antígeno. Note que los datos de hospitalizaciones, muertes, y vacunas no son afectados por esta opción. Está opción no afecta la pestaña _RESUMEN_ pues en está fijamos el tipo de prueba que mostramos.
 
 * Datos diarios o acumulativos: Por defecto mostramos datos diarios ya que se destacan las tendencias mucho mejor. Pero ofrecemos la opción de cambiar a datos acumulativos. 
 
@@ -141,7 +141,13 @@ Los datos observados incluyen variabilidad aleatoria. Cuando se recopilan menos 
 <details><summary>¿Puedo ver resúmenes basados en otros tipos de prueba? </summary>
 
 Por defecto mostramos resúmenes basados en pruebas moleculares ya que hemos calibrado los metas basado en estos datos. 
-Pero en el panel de control pueden cambiar el tipo de pruebas usadas en los cálculos a moleculares, moleculares y de antígenos, de antígenos, o serológicas. Información sobre las diferencias entre estás pruebas se encuentran [aquí](https://espanol.cdc.gov/coronavirus/2019-ncov/symptoms-testing/testing.html).
+Pero en el panel de control pueden cambiar el tipo de pruebas usadas en los cálculos a moleculares, moleculares y de antígenos, o de antígenos. Información sobre las diferencias entre estás pruebas se encuentran [aquí](https://espanol.cdc.gov/coronavirus/2019-ncov/symptoms-testing/testing.html).
+
+</details>
+
+<details><summary>¿Por qué quitaron los datos de pruebas serológicas? </summary>
+
+No las estábamos usando para ningún monitoreo. Como ocupan espacio en el servidor y hacen los cómputos más lentos las removimos.
 
 </details>
 
