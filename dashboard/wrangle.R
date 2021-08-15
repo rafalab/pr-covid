@@ -762,7 +762,7 @@ fits <- all_tests_with_id %>%
   mutate(ageRange = age_levels[as.numeric(cut(age_start, c(age_starts, Inf), right = FALSE))]) %>%
   mutate(ageRange = factor(ageRange, levels = age_levels)) %>%
   mutate(entry_date = as_date(orderCreatedAt)) %>%
-  filter(date >= first_day & testType %in% test_types) & 
+  filter(date >= first_day & testType %in% test_types & 
            result %in% c("positive", "negative")) %>%
   nest_by(testType, ageRange) %>%
   summarize(positivity(data), .groups = "drop")
