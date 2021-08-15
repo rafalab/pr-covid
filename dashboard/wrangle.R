@@ -115,7 +115,8 @@ all_tests <- all_tests %>%
                                     grepl("negative", result) ~ "negative",
                                     result == "not detected" ~ "negative",
                                     TRUE ~ "other")) %>%
-  arrange(reportedDate, collectedDate) 
+  arrange(reportedDate, collectedDate) %>%
+  filter(testType %in% test_types)
 
 ## fixing bad dates: if you want to remove bad dates instead, change FALSE TO TRUE
 if(FALSE){
@@ -163,7 +164,8 @@ all_tests_with_id <- all_tests_with_id %>%
                             grepl("negative", result) ~ "negative",
                             result == "not detected" ~ "negative",
                             TRUE ~ "other")) %>%
-  arrange(reportedDate, collectedDate, patientId) 
+  arrange(reportedDate, collectedDate, patientId) %>%
+  filter(testType %in% test_types)
 
 ## fixing bad dates: if you want to remove bad dates instead, change FALSE TO TRUE
 if(FALSE){
