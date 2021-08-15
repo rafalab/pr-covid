@@ -44,8 +44,8 @@ ui <- fixedPage(
                                            label = "Tipo de prueba",
                                            choices = list("Molecular" = "Molecular",
                                                           "Molecular + Antígeno" = "Molecular+Antigens",
-                                                          "Antígeno" = "Antigens",
-                                                          "Serológica" = "Serological"),
+                                                          "Antígeno" = "Antigens"),
+                                                          #"Serológica" = "Serological"),
                                            selected = "Molecular")),
                      column(6, dateInput(
                          "the_day",
