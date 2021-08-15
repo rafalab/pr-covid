@@ -951,9 +951,13 @@ if(Sys.info()["nodename"] == "fermat.dfci.harvard.edu"){
 the_stamp <- now()
 save(first_day, last_complete_day,
      alpha, the_stamp, 
-     tests, tests_by_strata, cases,
+     tests, cases,
      hosp_mort, labs, pr_pop, 
      file = file.path(rda_path, "data.rda"))
+
+save(labs, file = file.path(rda_path, "labs.rda"))
+
+save(tests_by_strata, file = file.path(rda_path, "tests_by_strata.rda"))
 
 save(lab_tab, file = file.path(rda_path, "lab_tab.rda"))
 
