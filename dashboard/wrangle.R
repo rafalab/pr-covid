@@ -85,6 +85,11 @@ get_bioportal <- function(url){
   )
 }
 
+#test_types <- c("Molecular", "Serological", "Antigens", "Molecular+Antigens")
+#original_test_types <- c("Molecular", "Serological", "Antigens")
+test_types <- c("Molecular", "Antigens", "Molecular+Antigens")
+original_test_types <- c("Molecular", "Antigens")
+
 # Reading and wrangling test data from database ----------------------------------------------
 message("Reading test data.")
 
@@ -189,7 +194,7 @@ mol_anti <- all_tests_with_id %>%
 tests <- all_tests_with_id %>%
   bind_rows(mol_anti) %>%
   filter(date >= first_day & 
-           testType %in% c("Molecular", "Serological", "Antigens", "Molecular+Antigens") & 
+           testType %in% test_types & 
            result %in% c("positive", "negative")) %>%
   group_by(testType, date) %>%
   summarize(people_positives = n_distinct(patientId[result == "positive"]),
@@ -228,7 +233,7 @@ message("Computing positivity.")
 fits <- all_tests_with_id %>% 
   bind_rows(mol_anti) %>%
   mutate(entry_date = as_date(orderCreatedAt)) %>%
-  filter(date >= first_day & testType %in% c("Molecular", "Serological", "Antigens", "Molecular+Antigens") & 
+  filter(date >= first_day & testType %in% test_types & 
            result %in% c("positive", "negative")) %>%
   nest_by(testType) %>%
   summarize(positivity(data), .groups = "drop")
@@ -247,7 +252,7 @@ tests <- tests %>%
 all_cases <- all_tests_with_id %>%  
   bind_rows(mol_anti) %>%
   filter(date>=first_day & result == "positive" &
-           testType %in% c("Molecular", "Serological", "Antigens",  "Molecular+Antigens")) %>%
+           testType %in% test_types) %>%
   group_by(testType, patientId) %>%
   mutate(n=n()) %>%
   arrange(date) %>%
@@ -287,7 +292,7 @@ message("Computing unique negatives.")
 negative_cases <- all_tests_with_id %>%  
   bind_rows(mol_anti) %>%
   filter(date>=first_day & result == "negative" &
-           testType %in% c("Molecular", "Serological", "Antigens",  "Molecular+Antigens")) %>%
+           testType %in% test_types) %>%
   group_by(testType, patientId) %>%
   arrange(date) %>%
   slice(1) %>% 
@@ -349,7 +354,7 @@ mol_anti_2 <-  all_tests %>%
 
 tests_by_strata <- all_tests %>%  
   bind_rows(mol_anti_2) %>%
-  filter(date >= first_day & testType %in% c("Molecular", "Serological", "Antigens", "Molecular+Antigens") & 
+  filter(date >= first_day & testType %in% test_types & 
            result %in% c("positive", "negative")) %>%
   filter(date>=first_day) %>%
   mutate(patientCity = fct_explicit_na(patientCity, "No reportado")) %>%
@@ -438,7 +443,7 @@ message("Computing lag statistics.")
 
 rezago <- all_tests_with_id  %>% 
   filter(result %in% c("positive", "negative") & 
-           testType %in% c("Molecular", "Serological", "Antigens") &
+           testType %in% original_test_types &
            resultCreatedAt >= collectedDate) %>% ## based on @midnucas suggestion: can't be added before it's reported
   group_by(testType) %>%
   mutate(diff = (as.numeric(resultCreatedAt) - as.numeric(collectedDate)) / (60 * 60 * 24),
@@ -625,7 +630,7 @@ message("Computing by region statistics.")
 tests_by_region <- all_tests_with_id %>%
   bind_rows(mol_anti) %>%
   filter(date >= first_day & 
-           testType %in% c("Molecular", "Serological", "Antigens", "Molecular+Antigens") & 
+           testType %in% test_types & 
            result %in% c("positive", "negative")) %>%
   group_by(testType, region, date) %>%
   summarize(people_positives = n_distinct(patientId[result == "positive"]),
@@ -639,7 +644,7 @@ tests_by_region <- all_tests_with_id %>%
 fits <- all_tests_with_id %>% 
   bind_rows(mol_anti) %>%
   mutate(entry_date = as_date(orderCreatedAt)) %>%
-  filter(date >= first_day & testType %in% c("Molecular", "Serological", "Antigens", "Molecular+Antigens") & 
+  filter(date >= first_day & testType %in% test_types & 
            result %in% c("positive", "negative")) %>%
   nest_by(testType, region) %>%
   summarize(positivity(data), .groups = "drop")
@@ -686,7 +691,7 @@ tests_by_region <- left_join(tests_by_region, cases_by_region, by = c("testType"
 negative_cases_by_region <- all_tests_with_id %>%
   bind_rows(mol_anti) %>%
   filter(date>=first_day & result == "negative" &
-           testType %in% c("Molecular", "Serological", "Antigens",  "Molecular+Antigens")) %>%
+           testType %in% test_types) %>%
   group_by(testType, region, patientId) %>%
   arrange(date) %>%
   slice(1) %>%
@@ -739,7 +744,7 @@ tests_by_age <- all_tests_with_id %>%
   mutate(ageRange = age_levels[as.numeric(cut(age_start, c(age_starts, Inf), right = FALSE))]) %>%
   mutate(ageRange = factor(ageRange, levels = age_levels)) %>%
   filter(date >= first_day & 
-           testType %in% c("Molecular", "Serological", "Antigens", "Molecular+Antigens") & 
+           testType %in% test_types & 
            result %in% c("positive", "negative")) %>%
   group_by(testType, date, ageRange) %>% 
   summarize(people_positives = n_distinct(patientId[result == "positive"]),
@@ -757,7 +762,7 @@ fits <- all_tests_with_id %>%
   mutate(ageRange = age_levels[as.numeric(cut(age_start, c(age_starts, Inf), right = FALSE))]) %>%
   mutate(ageRange = factor(ageRange, levels = age_levels)) %>%
   mutate(entry_date = as_date(orderCreatedAt)) %>%
-  filter(date >= first_day & testType %in% c("Molecular", "Serological", "Antigens", "Molecular+Antigens") & 
+  filter(date >= first_day & testType %in% test_types) & 
            result %in% c("positive", "negative")) %>%
   nest_by(testType, ageRange) %>%
   summarize(positivity(data), .groups = "drop")
@@ -807,7 +812,7 @@ negative_cases_by_age <- all_tests_with_id %>%
   mutate(ageRange = age_levels[as.numeric(cut(age_start, c(age_starts, Inf), right = FALSE))]) %>%
   mutate(ageRange = factor(ageRange, levels = age_levels)) %>%
   filter(date>=first_day & result == "negative" &
-           testType %in% c("Molecular", "Serological", "Antigens",  "Molecular+Antigens")) %>%
+           testType %in% test_types) %>%
   group_by(testType, ageRange, patientId) %>%
   arrange(date) %>%
   slice(1) %>%
