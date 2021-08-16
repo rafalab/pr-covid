@@ -20,7 +20,7 @@ library(lubridate)
 library(tidycensus)
 Sys.setlocale("LC_TIME", "es_ES")
 
-last_day <- make_date(2021, 8, 7)
+last_day <- make_date(2021, 8, 13)
 fn <- paste0("data/Vacunas (Raw Data - Clean) ", format(last_day+days(1),"%m-%d-%Y"), ".csv")
 
 # Define functions --------------------------------------------------------
@@ -45,16 +45,14 @@ load("rdas/population-tabs.rda")
 pop_by_age_gender <- pop_by_age_gender %>% 
   mutate(ageRange = cut(age_start, c(age_starts, Inf), right = FALSE, labels = age_levels)) %>% 
   group_by(ageRange, gender) %>%
-  summarize(poblacion = sum(poblacion), .groups = "drop") %>%
-  ungroup() 
+  summarize(poblacion = sum(poblacion), .groups = "drop") 
 
 # From here: https://www.census.gov/data/tables/time-series/demo/popest/2010s-detail-puerto-rico-municipios.html
 # note for future: look into why it does not show up with get_estimate
 pop_by_municipio_age_gender <- pop_by_municipio_age_gender  %>%
   mutate(ageRange = cut(age_start, c(age_starts, Inf), right = FALSE, labels = age_levels)) %>% 
   group_by(municipio, ageRange, gender) %>%
-  summarize(poblacion = sum(poblacion), .groups = "drop") %>%
-  ungroup() 
+  summarize(poblacion = sum(poblacion), .groups = "drop") 
 ```
 
 
@@ -110,7 +108,6 @@ dose_1 <- vac %>%
   filter(!is.na(date_1) & !is.na(ageRange_1) & gender_1 %in% c("F","M")) %>%
   group_by(date_1, gender_1, ageRange_1) %>%
   summarize(daily = n(), .groups = "drop") %>%
-  ungroup() %>%
   complete(date_1, gender_1, ageRange_1, fill = list(daily = 0)) %>%
   group_by(ageRange_1, gender_1) %>%
   mutate(total = cumsum(daily)) %>%
@@ -125,7 +122,6 @@ dose_2 <- vac %>%
   filter(!is.na(date_2) & !is.na(ageRange_2) & gender_2 %in% c("F","M")) %>%
   group_by(date_2, gender_2, ageRange_2) %>%
   summarize(daily = n(), .groups = "drop") %>%
-  ungroup() %>%
   complete(date_2, gender_2, ageRange_2, fill = list(daily = 0)) %>%
   group_by(ageRange_2, gender_2) %>%
   mutate(total = cumsum(daily)) %>%
@@ -155,7 +151,7 @@ resumen <- dat %>% group_by(id) %>%
   summarize(vacunas_recibidas = paste(manu, collapse = ";"), n=n()) %>%
   ungroup() %>%
   group_by(vacunas_recibidas) %>%
-  summarize(personas = n(), n = n[1]) %>%
+  summarize(personas = n(), n = n[1], .groups = "drop") %>%
   mutate(serie_completa = ifelse(vacunas_recibidas %in% c("MOD", "NA", "PFR"), "No", "Sí")) %>%
   arrange(desc(serie_completa), desc(personas)) %>%
   select(vacunas_recibidas, serie_completa, personas, n)
@@ -163,10 +159,9 @@ resumen <- dat %>% group_by(id) %>%
 last_week_resumen <- dat %>% 
   filter(insert_date <= last_day - weeks(1)) %>%
   group_by(id) %>%
-  summarize(vacunas_recibidas = paste(manu, collapse = ";"), n=n()) %>%
-  ungroup() %>%
+  summarize(vacunas_recibidas = paste(manu, collapse = ";"), n=n(), .groups = "drop") %>%
   group_by(vacunas_recibidas) %>%
-  summarize(personas = n(), n = n[1]) %>%
+  summarize(personas = n(), n = n[1], .groups = "drop") %>%
   mutate(serie_completa = ifelse(vacunas_recibidas %in% c("MOD", "NA", "PFR"), "No", "Sí")) %>%
   arrange(desc(serie_completa), desc(personas)) %>%
   select(vacunas_recibidas, serie_completa, personas, n)
@@ -190,7 +185,7 @@ cat("Semana pasada:",
     make_pct(sum(last_week_resumen$personas)/pr_pop), "de la poblacion",
     make_pct(sum(last_week_resumen$personas)/pr_adult_pop), "de los adultos.")
 
-cat("Cambio de la semana pasata:",
+cat("Cambio de la semana pasada:",
     make_pretty(sum(resumen$personas) - sum(last_week_resumen$personas)))
     
 ## No cuadra
@@ -317,20 +312,18 @@ last_day <- max(dat$date, na.rm=TRUE) - weeks(2)
 
 tmp1 <- vac %>% filter(!is.na(date_1)) %>% 
   group_by(date = date_1) %>%
-  summarize(daily = n()) %>%
-  ungroup() %>%
+  summarize(daily = n(), .groups = "drop") %>%
   mutate(total = cumsum(daily), percent = total / pr_pop, dosis = "Primera") %>%
   filter(date <= last_day)
 
 tmp2 <- vac %>% filter(!is.na(date_2)) %>% 
   group_by(date = date_2) %>%
-  summarize(daily = n()) %>%
-  ungroup() %>%
+  summarize(daily = n(), .groups = "drop") %>%
   mutate(total = cumsum(daily), percent = total / pr_pop, dosis = "Completa") %>%
   filter(date <= last_day)
 
 param <- tmp2 %>% filter(date > last_day - weeks(2) & date <= last_day) %>%
-  summarize(slope = mean(daily), intercept = last(total))
+  summarize(slope = mean(daily), intercept = last(total), .groups = "drop")
 
 dates <- seq(last_day+days(1), last_day + months(6), by="days")
 
@@ -409,14 +402,12 @@ municipio_1 <- vac %>%
   filter(!is.na(date_1) & !is.na(municipio_1)) %>%
   group_by(municipio_1) %>%
   summarize(total_1 = n(), .groups = "drop") %>%
-  ungroup() %>%
   rename(municipio = municipio_1)
 
 municipio_2 <- vac %>% 
   filter(!is.na(date_2) & !is.na(municipio_2)) %>%
   group_by(municipio_2) %>%
   summarize(total_2 = n(), .groups = "drop") %>%
-  ungroup() %>%
   rename(municipio = municipio_2)
 
 rezago <- dat %>% 
@@ -458,14 +449,12 @@ left_join(municipio_2, pop_by_municipio, by = "municipio") %>%
   ggplot() + 
   geom_polygon(aes(x = X, y = Y, group = paste(municipio, part), fill = rate), color = "black", size = 0.15) + 
   geom_text(mapping = aes(x = X, y = Y, label = municipio), data = map_centers,
-            size  = 2.2,
-            color = "black",
-            fontface = "bold") +
+            size  = 2.0,
+            color = "black") +
   scale_fill_gradientn(colors = rev(RColorBrewer::brewer.pal(9, "Reds")),
                        name = "Por ciento con dosis completa:",
                        limits= c(100*min_rate, 100*max_rate)) +
   coord_map() +
-  theme_bw() +
   theme_void() +
   theme(legend.position = "bottom")
 ggsave("~/Desktop/mapa.png", width = 10, height = 5)
@@ -481,7 +470,6 @@ tmp1 <- vac %>%
   filter(municipio_1 != "" & !is.na(date_1) & !is.na(ageRange_1) & gender_1 %in% c("F","M")) %>%
   group_by(municipio_1, ageRange_1, gender_1) %>%
   summarize(total = n(), .groups = "drop") %>%
-  ungroup() %>%
   rename(municipio = municipio_1, gender = gender_1, ageRange = ageRange_1) %>%
   select(municipio, ageRange, gender, total) %>% 
   complete(municipio, ageRange, gender, fill = list(total = 0)) %>%
@@ -491,7 +479,6 @@ tmp2 <- vac %>%
   filter(municipio_2 != "" & !is.na(date_2) & !is.na(ageRange_2) & gender_2 %in% c("F","M")) %>%
   group_by(municipio_2, ageRange_2, gender_2) %>%
   summarize(total = n(), .groups = "drop") %>%
-  ungroup() %>%
   rename(municipio = municipio_2, gender = gender_2, ageRange = ageRange_2) %>%
   select(municipio, ageRange, gender, total) %>% 
   complete(municipio, ageRange, gender, fill = list(total = 0)) %>%
@@ -640,7 +627,7 @@ viejos %>% mutate(municipio = ifelse(municipio=="", "No reportado", municipio)) 
 menores <- left_join(mun, pop, by = c("municipio", "ageRange")) %>%
   filter(ageRange %in% c("10 a 14", "15 a 19")) %>%
   group_by(municipio) %>%
-  summarize(poblacion = sum(poblacion), total = sum(total)) %>%
+  summarize(poblacion = sum(poblacion), total = sum(total), .groups = "drop") %>%
   mutate(faltan = poblacion - total) %>%
   mutate(perc = total / poblacion) %>%
   select(municipio, faltan, poblacion, total, perc) %>% 
@@ -667,7 +654,6 @@ mun_1 <- vac %>%
   filter(!is.na(date_1) & !is.na(municipio_1) & !is.na(ageRange_1)) %>%
   group_by(municipio_1, ageRange_1) %>%
   summarize(total = n(), .groups = "drop") %>%
-  ungroup() %>%
   rename(municipio = municipio_1, ageRange = ageRange_1) 
 
 viejos_1 <- left_join(mun_1, pop, by = c("municipio", "ageRange")) %>%
@@ -697,7 +683,6 @@ viejos_1 <- left_join(mun_1, pop, by = c("municipio", "ageRange")) %>%
   filter(ageRange %in% c("60 a 69", "70 a 79", "80+")) %>%
   group_by(municipio) %>%
   summarize(total = sum(total), poblacion = sum(poblacion), .groups = "drop") %>%  
-  ungroup() %>%
   mutate(faltan = poblacion - total) %>%
   mutate(perc = total / poblacion) %>%
   select(municipio, faltan, poblacion, total, perc) %>% 
@@ -724,7 +709,7 @@ viejos_1 %>% mutate(municipio = ifelse(municipio=="", "No reportado", municipio)
 menores_1 <- left_join(mun_1, pop, by = c("municipio", "ageRange")) %>%
   filter(ageRange %in% c("10 a 14", "15 a 19")) %>%
   group_by(municipio) %>%
-  summarize(poblacion = sum(poblacion), total = sum(total)) %>%
+  summarize(poblacion = sum(poblacion), total = sum(total), .groups = "drop") %>%
   mutate(faltan = poblacion - total) %>%
   mutate(perc = total / poblacion) %>%
   select(municipio, faltan, poblacion, total, perc) %>% 
@@ -811,8 +796,7 @@ dat %>%
   filter(!is.na(ageRange) & date < max(date) - weeks(2)) %>%
   mutate(date = floor_date(date, unit = "week")) %>%
   group_by(date, ageRange) %>%
-  summarize(total = n()) %>%
-  ungroup() %>%
+  summarize(total = n(), .groups = "drop") %>%
   ggplot(aes(date, total, fill = ageRange)) +
   geom_area() +
   scale_y_continuous(labels = scales::comma) +
@@ -833,8 +817,7 @@ dat %>%
   mutate(date = floor_date(date, unit = "week")) %>%
   filter(!is.na(ageRange) & date < max(date) - weeks(2)) %>%
   group_by(date, manu) %>%
-  summarize(total = n()) %>%
-  ungroup() %>%
+  summarize(total = n(), .groups = "drop") %>%
   mutate(manu = factor(manu, levels = c("PFR","MOD","JSN"))) %>%
   mutate(manu = recode(manu, MOD = "Moderna", PFR = "Pfizer", JSN = "Janssen")) %>%
   ggplot(aes(date, total, color = manu)) +
@@ -857,7 +840,6 @@ no_dose_2 <- vac %>% filter(ageRange_1 != "10 a 14") %>%
            !is.na(ageRange_1) & gender_1 %in% c("F","M")) %>%
   group_by(ageRange_1, gender_1) %>%
   summarize(no_second_dose = make_pct(round(mean(is.na(date_2)),3)), .groups = "drop") %>%
-  ungroup() %>% 
   pivot_wider(names_from = gender_1, values_from = no_second_dose) %>%
   setNames(c("Grupo de Edad", "Mujeres", "Hombres"))
 
@@ -877,8 +859,8 @@ prov_full %>% simplify_proveedor("proveedor_simple") %>%
             total = n(), 
             rezago = median(diff),
             entradas_esta_semana = sum(insert_date >= today() - weeks(1)),
-            rezago_esta_semana = median(diff[insert_date >= today() - weeks(1)])) %>%
-  ungroup() %>%
+            rezago_esta_semana = median(diff[insert_date >= today() - weeks(1)]),
+            .groups = "drop") %>%
   mutate(o = ifelse(proveedor_simple == "Otros", -Inf, entradas_esta_semana)) %>%  
   arrange(desc(o)) %>%
   select(-o) %>%
@@ -902,8 +884,7 @@ keep <- setdiff(names(sort(table(prov$proveedor),decreasing = TRUE))[1:10], c("O
 prov %>%
   filter(proveedor %in% keep) %>%
   group_by(date, proveedor) %>%
-  summarize(total = n()) %>%
-  ungroup() %>%
+  summarize(total = n(), .groups = "drop") %>%
   arrange(date) %>%
   group_by(proveedor) %>%
   mutate(total_week_avg = ma7(date, total)$moving_avg) %>%
