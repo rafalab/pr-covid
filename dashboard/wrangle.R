@@ -91,7 +91,7 @@ get_bioportal <- function(url){
                 httr::add_headers('Accept-Enconding'="br"))$content, multiple = TRUE)
     starts <- which(y=="{")
     ends <- c(starts[-1]-2,length(y)-1)
-    y <- sapply(seq_along(starts)[1:100000], function(i) {
+    y <- sapply(seq_along(starts), function(i) {
       ind <- (starts[i]):(ends[i])
       tmp <- str_c(y[ind], collapse="")
       if(str_detect(tmp, "Serological")) return("") else return(tmp)
