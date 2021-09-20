@@ -76,14 +76,14 @@ alpha <- 0.05
 test_url <- "https://bioportal.salud.gov.pr/api/administration/reports/minimal-info-unique-tests"
 
 cases_url <- "https://bioportal.salud.gov.pr/api/administration/reports/orders/basic?testType=Molecular&testType=Antigens"
-# 
-# get_bioportal <- function(url){
-#   jsonlite::fromJSON(
-#     rawToChar(
-#       httr::GET(url, httr::content_type('application/json'),
-#                 httr::add_headers('Accept-Enconding'="br"))$content)
-#   )
-# }
+
+get_bioportal <- function(url){
+  jsonlite::fromJSON(
+    rawToChar(
+      httr::GET(url, httr::content_type('application/json'),
+                httr::add_headers('Accept-Enconding'="br"))$content)
+  )
+}
 
 # get_bioportal <- function(url){
 #   y <- rawToChar(
@@ -99,7 +99,7 @@ cases_url <- "https://bioportal.salud.gov.pr/api/administration/reports/orders/b
 #   jsonlite::fromJSON(paste0("[", str_c(y[y!=""], collapse=","), "]"))
 # }
 
-get_bioportal <- function(url){
+get_big_bioportal <- function(url){
   y <- rawToChar(
     httr::GET(url, httr::content_type('application/json'),
               httr::add_headers('Accept-Enconding'="br"))$content, multiple = TRUE)
@@ -168,7 +168,7 @@ age_levels <-  paste(seq(0, 125, 5), "to", seq(4, 129, 5))
 
 message("Reading case data.")
 
-all_tests_with_id <- get_bioportal(cases_url)
+all_tests_with_id <- get_big_bioportal(cases_url)
 
 message("Processing case data.")
 
