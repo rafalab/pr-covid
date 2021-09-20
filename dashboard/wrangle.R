@@ -73,33 +73,33 @@ imputation_delay  <- 2
 
 alpha <- 0.05
 
-test_url <- "https://bioportal.salud.gov.pr/api/administration/reports/minimal-info-unique-tests"
+test_url <- "https://bioportal.salud.gov.pr/api/administration/reports/minimal-info-unique-tests?testType=Molecular&testType=Antigens"
 
 cases_url <- "https://bioportal.salud.gov.pr/api/administration/reports/orders/basic?testType=Molecular&testType=Antigens"
 
-get_bioportal <- function(url){
-  jsonlite::fromJSON(
-    rawToChar(
-      httr::GET(url, httr::content_type('application/json'),
-                httr::add_headers('Accept-Enconding'="br"))$content)
-  )
-}
-
 # get_bioportal <- function(url){
-#   y <- rawToChar(
-#     httr::GET(url, httr::content_type('application/json'),
-#               httr::add_headers('Accept-Enconding'="br"))$content, multiple = TRUE)
-#   starts <- which(y=="{")
-#   ends <- c(starts[-1]-2,length(y)-1)
-#   y <- sapply(seq_along(starts), function(i) {
-#     ind <- (starts[i]):(ends[i])
-#     tmp <- str_c(y[ind], collapse="")
-#     if(str_detect(tmp, "Serological")) return("") else return(tmp)
-#   })
-#   jsonlite::fromJSON(paste0("[", str_c(y[y!=""], collapse=","), "]"))
+#   jsonlite::fromJSON(
+#     rawToChar(
+#       httr::GET(url, httr::content_type('application/json'),
+#                 httr::add_headers('Accept-Enconding'="br"))$content)
+#   )
 # }
 
-get_big_bioportal <- function(url){
+get_bioportal_2 <- function(url){
+  y <- rawToChar(
+    httr::GET(url, httr::content_type('application/json'),
+              httr::add_headers('Accept-Enconding'="br"))$content, multiple = TRUE)
+  starts <- which(y=="{")
+  ends <- c(starts[-1]-2,length(y)-1)
+  y <- sapply(seq_along(starts), function(i) {
+    ind <- (starts[i]):(ends[i])
+    tmp <- str_c(y[ind], collapse="")
+    if(str_detect(tmp, "Serological")) return("") else return(tmp)
+  })
+  jsonlite::fromJSON(paste0("[", str_c(y[y!=""], collapse=","), "]"))
+}
+
+get_bioportal <- function(url){
   y <- rawToChar(
     httr::GET(url, httr::content_type('application/json'),
               httr::add_headers('Accept-Enconding'="br"))$content, multiple = TRUE)
@@ -121,7 +121,7 @@ original_test_types <- c("Molecular", "Antigens")
 # Reading and wrangling test data from database ----------------------------------------------
 message("Reading test data.")
 
-all_tests <- get_bioportal(test_url)
+all_tests <- get_bioportal_2(test_url)
 
 message("Processing test data.")
 
@@ -168,7 +168,7 @@ age_levels <-  paste(seq(0, 125, 5), "to", seq(4, 129, 5))
 
 message("Reading case data.")
 
-all_tests_with_id <- get_big_bioportal(cases_url)
+all_tests_with_id <- get_bioportal(cases_url)
 
 message("Processing case data.")
 
