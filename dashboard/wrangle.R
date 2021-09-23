@@ -966,11 +966,15 @@ travelers <- jsonlite::fromJSON(url) %>%
          long = nonResidentsStaying5DaysOrMore,
          long_week_avg =  ma7(date, nonResidentsStaying5DaysOrMore)$moving_avg,
          perc_long = percentageResidentsStaying5DaysOrMoreArrivedWithNegativePcrResults/100,
-         perc_long_week_avg  = ma7(date, perc_long*long)$moving_avg/long_week_avg) %>%
+         perc_long_week_avg  = ma7(date, perc_long*long)$moving_avg/long_week_avg,
+         
+         vaccine = selfReportedTotalArrivedVaccinatedBothDoses / total,
+         vaccine_week_avg = ma7(date, selfReportedTotalArrivedVaccinatedBothDoses)$moving_avg / 
+           ma7(date, total)$moving_avg ) %>%
   select(date, 
          residents, perc_residents, short, perc_short, long, perc_long,
-         residents_week_avg, perc_residents_week_avg, short_week_avg, perc_short_week_avg, long_week_avg, perc_long_week_avg)
-
+         residents_week_avg, perc_residents_week_avg, short_week_avg, perc_short_week_avg, long_week_avg, perc_long_week_avg, 
+         vaccine, vaccine_week_avg)
 
 # -- Save data
 
