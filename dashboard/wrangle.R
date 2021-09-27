@@ -806,6 +806,7 @@ tests_by_age <- tests_by_age %>%
   group_by(testType, ageRange) %>%
   mutate(tests_positives_week = sum7(d = date, y = tests_positives)$moving_sum) %>%
   mutate(tests_total_week = sum7(d = date, y = tests_total)$moving_sum) %>%
+  mutate(tests_week_avg = ma7(d = date, y = tests_total)$moving_avg) %>%
   ungroup()
 
 # compute daily new cases
@@ -1013,8 +1014,8 @@ save(travelers, file = file.path(rda_path, "travelers.rda"))
 
 ## For backward compatibility
 all_tests <- all_tests %>%  filter(testType == "Molecular")
-saveRDS(all_tests, file = file.path(rda_path, "all_tests.rds"), compress = "xz")
-saveRDS(all_tests_with_id, file = file.path(rda_path, "all_tests_with_id.rds"), compress = "xz")
+# saveRDS(all_tests, file = file.path(rda_path, "all_tests.rds"), compress = "xz")
+# saveRDS(all_tests_with_id, file = file.path(rda_path, "all_tests_with_id.rds"), compress = "xz")
 
 
 

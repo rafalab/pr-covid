@@ -1242,7 +1242,7 @@ summary_by_age <- function(tests_by_age,
                            type = "Molecular", 
                            cumm = FALSE,
                            yscale = TRUE,
-                           version = c("tp_pruebas", "tp_casos", "casos_per", "casos", "deaths_per", "deaths"),
+                           version = c("tp_pruebas", "tp_casos", "casos_per", "casos", "pruebas_per", "pruebas", "deaths_per", "deaths"),
                            facet = TRUE){
   
   version <- match.arg(version)
@@ -1320,6 +1320,29 @@ summary_by_age <- function(tests_by_age,
     var_title <- "Casos únicos por día por 100,000 habitantes"
     the_ylim <- c(0, 80)
   }
+  
+  if(version == "pruebas"){
+    tab <- dat %>% 
+      mutate(the_stat = dynamic_round(tests_week_avg, min_round = 100)) %>%
+      select(date, ageRange, the_stat)
+    dat <- dat %>% 
+      rename(the_stat = tests_week_avg, daily_stat = tests_total) 
+    var_title <- "Pruebas por día"
+    the_ylim <- c(0, 10000)
+  }
+  
+  if(version == "pruebas_per"){
+    tab <- dat %>% 
+      mutate(the_stat = tests_week_avg/poblacion*10^5) %>%
+      mutate(the_stat = ifelse(is.na(the_stat), "", format(round(the_stat, 1), nsmall = 1))) %>%
+      select(date, ageRange, the_stat)
+    dat <- dat %>% 
+      mutate(tests_week_avg = tests_week_avg/poblacion*10^5, tests_total = tests_total/poblacion*10^5) %>%
+      rename(the_stat = tests_week_avg, daily_stat = tests_total) 
+    var_title <- "Pruebas por día por 100,000 habitantes"
+    the_ylim <- c(0, 500)
+  }
+  
   if(version == "deaths"){
     if(cumm){
       tab <- dat %>% 
@@ -1411,9 +1434,10 @@ summary_by_age <- function(tests_by_age,
     }
     
     if(version %in% c("casos", "casos_per")){ the_color_1 <- "#FBBCB2"; the_color_2 <- "#CC523A"}
+    if(version %in% c("pruebas", "pruebas_per")){ the_color_1 <- "#DEEBF7"; the_color_2 <- "#3182BD"}
     if(version %in% c("deaths", "deaths_per")){ the_color_1 <- "grey"; the_color_2 <- "black"}
     
-    if(version %in% c("casos", "casos_per", "deaths", "deaths_per")){
+    if(version %in% c("casos", "casos_per", "pruebas", "pruebas_per", "deaths", "deaths_per")){
       if(cumm){
         p <- p + 
           geom_bar(stat = "identity", color = the_color_1, fill = the_color_1, width= 0.2)
