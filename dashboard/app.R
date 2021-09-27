@@ -27,11 +27,7 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                 sidebarLayout(
                   sidebarPanel(
                     dateRangeInput("range", "Periodo", 
-                                   start = last_complete_day - days(89), 
-                                   end = last_complete_day,
-                                   min = first_day,
-                                   format = "M-dd",
-                                   max = max(tests$date),
+                                   format = "M-dd-yyyy",
                                    language = "es",
                                    width = "100%"),
                     
@@ -89,10 +85,9 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                   # Show a plot of the generated distribution
                   mainPanel(
                     
-                    tabsetPanel(
+                    tabsetPanel(id = "tabs",
                       
                       tabPanel("Resumen",
-                               
                                htmlOutput("fecha"),
                                htmlOutput("positividad"),
                                br(),
@@ -201,16 +196,24 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
                                DT::dataTableOutput("vaccines_table")),
                       
                       tabPanel("Viajeros",
-                               h4("Ojo: El Departamento de Salud parece que dejo de compartir estos datos en mayo 1. Los datos desde ese día no son fiables."),
+                              
                                radioButtons("travelers_version", 
                                             label = "",
                                             choices = list("Número de viajeros" = "totals",
-                                                           "Por ciento con prueba negativa" = "percent"),
+                                                           "Por ciento con prueba negativa" = "percent",
+                                                           "Vacunados" = "vax"),
                                             selected = "totals",
                                             inline = TRUE),
                                plotOutput("travelers"),
+                               h5("El Departamento de Salud cambió la forma de manejar estos datos en mayo del 2021 y se está trabajando para actualizar datos históricos entre mayo y julio."),
                                DT::dataTableOutput("table_travelers")),
                       
+                      # tabPanel("Escuelas",
+                      #          br(),
+                      #          h4("En esta pestaña estáremos publicando datos sobre contagios y exposiciones en las escuelas de Puerto Rico. En colaboración con ",
+                      #             "el Departamento de Salud estamos preparando resúmenes y explicaciones útiles para el público.")),
+                      #          #DT::dataTableOutput("escuelas")),
+                      # 
                       tabPanel("FAQ",
                                includeMarkdown("faq.md"))
                       
@@ -223,20 +226,22 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
 server <- function(input, output, session) {
   
   load(file.path(rda_path,"data.rda"))
+  last_day <- last_complete_day - days(lag_to_complete)
   
-  ## adjust last week of positivity rate
-  ## Right now it is not necessary to adjust as + are coming at the same time as - 
-  # tests <- tests %>%
-  #   mutate(fit = ifelse(date <= last_day, fit, estimate),
-  #          lower = ifelse(date <= last_day, lower, estimate_lower),
-  #          upper = ifelse(date <= last_day, upper, estimate_upper))
-  #          
-  # -- This sets range to last two weeks
+  
+  updateDateRangeInput(session, "range",
+                       start = last_complete_day - days(89), 
+                       end = last_complete_day,
+                       min = first_day,
+                       max = max(tests$date))
+
+   # -- This sets range to last two weeks
   observeEvent(input$weeks, {
     updateDateRangeInput(session, "range",
                          start = last_complete_day - days(6),
                          end   = last_complete_day)
   })
+  
   
   # -- This sets range to last 90 days (default)
   observeEvent(input$months, {
@@ -555,10 +560,11 @@ server <- function(input, output, session) {
   
   # -- This creates a geographical table of positivity rate
   output$municipios <- DT::renderDataTable({
+    
     load(file.path(rda_path,"tests_by_strata.rda"))
     ret <- make_municipio_table(tests_by_strata,  
                                 start_date =input$range[1], 
-                                end_date =input$range[2], 
+                                end_date = input$range[2], 
                                 type = input$testType)
     
     DT::datatable(ret, #class = 'white-space: nowrap',
@@ -581,6 +587,7 @@ server <- function(input, output, session) {
   
   # -- This creates a geographical map of positivity rate
   output$mapa_positividad <- renderPlot({
+     
     load(file.path(rda_path,"tests_by_strata.rda"))
     plot_map(tests_by_strata,  
              start_date = input$range[1], 
@@ -756,6 +763,60 @@ server <- function(input, output, session) {
     contentType = "txt/csv"
   )
   
+
+# Escuelas ----------------------------------------------------------------
+
+  
+  output$escuelas <- DT::renderDataTable({
+    
+    ### Original code written by Mónica Robles
+    
+    data<-httr::GET("https://bioportal.salud.gov.pr/api/administration/reports/education/general-summary",
+                    httr::content_type('application/json'))
+    school_data<-jsonlite::fromJSON(rawToChar(data$content), flatten = T)
+    
+    ## some important definitions as provided by Aníbal López Correa
+    ## this url downloads information from ACTIVE exposed cases
+    ## exposed cases USED to refer to students/employees who recently traveled,
+    # have tested positive to a dx test or have been contacts to cases
+    
+    ## some important limitations
+    ## we do not know if the school enrollments are up to date
+    ## we do not know if the active exposed cases definition has changed (to be discussed)
+    
+    
+    #### exploring active exposed cases per institution type
+    
+    school_data_k <- school_data %>%
+      mutate(totalPeopleExposed = totalEmployeesExposed+totalStudentsExposed) %>%
+      dplyr::select(entityName,
+                    entityType, 
+                    entityMunicipality, 
+                    entityName,
+                    totalPeopleExposed,
+                    totalStudentsExposed, 
+                    totalEmployeesExposed) %>% 
+      arrange(desc(totalPeopleExposed),
+              desc(totalStudentsExposed), 
+              desc(totalEmployeesExposed)) %>%
+      rename("Tipo de institución"=entityType, 
+             "Nombre de institución"=entityName,
+             "Municipio de institución"=entityMunicipality,
+             "Total de empleados expuestos"=totalEmployeesExposed,
+             "Total de estudiantes expuestos"=totalStudentsExposed,
+             "Total de personas expuestas"=totalPeopleExposed)
+    
+    DT::datatable(school_data_k ,   
+                  rownames= FALSE,
+                  caption =  paste0("Una persona expuesta en una institución educativa es aquella que ha estado en contacto directo ",
+                  "con una persona contagiada con SARS-CoV-2 o que ha dado positivo a una prueba diagnóstica de SARS-CoV-2 en los pasados 14 días.",
+                  "\nEn la primera página mostramos las 15 escuelas con mayor número de exposiciones pero pueden usar la utilidad `Search` (arriba a la derecha para encontrar una escuela)",
+                  "o pasar las páginas (ver botón al final de la tabla).",
+                  "\nDisclaimer: Los números pueden variar dependiendo de la actualización de las matrículas escolares y de la entrada de pruebas al BioPortal."),
+                  options = list(pageLength = 15, lengthMenu = list(c(10, 15, 25, 100, -1), c('10', '15', '25', '100', 'All')))) %>%
+                  DT::formatStyle("Nombre de institución", "white-space"="nowrap")
+  
+  }, server = FALSE)
 }
 
 shinyApp(ui = ui, server = server)

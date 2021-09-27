@@ -26,7 +26,7 @@ plot_positivity <- function(tests,
                             start_date = first_day, 
                             end_date = last_complete_day, 
                             type = "Molecular", 
-                            yscale = FALSE,
+                            yscale = TRUE,
                             version = c("pruebas", "casos")){
   
   version <- match.arg(version)
@@ -108,7 +108,7 @@ plot_positivity <- function(tests,
 plot_icu <- function(hosp_mort,  
                       start_date = first_day, 
                       end_date = last_complete_day, 
-                      yscale = FALSE){
+                      yscale = TRUE){
   
   tmp <- hosp_mort %>% 
     filter(!is.na(CamasICU)) %>%
@@ -154,7 +154,7 @@ plot_deaths <- function(hosp_mort,
                         start_date = first_day, 
                         end_date = last_complete_day, 
                         cumm = FALSE,
-                        yscale = FALSE){
+                        yscale = TRUE){
   if(cumm){
     ret <- hosp_mort %>%
       replace_na(list(IncMueSalud = 0)) %>%
@@ -196,7 +196,7 @@ plot_deaths <- function(hosp_mort,
 plot_hosp <- function(hosp_mort,  
                       start_date = first_day, 
                       end_date = last_complete_day,
-                      yscale = FALSE){
+                      yscale = TRUE){
   
   tmp <- hosp_mort %>% 
     filter(!is.na(HospitCOV19) & 
@@ -231,7 +231,7 @@ plot_hosp <- function(hosp_mort,
 plot_hosp_ped <- function(hosp_mort,  
                           start_date = first_day, 
                           end_date = last_complete_day,
-                          yscale = FALSE){
+                          yscale = TRUE){
   
   tmp <- hosp_mort %>% 
     filter(!is.na(CAMAS_PED_COVID) & 
@@ -251,7 +251,7 @@ plot_hosp_ped <- function(hosp_mort,
       ggplot(aes(x = date)) +
       geom_point(mapping = aes(y = CAMAS_PED_COVID), width = 0.75, color = "#8CC8F4") +
       geom_line(aes(y = ped_hosp_week_avg), color="#8CC8F4", size = 1.25) +
-      ggtitle("Hospitalizaciones") 
+      ggtitle("Hospitalizaciones y ICU Pediátricas") 
   }
   
   ret <- ret +  
@@ -269,7 +269,7 @@ plot_cases <- function(cases,
                        end_date = last_complete_day, 
                        type = "Molecular", 
                        cumm = FALSE,
-                       yscale = FALSE){
+                       yscale = TRUE){
   if(cumm){
     ret <- cases %>% 
       filter(testType == type) %>%
@@ -370,7 +370,7 @@ plot_positivity_by_lab <- function(labs,
                             start_date = first_day, 
                             end_date = last_complete_day, 
                             type = "Molecular", 
-                            yscale = FALSE){
+                            yscale = TRUE){
   if(type == "Molecular+Antigens") return(NULL) else{
     levels <- labs %>% filter(date == pmin(end_date, max(labs$date)) & testType =="Molecular") %>%
       mutate(o = ifelse(Laboratorio == "Otros", -Inf, tests_week_avg)) %>%
@@ -569,7 +569,7 @@ make_pretty_table <- function(tab, the_caption = ""){
            cases_week_avg = round(cases_week_avg),
            positives = make_pretty(positives),
            tests = make_pretty(tests),
-           mort = make_pretty(mort),
+           mort = mort,
            total_distributed = make_pretty(total_distributed), 
            total_vaccinations = make_pretty(total_vaccinations),
            people_vaccinated = make_pretty(people_vaccinated),
@@ -703,7 +703,7 @@ make_municipio_table <- function(tests_by_strata,
 #                          start_date = first_day, 
 #                          end_date = last_complete_day, 
 #                          type = "Molecular",
-#                          yscale = FALSE,
+#                          yscale = TRUE,
 #                          version = c("hist", "tendencia")){
 #   
 #   version <- match.arg(version)
@@ -927,7 +927,7 @@ table_vaccines <- function(hosp_mort,
 plot_fully_vaccinated <- function(hosp_mort,  
               start_date = first_day, 
               end_date = last_complete_day,
-              yscale = FALSE){
+              yscale = TRUE){
 
 
     tmp <- hosp_mort %>% 
@@ -959,8 +959,8 @@ plot_fully_vaccinated <- function(hosp_mort,
 plot_travelers <- function(travelers,  
                           start_date = first_day, 
                           end_date = last_complete_day,
-                          yscale = FALSE,
-                          version = c("totals", "percent")){
+                          yscale = TRUE,
+                          version = c("totals", "percent", "vax")){
   
   version <- match.arg(version)
   
@@ -977,35 +977,51 @@ plot_travelers <- function(travelers,
     } else{
       ylim <- with(tmp, range(c(residents, short, long), na.rm=TRUE))
     }
-    } else{
-      tmp <- select(tmp, date, starts_with("perc")) 
-      ylab <- "Por ciento"
-      the_title <- "Viajeros llegando a Puerto Rico"
-      if(yscale){
-        ylim <- c(0,1)
+    } else{ 
+      if(version == "percent"){
+        tmp <- select(tmp, date, starts_with("perc")) 
+        ylab <- "Por ciento con pruebas"
+        the_title <- "Viajeros llegando a Puerto Rico"
+        if(yscale){
+          ylim <- c(0,1)
+        } else{
+          ylim <- with(tmp, range(c(perc_residents, perc_short, perc_long), na.rm=TRUE))
+        }
       } else{
-        ylim <- with(tmp, range(c(perc_residents, perc_short, perc_long), na.rm=TRUE))
+        tmp <- select(tmp, date, starts_with("vaccine")) 
+        ylab <- "Por ciento vacunados"
+        the_title <- "Viajeros llegando a Puerto Rico"
+        if(yscale){
+          ylim <- c(0,1)
+        } else{
+          ylim <- with(tmp, range(c(vaccine, vaccine_week_avg), na.rm=TRUE))
+        }
       }
     }
   
-  values <- select(tmp, -contains("week_avg")) %>% 
-    pivot_longer(-date) %>%
-    mutate(name = str_remove_all(name,"perc_"))
-  avgs <- select(tmp, date, contains("week_avg")) %>% 
-    pivot_longer(-date, values_to = "avg") %>%
-    mutate(name = str_remove_all(name,"perc_|_week_avg"))
+  if(version != "vax"){        
+    tmp <- select(tmp, -contains("vaccine"))
+    values <- select(tmp, -contains("week_avg")) %>% 
+      pivot_longer(-date) %>%
+      mutate(name = str_remove_all(name,"perc_"))
+    avgs <- select(tmp, date, contains("week_avg")) %>% 
+      pivot_longer(-date, values_to = "avg") %>%
+      mutate(name = str_remove_all(name,"perc_|_week_avg"))
   
-  tab <- left_join(values, avgs, by = c("date", "name")) %>%
-    mutate(name = case_when(name == "residents" ~ "Residente",
-                            name == "short" ~ "Menos de 5 días",
-                            name == "long" ~ "5 días o más")) %>%
-    mutate(name = factor(name, 
-                         levels = c("Residente",
-                                    "Menos de 5 días",
-                                    "5 días o más")))
-  
-  
-  tab  %>% ggplot(aes(date, value, color = name)) +
+    tab <- left_join(values, avgs, by = c("date", "name")) %>%
+      mutate(name = case_when(name == "residents" ~ "Residente",
+                              name == "short" ~ "Menos de 5 días",
+                              name == "long" ~ "5 días o más")) %>%
+      mutate(name = factor(name, 
+                           levels = c("Residente",
+                                      "Menos de 5 días",
+                                      "5 días o más")))
+    p <- tab %>% ggplot(aes(date, value, color = name))
+  } else{
+    p <-  tmp %>% rename(value= vaccine, avg = vaccine_week_avg) %>% ggplot(aes(date, value))
+  }
+    
+  p +
     geom_point(alpha = 0.25) +
     geom_line(aes(y = avg), size = 1.5) +
     scale_x_date(date_labels = "%b %d") +
@@ -1013,7 +1029,7 @@ plot_travelers <- function(travelers,
     ylab(ylab) +
     xlab("Fecha") +
     ggtitle(the_title) +
-    ylim(ylim) + 
+    scale_y_continuous(labels = scales::percent, limits = ylim) +
     theme_bw() 
 }
 
@@ -1024,11 +1040,13 @@ table_travelers <- function(travelers,
   
   tab <- travelers %>% 
     #filter(date >= start_date & date <= end_date) %>% 
-    select(date, 
+    select(date, vaccine, vaccine_week_avg,
            residents, residents_week_avg, perc_residents,
            short, short_week_avg, perc_short,
            long, long_week_avg, perc_long) %>%
-    mutate(residents = make_pretty(residents),
+    mutate(vaccine = make_pct(vaccine),
+           vaccine_week_avg = make_pct(vaccine_week_avg),
+           residents = make_pretty(residents),
            residents_week_avg = make_pretty(round(residents_week_avg)),
            perc_residents = make_pct(perc_residents),
            short = make_pretty(short), 
@@ -1041,6 +1059,7 @@ table_travelers <- function(travelers,
     arrange(desc(dummy)) %>%
     mutate(date = format(date, "%B %d")) %>%
     setNames(c("Fecha", 
+               "Percent", "Media móvil",
                "Total", "Media móvil", "% con prueba",
                "Total", "Media móvil", "% con prueba",
                "Total", "Media móvil", "% con prueba", 
@@ -1051,6 +1070,7 @@ table_travelers <- function(travelers,
     thead(style = "border-collapse: collapse;",
           tr(
             th('', colspan = 1, style = "border-bottom: none;"),
+            th('Viajeros Vacunados', colspan = 2, style = "border-bottom: none;text-align:center;"),
             th('Residentes', colspan = 3, style = "border-bottom: none;text-align:center;"),
             th('Menos de 5 días', colspan = 3, style = "border-bottom: none;text-align:center;"),
             th('5 días o más', colspan = 3, style = "border-bottom: none;text-align:center;")),
@@ -1078,7 +1098,7 @@ summary_by_region <- function(tests_by_region,
                               end_date = last_complete_day, 
                               type = "Molecular", 
                               cumm = FALSE,
-                              yscale = FALSE,
+                              yscale = TRUE,
                               version = c("tp_pruebas", "tp_casos", "casos", "pruebas", "prop")){
   
   version <- match.arg(version)
@@ -1108,7 +1128,7 @@ summary_by_region <- function(tests_by_region,
       ungroup()
     
     
-    yscale = FALSE
+    yscale = TRUE
   }
   
   type_char <- case_when(type == "Molecular" ~ "molecular", 
@@ -1221,7 +1241,7 @@ summary_by_age <- function(tests_by_age,
                            end_date = last_complete_day, 
                            type = "Molecular", 
                            cumm = FALSE,
-                           yscale = FALSE,
+                           yscale = TRUE,
                            version = c("tp_pruebas", "tp_casos", "casos_per", "casos", "deaths_per", "deaths"),
                            facet = TRUE){
   
