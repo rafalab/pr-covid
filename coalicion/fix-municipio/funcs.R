@@ -39,12 +39,14 @@ fix_municipio <- function(x, min.dist = 2,
   
   x <- as.factor(x)
   query <- levels(x)
+  ans <- as.character(rep(NA, length(query)))
+  barrio <- as.character(rep(NA, length(query)))
+  the_dist <- rep(NA, length(ans))
+  the_score <- rep(NA, length(ans)) 
   
   if(all(query %in% municipios)){ # if all map, we are done
     ans <- query
     barrio <- as.character(rep(NA, length(query)))
-    the_dist <- NA
-    the_score <- NA
   } else{ ## if not, we will convert to lower case, remvoe accents and non-characters
     map_mun <- data.frame(id = to_english(municipios), municipio = municipios)
     
@@ -56,8 +58,6 @@ fix_municipio <- function(x, min.dist = 2,
     query[query=="puertorico" | query == "unknown" | query == "pr"] <- ""
     
     ## we will store answers in ans and if matching barrios, store that in barrio
-    ans <- as.character(rep(NA, length(query)))
-    barrio <- as.character(rep(NA, length(query)))
     ind1 <- query %in% map_mun$id
     ans[ind1] <- map_mun$municipio[match(query[ind1], map_mun$id)]
     
@@ -133,75 +133,73 @@ fix_municipio <- function(x, min.dist = 2,
       ## keep those not matched to search and see if municioio a subset like sanjuan in sanjuanpr 
       ind <- which(is.na(ans))
       if(length(ind)>0){
+        
         for(i in 1:nrow(map_mun)){
           ind2 <- str_which(query[ind], map_mun$id[i])
           if(length(ind2)>0) ans[ind[ind2]] <- map_mun$municipio[i]
         }
-      }  
       
-      ##for those not matched and find fuzzy match with municipios
-      ind <- which(is.na(ans))
       
-      if(length(ind)>0){  
-        
-        the_dist <- rep(NA, length(ans))
-        the_score <- rep(NA, length(ans)) 
-        
-        ## distance to municipio
-        d_mun <- stringdistmatrix(query[ind], map_mun$id, method = "lv")
-        ind_mun <- apply(d_mun, 1, which.min)
-        min_d_mun <- apply(d_mun, 1, min) 
-        if(first.letter.match){ ##require first letter matches
-          min_d_mun[str_sub(query[ind],1,1) != str_sub(map_mun$id[ind_mun],1,1)] <- Inf
-        }
-        score_mun <- min_d_mun / nchar(query[ind])
-        
-        ##if criteria met, keep it
-        keep <- min_d_mun <= min.dist & score_mun <= min.score 
-        
-        if(length(keep)>0){
-          ans[ind][keep] <-map_mun$municipio[ind_mun][keep]
-          the_dist[ind][keep] <- min_d_mun[keep]
-          the_score[ind][keep] <- score_mun[keep]
-        }
-        ##for those not matched check for fuzzy match with barrio
+        ##for those not matched and find fuzzy match with municipios
         ind <- which(is.na(ans))
         
-        if(length(ind)>0){
-          #distance to barrio
-          d_bar <- stringdistmatrix(query[ind], barrios$barrio, method = "lv")
-          ind_bar <- apply(d_bar, 1, which.min)
-          min_d_bar <- apply(d_bar, 1, min) 
-          if(first.letter.match){
-            min_d_bar[str_sub(query[ind], 1, 1) != str_sub(barrios$barrio[ind_bar], 1, 1)] <- Inf
-          }
-          score_bar <- min_d_bar / nchar(query[ind])
+        if(length(ind)>0){  
           
-          keep <- min_d_bar <= min.dist & score_bar <= min.score.barrio
+          ## distance to municipio
+          d_mun <- stringdistmatrix(query[ind], map_mun$id, method = "lv")
+          ind_mun <- apply(d_mun, 1, which.min)
+          min_d_mun <- apply(d_mun, 1, min) 
+          if(first.letter.match){ ##require first letter matches
+            min_d_mun[str_sub(query[ind],1,1) != str_sub(map_mun$id[ind_mun],1,1)] <- Inf
+          }
+          score_mun <- min_d_mun / nchar(query[ind])
+          
+          ##if criteria met, keep it
+          keep <- min_d_mun <= min.dist & score_mun <= min.score 
+          
           if(length(keep)>0){
-            ans[ind][keep] <- barrios$municipio[ind_bar][keep]
-            barrio[ind][keep] <- barrios$original_barrio[ind_bar][keep]
-            the_dist[ind][keep] <- min_d_bar[keep]
-            the_score[ind][keep] <- score_bar[keep]
+            ans[ind][keep] <-map_mun$municipio[ind_mun][keep]
+            the_dist[ind][keep] <- min_d_mun[keep]
+            the_score[ind][keep] <- score_mun[keep]
           }
-          
+          ##for those not matched check for fuzzy match with barrio
           ind <- which(is.na(ans))
           
           if(length(ind)>0){
-            ##check if barrio included
-            for(i in 1:nrow(barrios)){
-              ind2 <- str_which(query[ind], barrios$barrio[i])
-              if(length(ind2)>0){
-                ans[ind[ind2]] <- barrios$municipio[i]
-                barrio[ind[ind2]] <- barrios$original_barrio[i]
+            #distance to barrio
+            d_bar <- stringdistmatrix(query[ind], barrios$barrio, method = "lv")
+            ind_bar <- apply(d_bar, 1, which.min)
+            min_d_bar <- apply(d_bar, 1, min) 
+            if(first.letter.match){
+              min_d_bar[str_sub(query[ind], 1, 1) != str_sub(barrios$barrio[ind_bar], 1, 1)] <- Inf
+            }
+            score_bar <- min_d_bar / nchar(query[ind])
+            
+            keep <- min_d_bar <= min.dist & score_bar <= min.score.barrio
+            if(length(keep)>0){
+              ans[ind][keep] <- barrios$municipio[ind_bar][keep]
+              barrio[ind][keep] <- barrios$original_barrio[ind_bar][keep]
+              the_dist[ind][keep] <- min_d_bar[keep]
+              the_score[ind][keep] <- score_bar[keep]
+            }
+            
+            ind <- which(is.na(ans))
+            
+            if(length(ind)>0){
+              ##check if barrio included
+              for(i in 1:nrow(barrios)){
+                ind2 <- str_which(query[ind], barrios$barrio[i])
+                if(length(ind2)>0){
+                  ans[ind[ind2]] <- barrios$municipio[i]
+                  barrio[ind[ind2]] <- barrios$original_barrio[i]
+                }
               }
             }
           }
         }
       }
     }
-  }
-  
+  }  
   look_up <- data.frame(original = levels(x),
              predicted = ans,
              barrio.match = barrio,
@@ -214,6 +212,6 @@ fix_municipio <- function(x, min.dist = 2,
   if(return.dist){
     return(ret)
   } else{
-    return(ret$municipio)
+    return(ret$predicted)
   }  
 }
