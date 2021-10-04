@@ -43,6 +43,8 @@ fix_municipio <- function(x, min.dist = 2,
   if(all(query %in% municipios)){ # if all map, we are done
     ans <- query
     barrio <- as.character(rep(NA, length(query)))
+    the_dist <- NA
+    the_score <- NA
   } else{ ## if not, we will convert to lower case, remvoe accents and non-characters
     map_mun <- data.frame(id = to_english(municipios), municipio = municipios)
     
@@ -199,6 +201,7 @@ fix_municipio <- function(x, min.dist = 2,
       }
     }
   }
+  
   look_up <- data.frame(original = levels(x),
              predicted = ans,
              barrio.match = barrio,
