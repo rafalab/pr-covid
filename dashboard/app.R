@@ -641,7 +641,8 @@ server <- function(input, output, session) {
   output$vaccines <- renderPlot({
     plot_vaccines(hosp_mort, 
                 start_date = input$range[1],
-                end_date = input$range[2])
+                end_date = input$range[2],
+                yscale = input$yscale)
   })
   
   output$vaccines_table <- DT::renderDataTable({

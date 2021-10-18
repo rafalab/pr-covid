@@ -116,7 +116,7 @@ plot_icu <- function(hosp_mort,
     mutate(icu = CamasICU / (CamasICU + CamasICU_disp))
   
   if(yscale){
-    lim  <- c(0, 0.4)
+    lim  <- c(0, 0.5)
   } else
   {
     lim <- c(min(tmp$icu, na.rm = TRUE),
@@ -859,35 +859,40 @@ make_lab_tab <- function(lab_tab,
 }
 
 plot_vaccines <- function(hosp_mort,  
-                                  start_date = first_day, 
-                                  end_date = last_complete_day){
+                          start_date = first_day, 
+                          end_date = last_complete_day,
+                          yscale = TRUE){
   
   tmp <- hosp_mort %>% 
     filter(date >= start_date & date <= end_date & !is.na(people_fully_vaccinated)) %>% 
-    select(date, total_distributed, total_vaccinations, people_vaccinated,
-    people_fully_vaccinated) %>% 
-    rename("Dosis distribuidas" = total_distributed,
-           "Vacunaciones totales" = total_vaccinations,
-           "Personas vacunadas" = people_vaccinated,
+    select(date,people_vaccinated, people_fully_vaccinated) %>% 
+    rename("Personas vacunadas" = people_vaccinated,
            "Personas vacunadas (Dosis completa)" =  people_fully_vaccinated) %>%
     pivot_longer(-date) %>%
     mutate(name = factor(name, 
                          levels = c("Personas vacunadas (Dosis completa)",
-                                    "Personas vacunadas",
-                                    "Vacunaciones totales",
-                                    "Dosis distribuidas")))
+                                    "Personas vacunadas")))
       
   
-  tmp %>% ggplot(aes(date, value/1000, color = name)) +
+  p <- tmp %>% 
+    ggplot(aes(date, value/pr_pop, color = name)) +
     geom_line() +
     geom_point(show.legend = FALSE) +
     scale_x_date(date_labels = "%b %d") +#, breaks = breaks_width("days")) +
-    ggtitle("Personas vacunadas, vacunaciones totales y dosis distribuidas") +
-    ylim(c(0, max(tmp$value/1000))) + 
-    ylab("Total en miles") +
+     ggtitle("Personas vacunadas") +
+    geom_hline(yintercept = 0.7, lty = 2) +
+    ylab("Por ciento de la población") +
     xlab("Fecha") +
     theme_bw() +   
     theme(legend.position="bottom", legend.title=element_blank()) 
+  
+  if(yscale){
+    p <- p + scale_y_continuous(labels = scales::percent,
+                                limits=c(0,1)) 
+  } else{
+    p <- p + scale_y_continuous(labels = scales::percent) 
+  }
+  return(p)
 }
 
  
@@ -1271,7 +1276,9 @@ summary_by_age <- function(tests_by_age,
              cases_week_avg = cases,
              people_total_week = people_total,
              deaths = cumsum(replace_na(deaths, 0)),
-             deaths_week_avg = deaths) %>%
+             deaths_week_avg = deaths,
+             tests_total = cumsum(replace_na(tests_total, 0)),
+             tests_week_avg = tests_total) %>%
       ungroup()
   }
   
@@ -1386,7 +1393,7 @@ summary_by_age <- function(tests_by_age,
   # 
   if(cumm){
     the_ylim <- range(dat$the_stat, na.rm = TRUE)
-    if(version %in% c("casos", "casos_per", "deaths", "deaths_per")) the_ylim[1] <- 0
+    if(version %in% c("casos", "casos_per", "deaths", "deaths_per", "pruebas", "pruebas_per")) the_ylim[1] <- 0
   }
   
   tab <- tab %>%
@@ -1434,7 +1441,7 @@ summary_by_age <- function(tests_by_age,
     }
     
     if(version %in% c("casos", "casos_per")){ the_color_1 <- "#FBBCB2"; the_color_2 <- "#CC523A"}
-    if(version %in% c("pruebas", "pruebas_per")){ the_color_1 <- "#DEEBF7"; the_color_2 <- "#3182BD"}
+    if(version %in% c("pruebas", "pruebas_per")){ the_color_1 <- "#D1D1E8"; the_color_2 <- "#31347A"}
     if(version %in% c("deaths", "deaths_per")){ the_color_1 <- "grey"; the_color_2 <- "black"}
     
     if(version %in% c("casos", "casos_per", "pruebas", "pruebas_per", "deaths", "deaths_per")){
@@ -1685,7 +1692,7 @@ compute_summary <- function(tests, hosp_mort, day = last_complete_day){
                 "<span style=\"color:#FFC900;font-weight: bold;\">&#8596;</span>",
                 "<span style=\"color:#01D474;font-weight: bold;\">&#8593;</span>")
   
-  #no_arrow <- "<span style=\"color:#ffffff00;font-weight: bold;\">&#8596;</span>"
+  arrow_space <- "<span style=\"color:#ffffff00;font-weight: bold;\">&#8596;</span>"
   no_arrow <- ""
   ## make arrow based on change values. +2 because turne -1,0,1 to 1,2,3
   make_arrow <- function(i){
@@ -1736,9 +1743,9 @@ compute_summary <- function(tests, hosp_mort, day = last_complete_day){
   
   vacs_per_day <- diff(vac$people_fully_vaccinated[c(1,3)])/diff(as.numeric(vac$date[c(1,3)]))
   
-  tmp <- round((pr_pop*0.7 - vac$people_fully_vaccinated[1]) / vacs_per_day)
+  tmp <- pmax(0,round((pr_pop*0.7 - vac$people_fully_vaccinated[1]) / vacs_per_day))
   dias_hasta_meta_vacunas <- paste0(
-    prettyNum(tmp, big.mark = ","), format(today()+tmp, " (%b %d)"))
+    prettyNum(tmp, big.mark = ","),  arrow_space)#, format(today()+tmp, " (%b %d)"))
     
   vac <- slice(vac, -1)
   
