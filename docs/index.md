@@ -1,5 +1,6 @@
 ##  Informes Diarios Sobre COVID19 Coalición Científica de Puerto Rico
 
+* [2022-02-08](informe-2022-02-08.html)
 * [2022-02-07](informe-2022-02-07.html)
 * [2022-02-06](informe-2022-02-06.html)
 * [2022-02-05](informe-2022-02-05.html)
