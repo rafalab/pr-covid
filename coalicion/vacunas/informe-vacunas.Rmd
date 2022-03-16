@@ -20,7 +20,7 @@ library(lubridate)
 library(tidycensus)
 Sys.setlocale("LC_TIME", "es_ES")
 
-last_day <- make_date(2021, 8, 13)
+last_day <- make_date(2021, 10, 2)
 fn <- paste0("data/Vacunas (Raw Data - Clean) ", format(last_day+days(1),"%m-%d-%Y"), ".csv")
 
 # Define functions --------------------------------------------------------
@@ -139,7 +139,7 @@ Este informe está basado en datos del Puerto Rico Electronic Immunization Syste
 
 https://github.com/rafalab/pr-covid/tree/master/coalicion/vacunas
 
-y en cuanto el Departamento de Salud haga público los datos, serán compartidos por esta Coalición para facilitar reproducir nuestros informes, similar a cómo se ha hecho con todos los otros informes de la Coalición. Noten que sin los datos no podrán reproducir el informe, pero desafortunadamente no tenemos permiso para compartir estos datos.
+y en cuanto el Departamento de Salud haga público los datos, serán compartidos por esta Coalición para facilitar reproducir nuestros informes, similar a cómo se ha hecho con todos los otros informes de la Coalición. Noten que sin los datos no podrán reproducir el informe, pero desafortunádamente no tenemos permiso para compartir estos datos.
 
 Noten también que el informe está basado en código preliminar. Si estudian el código y encuentra errores por favor envíelos a bianca.porratadoria@gmail.com
 
@@ -350,7 +350,7 @@ bind_rows(tmp1, tmp2) %>%
 
 \newpage
 
-## Dosis completa por fecha por group demográfico
+## Dosis completa por fecha por grupo demográfico
 
 Línea entrecortada representa periodos con datos incompletos.
 
@@ -369,7 +369,7 @@ dose_2 %>% rename(Género = gender) %>%
 ```
 
 \newpage
-## Primera dosis por fecha por group de edad
+## Primera dosis por fecha por grupo de edad
 
 Línea entrecortada representa periodos con datos incompletos.
 
@@ -793,7 +793,7 @@ No incluye datos de las últimas dos semanas por estar incompletos. Noten que ha
 
 ```{r}
 dat %>%
-  filter(!is.na(ageRange) & date < max(date) - weeks(2)) %>%
+  filter(!is.na(ageRange) & date < max(date) - weeks(1)) %>%
   mutate(date = floor_date(date, unit = "week")) %>%
   group_by(date, ageRange) %>%
   summarize(total = n(), .groups = "drop") %>%
@@ -804,18 +804,19 @@ dat %>%
   xlab("Fecha") +
   ggtitle("Vacunas por semana") +
   theme_bw() +
-  labs(fill = "Grupo de edad") 
+  labs(fill = "Grupo de edad") +
+  theme(legend.position = "bottom")
 ```
 
 ## Vacunas por día por fabricante
 
-No incluye datos de las últimas dos semanas por estar incompletos. Noten que hay un rezago en reportar datos de vacunación al departamento de salud por lo cual dias recientes tienen más datos incompletos (ver sección de rezagos).
+No incluye datos de las últimas dos semanas por estar incompletos. Noten que hay un rezago en reportar datos de vacunación al departamento de salud por lo cual días recientes tienen más datos incompletos (ver sección de rezagos).
 
 
 ```{r}
 dat %>%
   mutate(date = floor_date(date, unit = "week")) %>%
-  filter(!is.na(ageRange) & date < max(date) - weeks(2)) %>%
+  filter(!is.na(ageRange) & date < max(date) - weeks(1)) %>%
   group_by(date, manu) %>%
   summarize(total = n(), .groups = "drop") %>%
   mutate(manu = factor(manu, levels = c("PFR","MOD","JSN"))) %>%
