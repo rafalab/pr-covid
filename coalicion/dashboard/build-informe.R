@@ -1,5 +1,5 @@
 fn <- paste0("informe-", lubridate::today(),".html")
-dir <- "../../docs/"
+  dir <- "../../docs/"
 rmarkdown::render("informe.Rmd", output_format = "html_document", output_dir = dir, 
                   output_file = fn, clean = TRUE)
 

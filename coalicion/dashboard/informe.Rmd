@@ -75,11 +75,19 @@ Los colores indican la tendencia que deseamos ver (verde) y la que no (rojo). El
 #### Otros resúmenes semanales:
                      
 * **Casos nuevos por día** = Promedio diario de casos únicos **detectados** esa semana.
+
 * **Pruebas por día** = Promedio diario de personas que se hicieron la prueba esa semana.
+
 * **Hospitalizaciones** = Número de hospitalizaciones reportados por salud el último día de la semana. La tendencia se calcula para una media móvil de 7 días que no mostramos en la tabla.
+
 * **Muertes por día** = Promedio diario de muertes reportadas por salud esa semana. 
-* **% población vacunada** = Por ciento de la población de Puerto Rico que ha recibido ambas dosis de la vacuna. 
-* **Días para alcanzar 70%** = Basado en la tasa de crecimiento de la última semana, el número de días que tardará llegar a la meta de 70% de la población vacunada con amabas dosis.
+
+* **%con vacunación al día** = Por ciento de la poblacion con el booster o con dosis completa y sin necesidad de booster.
+
+* **% población con serie primaria completa** = Por ciento de la población de Puerto Rico que ha recibido las primeras dos dosis de la vacuna (o la primera de J&J).
+
+<!-- * **Días para alcanzar 70%** = Basado en la tasa de crecimiento de la última semana, el número de días que tardará llegar a la meta de 70% de la población vacunada con amabas dosis. -->
+
 * **% por lo menos 1 dosis** = Por ciento de la población de Puerto Rico que ha recibido por lo menos una dosis de la vacuna.
 
 Importante notar que no se detectan todos los casos y que cuántos detectamos depende de cuántas pruebas se hacen.        
