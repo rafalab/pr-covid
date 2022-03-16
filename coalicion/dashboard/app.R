@@ -115,7 +115,7 @@ ui <- fixedPage(
                  br(),
                  p("Con la excepción de los datos de las vacunas, los datos incluidos en esta página son recopilados por el Departamento de Salud. Los mismos son generados automáticamente usando los datos más recientes recopilados. Sin embargo, los mismos pueden diferir de los datos oficiales publicados por otros medios oficiales del Departamento de Salud.  Los datos incluidos deben solo ser utilizados para propósitos informativos e ilustrativos."),
                  p("Ni el Departamento de Salud, ni la Coalición Científica de Puerto Rico, ni el Gobierno de Puerto Rico son responsables de cualquier daño causado por la información publicada en esta página."),
-                 HTML("<p>Los datos de las vacunas los obtenemos de <a href=\"https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/vaccinations/us_state_vaccinations.csv\">Our World in Data</a></p>.")
+#                 HTML("<p>Los datos de las vacunas los obtenemos de <a href=\"https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/vaccinations/us_state_vaccinations.csv\">Our World in Data</a></p>.")
         )
     ),
     hr(),    
@@ -162,8 +162,10 @@ server <- function(input, output, session) {
             "<tr><td>Tasa de positividad (pruebas):</td><td align=\"right\">&emsp;", res()$positividad, "</td></tr>", 
             "<tr><td>Tasa de positividad (casos):</td><td align=\"right\">&emsp;", res()$casos_positividad, "</td></tr>", #, "&emsp;", 
             "<tr><td>Hospitalizaciones:</td><td align=\"right\">&emsp;", res()$hosp, "</td></tr>",
-            "<tr><td>% población vacunada:</td><td align=\"right\">&emsp;", res()$vacunas, "</td></tr>",
-            "<tr><td>Días para alcanzar 70%:</td><td align=\"right\">&emsp;", res()$dias_hasta_meta_vacunas, "</td></tr>",
+            "<tr><td>% con vacunación al día:</td><td align=\"right\">&emsp;", res()$vacuna_al_dia, "</td></tr>",
+            "<tr><td>% con serie primaria completa:</td><td align=\"right\">&emsp;", res()$vacunas, "</td></tr>",
+            #"<tr><td>Días para alcanzar 70%:</td><td align=\"right\">&emsp;", res()$dias_hasta_meta_vacunas, "</td></tr>",
+            #"<tr><td>Días para alcanzar 70%:</td><td align=\"right\">&emsp;", "0 (oct 16)", "</td></tr>",
             "<tr><td>% por lo menos 1 dosis:</td><td align=\"right\">&emsp;", res()$una_dosis, "</td></tr></table>")
     })
     

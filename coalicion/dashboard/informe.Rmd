@@ -20,8 +20,8 @@ res <- compute_summary(tests, hosp_mort, day = last_complete_day, type = "Molecu
 res2 <- compute_summary(tests, hosp_mort, day = last_complete_day, type = "Molecular+Antigens")
 res$tab[3,-2] <- res2$tab[3,-2]
 tab <- data.frame(
-  Metrica = paste0(c("% pruebas positivas", "% casos nuevos", "Hospitalizaciones", "% población vacunada", "Días para alcanzar 70%", "% por lo menos 1 dosis"), "&nbsp;"),
-  valor = c(res$positividad, res$casos_positividad, res$hosp, res$vacunas, res$dias_hasta_meta_vacuna, res$una_dosis))
+  Metrica = paste0(c("% pruebas positivas", "% casos nuevos", "Hospitalizaciones", "% con vacunación al día", "% con serie primaria completa",  "% por lo menos 1 dosis"), "&nbsp;"),
+  valor = c(res$positividad, res$casos_positividad, res$hosp, res$vacuna_al_dia, res$vacunas, res$una_dosis))
 knitr::kable(tab, escape = TRUE, align = c("l","r"), col.names = NULL)
 ```
 
@@ -90,5 +90,5 @@ Con la excepción de los datos de las vacunas, los datos incluidos en esta pági
 
 Ni el Departamento de Salud, ni la Coalición Científica de Puerto Rico, ni el Gobierno de Puerto Rico son responsables de cualquier daño causado por la información publicada en esta página.
 
-Los datos de las vacunas los obtenemos de [Our World in Data](https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/vaccinations/us_state_vaccinations.csv).
+
         

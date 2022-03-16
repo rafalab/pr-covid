@@ -1,5 +1,7 @@
 compute_summary <- function(tests, hosp_mort, type = "Molecular", day = last_complete_day){
   
+  load(url("https://github.com/rafalab/vacunaspr/raw/main/rdas/tabs.rda"))
+  
   ## function to turn proportions into pretty percentages
   make_pct <- function(x, digits = 1){
     ifelse(is.na(x), "", paste0(format(round(100 * x, digits = digits), nsmall = digits), "%"))
@@ -251,8 +253,8 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular", day = last_com
         arrows[change_cas[i]+2],
         arrows_2[change_tes[i]+2],
         arrows[change_hos[i]+2],
-        arrows[change_mor[i]+2],
-        NA),
+        arrows[change_mor[i]+2]),
+#        NA),
      no_arrow)
   }
   
@@ -262,8 +264,8 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular", day = last_com
       round(cas$cases_week_avg[i]), 
       prettyNum(round(tes$people_total_week[i] / 7), big.mark = ","),
       prettyNum(round(hos$HospitCOV19[i]), big.mark = ","),
-      dynamic_round(mor$mort_week_avg[i]),
-      make_pct(vac$pct_fully_vaccinated[i]))
+      dynamic_round(mor$mort_week_avg[i]))#,
+#      make_pct(vac$pct_fully_vaccinated[i]))
   }
   
   ## These are the positivity and hospitalizations for today
@@ -292,15 +294,22 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular", day = last_com
   
   vacs_per_day <- diff(vac$people_fully_vaccinated[1:2])/diff(as.numeric(vac$date[1:2]))
   dias_hasta_meta_vacunas <- paste(
-    prettyNum(round((pr_pop*0.7 - vac$people_fully_vaccinated[1]) / vacs_per_day), big.mark = ","),
+    prettyNum(round(pmax((pr_pop*0.7 - vac$people_fully_vaccinated[1]) / vacs_per_day),0), big.mark = ","),
     no_arrow)
 
   vac <- slice(vac, -1)
   
+  una_dosis <- paste(make_pct(summary_tab%>%filter(names=="Personas con por lo menos 1 dosis") %>% pull(porciento)),  no_arrow)
+  vacunas <- paste(make_pct(summary_tab%>%filter(names=="Personas con serie primaria completa") %>% pull(porciento)),  no_arrow)
+  vacuna_al_dia <- paste(make_pct(summary_tab%>%filter(names=="Personas con vacunación al día") %>% pull(porciento)),  
+                         arrows_2[sign(summary_tab%>%filter(names=="Personas con vacunación al día") %>% pull(tasas)) + 2])
+  vacs_per_day <- diff(vac$people_fully_vaccinated[c(1,3)])/diff(as.numeric(vac$date[c(1,3)]))
+  
+  
   if(type == "Molecular"){
-    meta <- c("< 3.0%", "< 2.0%",  "< 30",  "> 4,500", "< 300", "< 1", "> 70%")
+    meta <- c("< 3.0%", "< 2.0%",  "< 30",  "> 4,500", "< 300", "< 1")#, "> 70%")
   } else {
-    meta <- c("", "",  "",  "",  "< 300", "< 1", "> 70%")
+    meta <- c("", "",  "",  "",  "< 300", "< 1")#, "> 70%")
   }
   ## make the table
   tab <- tibble(metrica = c("Tasa de positividad (pruebas)", 
@@ -308,8 +317,8 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular", day = last_com
                             "Casos nuevos por día", 
                             "Pruebas por día", 
                             "Hospitalizaciones",
-                            "Muertes por día",
-                            "% población vacunada"),
+                            "Muertes por día"),
+#                            "% población vacunada"),
                 
                 meta = meta,
                 
@@ -326,9 +335,15 @@ compute_summary <- function(tests, hosp_mort, type = "Molecular", day = last_com
                      paste0(format(pos$date[3]-days(6), "%b%d-"), format(pos$date[3], "%b%d")))
                      
                      
-  return(list(tab = tab, riesgo = riesgo, nivel = nivel, tendencia = tendencia, 
+  # return(list(tab = tab, riesgo = riesgo, nivel = nivel, tendencia = tendencia, 
+  #             positividad = positividad, casos_positividad = casos_positividad, 
+  #             casos = casos, hosp = hosp, una_dosis = una_dosis, vacunas = vacunas,
+  #             dias_hasta_meta_vacunas = dias_hasta_meta_vacunas))
+  # 
+  return(list(tab = tab, 
               positividad = positividad, casos_positividad = casos_positividad, 
-              casos = casos, hosp = hosp, una_dosis = una_dosis, vacunas = vacunas,
+              casos = casos, hosp = hosp, una_dosis = una_dosis, vacunas = vacunas, 
+              vacuna_al_dia = vacuna_al_dia,
               dias_hasta_meta_vacunas = dias_hasta_meta_vacunas))
   
 }
